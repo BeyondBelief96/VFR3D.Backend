@@ -44,7 +44,7 @@ internal class Program
             }
         }, ServiceLifetime.Scoped);
 
-        //builder.Services.AddHostedService<MetarJob>();
+        builder.Services.AddHostedService<MetarJob>();
         builder.Services.AddHostedService<TafJob>();
 
         builder.Services.AddHttpClient();
