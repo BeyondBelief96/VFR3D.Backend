@@ -20,10 +20,11 @@ internal class Program
             .AddUserSecrets<Program>(optional: true);
 
         // Add services to the container.
-        builder.Services.AddHttpClient();
+
         builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"));
         builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
         builder.Services.AddScoped<IMetarService, MetarService>();
+        builder.Services.AddSingleton<IAwsSecretsService, AwsSecretsService>();
         builder.Services.AddDbContext<CronServiceDbContext>((serviceProvider, options) =>
         {
             var dbSettings = serviceProvider.GetRequiredService<IOptions<DatabaseSettings>>().Value;
@@ -44,14 +45,13 @@ internal class Program
 
         builder.Services.AddHostedService<MetarJob>();
 
-        builder.Services.AddSingleton<IAwsSecretsService, AwsSecretsService>();
+        builder.Services.AddHttpClient();
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 
         var app = builder.Build();
 
-        // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();

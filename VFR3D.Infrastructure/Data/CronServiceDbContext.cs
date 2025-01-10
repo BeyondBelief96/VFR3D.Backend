@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Vfr3d.Domain.Entities;
+using VFR3D.Domain.Entities;
 
 namespace VFR3D.Infrastructure.Data
 {
@@ -11,6 +12,8 @@ namespace VFR3D.Infrastructure.Data
         }
 
         public DbSet<Metar> Metars => Set<Metar>();
+
+        public DbSet<Taf> Tafs => Set<Taf>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
