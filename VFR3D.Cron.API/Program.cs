@@ -24,6 +24,7 @@ internal class Program
         builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"));
         builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
         builder.Services.AddScoped<IMetarService, MetarService>();
+        builder.Services.AddScoped<ITafService, TafService>();
         builder.Services.AddSingleton<IAwsSecretsService, AwsSecretsService>();
         builder.Services.AddDbContext<CronServiceDbContext>((serviceProvider, options) =>
         {
@@ -41,9 +42,10 @@ internal class Program
                 options.EnableDetailedErrors();
                 options.EnableSensitiveDataLogging();
             }
-        });
+        }, ServiceLifetime.Scoped);
 
-        builder.Services.AddHostedService<MetarJob>();
+        //builder.Services.AddHostedService<MetarJob>();
+        builder.Services.AddHostedService<TafJob>();
 
         builder.Services.AddHttpClient();
         builder.Services.AddControllers();
