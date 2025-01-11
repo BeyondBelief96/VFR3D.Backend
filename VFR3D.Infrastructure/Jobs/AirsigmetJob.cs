@@ -6,28 +6,31 @@ using VFR3D.Infrastructure.Services.Interfaces;
 
 namespace VFR3D.Infrastructure.Jobs
 {
-    public class TafJob : CronJobService
+    public class AirsigmetJob : CronJobService
     {
         private readonly IServiceProvider _serviceProvider;
 
-        public TafJob(ILogger<TafJob> logger, IServiceProvider serviceProvider) : base("*/30 * * * *", TimeZoneInfo.Utc, logger)
+        public AirsigmetJob(
+            ILogger<AirsigmetJob> logger,
+            IServiceProvider serviceProvider)
+            : base("*/30 * * * *", TimeZoneInfo.Utc, logger) 
         {
             _serviceProvider = serviceProvider;
         }
 
         protected override async Task ExecuteJob(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("MetarWorker running at: {time}", DateTimeOffset.Now);
+            _logger.LogInformation("AirsigmetWorker running at: {time}", DateTimeOffset.Now);
 
             try
             {
                 using var scope = _serviceProvider.CreateScope();
-                var metarService = scope.ServiceProvider.GetRequiredService<IAviationWeatherService<Taf>>();
-                await metarService.PollWeatherDataAsync(cancellationToken);
+                var airsigmetService = scope.ServiceProvider.GetRequiredService<IAviationWeatherService<Airsigmet>>();
+                await airsigmetService.PollWeatherDataAsync(cancellationToken);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occurred while running METAR service");
+                _logger.LogError(ex, "Error occurred executing AIRSIGMET service");
             }
         }
     }

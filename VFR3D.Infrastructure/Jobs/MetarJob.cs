@@ -21,8 +21,8 @@ namespace VFR3D.Infrastructure.Jobs
             try
             {
                 using var scope = _serviceProvider.CreateScope();
-                var metarService = scope.ServiceProvider.GetRequiredService<IMetarService>();
-                await metarService.PollMetarApiAsync(cancellationToken);
+                var metarService = scope.ServiceProvider.GetRequiredService<IAviationWeatherService<MetarJob>>();
+                await metarService.PollWeatherDataAsync(cancellationToken);
             }
             catch (Exception ex)
             {

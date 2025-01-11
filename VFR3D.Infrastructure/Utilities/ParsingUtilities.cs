@@ -10,5 +10,11 @@
 
         public static short? ParseNullableShort(string? value)
            => short.TryParse(value, out var result) ? result : null;
+
+        public static float ParseFloat(string? value)
+            => float.TryParse(value, out var result) ? result : 0f;
+
+        public static int ParseInt(string? value)
+            => int.TryParse(value, out var result) ? result : 0;
     }
 }

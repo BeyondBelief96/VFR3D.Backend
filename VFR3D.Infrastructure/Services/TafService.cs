@@ -9,7 +9,7 @@ using VFR3D.Infrastructure.Utilities;
 
 namespace VFR3D.Infrastructure.Services
 {
-    public class TafService : ITafService
+    public class TafService : IAviationWeatherService<Taf>
     {
         private readonly ILogger<TafService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
@@ -26,7 +26,7 @@ namespace VFR3D.Infrastructure.Services
             _dbContext = dbContext;
         }
 
-        public async Task PollTafApiAsync(CancellationToken cancellationToken = default)
+        public async Task PollWeatherDataAsync(CancellationToken cancellationToken = default)
         {
             try
             {

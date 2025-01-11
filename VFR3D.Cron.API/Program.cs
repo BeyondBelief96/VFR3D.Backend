@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Vfr3d.Domain.Entities;
+using VFR3D.Domain.Entities;
 using VFR3D.Infrastructure.Configuration;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Jobs;
@@ -20,9 +22,10 @@ internal class Program
 
         builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"));
         builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
-        builder.Services.AddScoped<IMetarService, MetarService>();
-        builder.Services.AddScoped<ITafService, TafService>();
-        builder.Services.AddScoped<IPirepService, PirepService>();
+        builder.Services.AddScoped<IAviationWeatherService<Metar>, MetarService>();
+        builder.Services.AddScoped<IAviationWeatherService<Taf>, TafService>();
+        builder.Services.AddScoped<IAviationWeatherService<Pirep>, PirepService>();
+        builder.Services.AddScoped<IAviationWeatherService<Airsigmet>, AirsigmetService>();
         builder.Services.AddSingleton<IAwsSecretsService, AwsSecretsService>();
         builder.Services.AddDbContext<CronServiceDbContext>((serviceProvider, options) =>
         {
@@ -45,6 +48,7 @@ internal class Program
         builder.Services.AddHostedService<MetarJob>();
         builder.Services.AddHostedService<TafJob>();
         builder.Services.AddHostedService<PirepJob>();
+        builder.Services.AddHostedService<AirsigmetJob>();
 
         builder.Services.AddHttpClient();
         builder.Services.AddControllers();

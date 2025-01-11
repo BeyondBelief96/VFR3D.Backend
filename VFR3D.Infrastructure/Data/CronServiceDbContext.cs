@@ -17,6 +17,8 @@ namespace VFR3D.Infrastructure.Data
 
         public DbSet<Pirep> Pireps => Set<Pirep>();
 
+        public DbSet<Airsigmet> Airsigmets => Set<Airsigmet>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
