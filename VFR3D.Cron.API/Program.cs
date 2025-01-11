@@ -12,19 +12,17 @@ internal class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
-        // Configure environment specific settings
         builder.Configuration.SetBasePath(builder.Environment.ContentRootPath)
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
             .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
             .AddEnvironmentVariables(prefix: "VFR3D_")
             .AddUserSecrets<Program>(optional: true);
 
-        // Add services to the container.
-
         builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"));
         builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
         builder.Services.AddScoped<IMetarService, MetarService>();
         builder.Services.AddScoped<ITafService, TafService>();
+        builder.Services.AddScoped<IPirepService, PirepService>();
         builder.Services.AddSingleton<IAwsSecretsService, AwsSecretsService>();
         builder.Services.AddDbContext<CronServiceDbContext>((serviceProvider, options) =>
         {
@@ -46,6 +44,7 @@ internal class Program
 
         builder.Services.AddHostedService<MetarJob>();
         builder.Services.AddHostedService<TafJob>();
+        builder.Services.AddHostedService<PirepJob>();
 
         builder.Services.AddHttpClient();
         builder.Services.AddControllers();

@@ -116,8 +116,36 @@ namespace VFR3D.Infrastructure.Services
                 if (existingMetar.RawText != metar.RawText)
                 {
                     _logger.LogDebug("Updating existing METAR for station {StationId}", metar.StationId);
-                    // Update all properties
-                    _dbContext.Entry(existingMetar).CurrentValues.SetValues(metar);
+                    existingMetar.RawText = metar.RawText;
+                    existingMetar.ObservationTime = metar.ObservationTime;
+                    existingMetar.Latitude = metar.Latitude;
+                    existingMetar.Longitude = metar.Longitude;
+                    existingMetar.TempC = metar.TempC;
+                    existingMetar.DewpointC = metar.DewpointC;
+                    existingMetar.WindDirDegrees = metar.WindDirDegrees;
+                    existingMetar.WindSpeedKt = metar.WindSpeedKt;
+                    existingMetar.WindGustKt = metar.WindGustKt;
+                    existingMetar.VisibilityStatuteMi = metar.VisibilityStatuteMi;
+                    existingMetar.AltimInHg = metar.AltimInHg;
+                    existingMetar.SeaLevelPressureMb = metar.SeaLevelPressureMb;
+                    existingMetar.QualityControlFlags = metar.QualityControlFlags;
+                    existingMetar.WxString = metar.WxString;
+                    existingMetar.SkyCondition = metar.SkyCondition;
+                    existingMetar.FlightCategory = metar.FlightCategory;
+                    existingMetar.ThreeHrPressureTendencyMb = metar.ThreeHrPressureTendencyMb;
+                    existingMetar.MaxTC = metar.MaxTC;
+                    existingMetar.MinTC = metar.MinTC;
+                    existingMetar.MaxT24hrC = metar.MaxT24hrC;
+                    existingMetar.MinT24hrC = metar.MinT24hrC;
+                    existingMetar.PrecipIn = metar.PrecipIn;
+                    existingMetar.Pcp3hrIn = metar.Pcp3hrIn;
+                    existingMetar.Pcp6hrIn = metar.Pcp6hrIn;
+                    existingMetar.Pcp24hrIn = metar.Pcp24hrIn;
+                    existingMetar.SnowIn = metar.SnowIn;
+                    existingMetar.VertVisFt = metar.VertVisFt;
+                    existingMetar.MetarType = metar.MetarType;
+                    existingMetar.ElevationM = metar.ElevationM;
+
                     await _dbContext.SaveChangesAsync(cancellationToken);
                 }
                 else
@@ -128,7 +156,7 @@ namespace VFR3D.Infrastructure.Services
             else
             {
                 _logger.LogDebug("Creating new METAR for station {StationId}", metar.StationId);
-                await _dbContext.Metars.AddAsync(metar);
+                await _dbContext.Metars.AddAsync(metar, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }
         }

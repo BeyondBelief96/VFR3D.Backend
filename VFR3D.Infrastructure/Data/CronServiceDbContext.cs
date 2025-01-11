@@ -15,6 +15,8 @@ namespace VFR3D.Infrastructure.Data
 
         public DbSet<Taf> Tafs => Set<Taf>();
 
+        public DbSet<Pirep> Pireps => Set<Pirep>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

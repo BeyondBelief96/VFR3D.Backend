@@ -185,8 +185,17 @@ namespace VFR3D.Infrastructure.Services
                 if (existingTaf.RawText != taf.RawText)
                 {
                     _logger.LogDebug("Updating existing TAF for station {StationId}", taf.StationId);
-                    _dbContext.Entry(existingTaf).CurrentValues.SetValues(taf);
-                    existingTaf.Forecast = taf.Forecast;  // Update the JSON field
+                    existingTaf.RawText = taf.RawText;
+                    existingTaf.IssueTime = taf.IssueTime;
+                    existingTaf.BulletinTime = taf.BulletinTime;
+                    existingTaf.ValidTimeFrom = taf.ValidTimeFrom;
+                    existingTaf.ValidTimeTo = taf.ValidTimeTo;
+                    existingTaf.Remarks = taf.Remarks;
+                    existingTaf.Latitude = taf.Latitude;
+                    existingTaf.Longitude = taf.Longitude;
+                    existingTaf.ElevationM = taf.ElevationM;
+                    existingTaf.Forecast = taf.Forecast;
+
                     await _dbContext.SaveChangesAsync(cancellationToken);
                 }
                 else
@@ -197,7 +206,7 @@ namespace VFR3D.Infrastructure.Services
             else
             {
                 _logger.LogDebug("Creating new TAF for station {StationId}", taf.StationId);
-                _dbContext.Tafs.Add(taf);
+                await _dbContext.Tafs.AddAsync(taf, cancellationToken);
                 await _dbContext.SaveChangesAsync(cancellationToken);
             }
         }
