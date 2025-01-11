@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Vfr3d.Domain.Entities;
 using VFR3D.Infrastructure.Services;
 using VFR3D.Infrastructure.Services.Interfaces;
 
@@ -21,7 +22,7 @@ namespace VFR3D.Infrastructure.Jobs
             try
             {
                 using var scope = _serviceProvider.CreateScope();
-                var metarService = scope.ServiceProvider.GetRequiredService<IAviationWeatherService<MetarJob>>();
+                var metarService = scope.ServiceProvider.GetRequiredService<IAviationWeatherService<Metar>>();
                 await metarService.PollWeatherDataAsync(cancellationToken);
             }
             catch (Exception ex)

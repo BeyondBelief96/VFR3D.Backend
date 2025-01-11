@@ -1,0 +1,36 @@
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using VFR3D.Domain.Entities;
+using VFR3D.Domain.ValueObjects.FaaPublications;
+
+namespace VFR3D.Infrastructure.Data.Configurations
+{
+    internal class FaaPublicationCycleConfiguration : IEntityTypeConfiguration<FaaPublicationCycle>
+    {
+        public void Configure(EntityTypeBuilder<FaaPublicationCycle> builder)
+        {
+            builder.Property(e => e.PublicationType)
+            .HasConversion<string>();
+
+            builder.HasIndex(e => e.PublicationType).IsUnique();
+
+            builder.HasData(
+            new FaaPublicationCycle
+            {
+                 Id = 1,
+                 PublicationType = PublicationType.ChartSupplement,
+                 CycleLengthDays = 56,
+                 KnownValidDate = new DateTime(2024, 12, 26, 0, 0, 0, DateTimeKind.Utc),
+                 LastSuccessfulUpdate = null
+            },
+            new FaaPublicationCycle
+            {
+                Id = 2,
+                PublicationType = PublicationType.AirportDiagram,
+                CycleLengthDays = 28,
+                KnownValidDate = new DateTime(2024, 12, 26, 0, 0, 0, DateTimeKind.Utc),
+                LastSuccessfulUpdate = null
+            });
+        }
+    }
+}

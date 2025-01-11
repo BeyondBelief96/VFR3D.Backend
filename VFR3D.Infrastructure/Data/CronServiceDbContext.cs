@@ -19,6 +19,10 @@ namespace VFR3D.Infrastructure.Data
 
         public DbSet<Airsigmet> Airsigmets => Set<Airsigmet>();
 
+        public DbSet<ChartSupplement> ChartSupplements => Set<ChartSupplement>();
+
+        public DbSet<FaaPublicationCycle> FaaPublicationCycles => Set<FaaPublicationCycle>();   
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

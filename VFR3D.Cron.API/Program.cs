@@ -1,6 +1,8 @@
+using Amazon.S3;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Vfr3d.Domain.Entities;
+using VFR3D.Cron.API.Extensions;
 using VFR3D.Domain.Entities;
 using VFR3D.Infrastructure.Configuration;
 using VFR3D.Infrastructure.Data;
@@ -26,6 +28,8 @@ internal class Program
         builder.Services.AddScoped<IAviationWeatherService<Taf>, TafService>();
         builder.Services.AddScoped<IAviationWeatherService<Pirep>, PirepService>();
         builder.Services.AddScoped<IAviationWeatherService<Airsigmet>, AirsigmetService>();
+        builder.Services.AddScoped<IChartSupplementService, ChartSupplementService>();
+        builder.Services.AddScoped<IFaaPublicationCycleService, FaaPublicationCycleService>();
         builder.Services.AddSingleton<IAwsSecretsService, AwsSecretsService>();
         builder.Services.AddDbContext<CronServiceDbContext>((serviceProvider, options) =>
         {
@@ -49,7 +53,9 @@ internal class Program
         builder.Services.AddHostedService<TafJob>();
         builder.Services.AddHostedService<PirepJob>();
         builder.Services.AddHostedService<AirsigmetJob>();
+        builder.Services.AddHostedService<ChartSupplementJob>();
 
+        builder.Services.AddAwsServices(builder.Configuration);
         builder.Services.AddHttpClient();
         builder.Services.AddControllers();
         builder.Services.AddEndpointsApiExplorer();
