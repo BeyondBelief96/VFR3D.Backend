@@ -1,4 +1,3 @@
-using Amazon.S3;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Vfr3d.Domain.Entities;
