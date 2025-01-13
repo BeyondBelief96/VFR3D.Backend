@@ -203,7 +203,6 @@ namespace VFR3D.Infrastructure.Services
 
                 var existingDict = existingSupplements.ToDictionary(x => x.NavigationalAidName!);
 
-                // Update existing records
                 foreach (var existing in existingSupplements)
                 {
                     var newData = batch.First(s => s.NavigationalAidName == existing.NavigationalAidName);
@@ -217,7 +216,6 @@ namespace VFR3D.Infrastructure.Services
                             cancellationToken);
                 }
 
-                // Insert new records
                 var newRecords = batch
                     .Where(s => !existingDict.ContainsKey(s.NavigationalAidName!))
                     .Select(s => new ChartSupplement
@@ -344,7 +342,6 @@ namespace VFR3D.Infrastructure.Services
 
             throw new ArgumentException($"Invalid file name format: {chartSupplementFileName}");
         }
-
 
         private static string FormatDate(DateTime date)
         {

@@ -190,7 +190,7 @@ namespace VFR3D.Infrastructure.Services
             .Where(record => record.Element("chart_code")?.Value == "APD")
             .Select(record => new AirportDiagram
             {
-                AirportName = airport.Attribute("ID")?.Value,
+                AirportName = airport.Attribute("ID")?.Value ?? "",
                 IcaoIdent = airport.Attribute("icao_ident")?.Value,
                 AirportIdent = airport.Attribute("apt_ident")?.Value,
                 FileName = record.Element("pdf_name")?.Value
