@@ -29,6 +29,7 @@ internal class Program
         builder.Services.AddScoped<IAviationWeatherService<Pirep>, PirepService>();
         builder.Services.AddScoped<IAviationWeatherService<Airsigmet>, AirsigmetService>();
         builder.Services.AddScoped<IChartSupplementService, ChartSupplementService>();
+        builder.Services.AddScoped<IAirportDiagramService, AirportDiagramService>();
         builder.Services.AddScoped<IFaaPublicationCycleService, FaaPublicationCycleService>();
         builder.Services.AddSingleton<IAwsSecretsService, AwsSecretsService>();
         builder.Services.AddDbContext<CronServiceDbContext>((serviceProvider, options) =>
@@ -54,7 +55,7 @@ internal class Program
         builder.Services.AddHostedService<PirepJob>();
         builder.Services.AddHostedService<AirsigmetJob>();
         builder.Services.AddHostedService<ChartSupplementJob>();
-
+        builder.Services.AddHostedService<AirportDiagramJob>();
         builder.Services.AddAwsServices(builder.Configuration);
         builder.Services.AddHttpClient();
         builder.Services.AddControllers();

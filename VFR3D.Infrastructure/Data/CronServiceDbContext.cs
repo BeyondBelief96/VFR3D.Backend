@@ -21,6 +21,8 @@ namespace VFR3D.Infrastructure.Data
 
         public DbSet<ChartSupplement> ChartSupplements => Set<ChartSupplement>();
 
+        public DbSet<AirportDiagram> AirportDiagrams => Set<AirportDiagram>();
+
         public DbSet<FaaPublicationCycle> FaaPublicationCycles => Set<FaaPublicationCycle>();   
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

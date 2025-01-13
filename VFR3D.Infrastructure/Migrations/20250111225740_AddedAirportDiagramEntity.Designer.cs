@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VFR3D.Infrastructure.Data;
@@ -11,9 +12,11 @@ using VFR3D.Infrastructure.Data;
 namespace VFR3D.Infrastructure.Migrations
 {
     [DbContext(typeof(CronServiceDbContext))]
-    partial class CronServiceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250111225740_AddedAirportDiagramEntity")]
+    partial class AddedAirportDiagramEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -38,8 +41,8 @@ namespace VFR3D.Infrastructure.Migrations
 
                     b.Property<string>("AirportName")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
                         .HasColumnName("airport_name");
 
                     b.Property<string>("FileName")

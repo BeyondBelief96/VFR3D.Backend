@@ -6,11 +6,11 @@ using VFR3D.Infrastructure.Services.Interfaces;
 
 namespace VFR3D.Infrastructure.Jobs
 {
-    public class ChartSupplementJob : CronJobService
+    public class AirportDiagramJob : CronJobService
     {
         private IServiceProvider _serviceProvider;
 
-        public ChartSupplementJob(IServiceProvider serviceProvider, ILogger<ChartSupplementJob> logger) : base("0 0 * * *", TimeZoneInfo.Utc, logger)
+        public AirportDiagramJob(IServiceProvider serviceProvider, ILogger<ChartSupplementJob> logger) : base("*/10 * * * *", TimeZoneInfo.Utc, logger)
         {
             _serviceProvider = serviceProvider;
         }
@@ -23,18 +23,18 @@ namespace VFR3D.Infrastructure.Jobs
                 var publicationService = scope.ServiceProvider.GetRequiredService<IFaaPublicationCycleService>();
                 var currentDate = DateTime.UtcNow;
 
-                if(await publicationService.ShouldRunUpdateAsync(PublicationType.ChartSupplement, currentDate))
+                if (await publicationService.ShouldRunUpdateAsync(PublicationType.AirportDiagram, currentDate))
                 {
-                    var chartSupplementService = scope.ServiceProvider.GetRequiredService<IChartSupplementService>();
-                    await chartSupplementService.DownloadAndProcessChartSupplementsAsync(cancellationToken);
-                    await publicationService.UpdateLastSuccessfulRunAsync(PublicationType.ChartSupplement, currentDate);
+                    var airportDiagramService = scope.ServiceProvider.GetRequiredService<IAirportDiagramService>();
+                    await airportDiagramService.DownloadAndProcessAirportDiagramsAsync(cancellationToken);
+                    await publicationService.UpdateLastSuccessfulRunAsync(PublicationType.AirportDiagram, currentDate);
                 }
                 else
                 {
                     _logger.LogInformation("No chart supplement update needed at this time");
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred executing Chart Supplement service");
             }

@@ -4,8 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.IO.Compression;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Xml.Linq;
 using VFR3D.Domain.Entities;
 using VFR3D.Domain.ValueObjects.FaaPublications;
