@@ -1,0 +1,85 @@
+services:
+  db:
+    image: postgis/postgis:15-3.3
+    container_name: vfr3d-db
+    environment:
+      - POSTGRES_USER=vfr3d_development_user
+      - POSTGRES_PASSWORD=localdevpassword
+      - POSTGRES_DB=vfr3d_development_database
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vfr3d_development_user -d vfr3d_development_database"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: vfr3d-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3
+      - AWS_DEFAULT_REGION=us-east-2
+      - GATEWAY_LISTEN=4566
+      - DEBUG=1
+      - AWS_ACCESS_KEY_ID=test123     
+      - AWS_SECRET_ACCESS_KEY=test123  
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - LS_LOG=debug
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "localstack-data:/var/lib/localstack"
+      - ./localstack/init/ready.d:/etc/localstack/init/ready.d
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s 
+      timeout: 5s
+      retries: 10    
+
+  cron-services:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+    container_name: vfr3d-api
+    depends_on:
+      db:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      # Database Settings
+      - Database__Host=db
+      - Database__DatabaseName=vfr3d_development_database
+      - Database__Username=vfr3d_development_user
+      - Database__Password=localdevpassword
+      - Database__Port=5432
+      # AWS Settings (Using LocalStack)
+      - AWS__Region=us-east-1
+      - AWS__AccessKeyId=test123 
+      - AWS__SecretAccessKey=test123  
+      - AWS__ServiceUrl=http://localstack:4566
+      - AWS__ChartSupplementsBucketName=vfr3d-development-digital-chart-supplement-bucket
+      - AWS__AirportDiagramsBucketName=vfr3d-development-airport-diagrams-bucket
+      - AWS__DbSslCertSecretName=VFR3D-Dev-Db-SSL-Cert
+    ports:
+      - "3001:3001"
+    volumes:
+      - .:/app
+      - /app/VFR3D.Domain/bin
+      - /app/VFR3D.Domain/obj
+      - /app/VFR3D.Infrastructure/bin
+      - /app/VFR3D.Infrastructure/obj
+      - /app/VFR3D.Cron.API/bin
+      - /app/VFR3D.Cron.API/obj
+    command: >
+      sh -c "dotnet ef database update --project VFR3D.Infrastructure --startup-project VFR3D.Cron.API &&
+             dotnet watch --project VFR3D.Cron.API run --urls=http://0.0.0.0:3001"
+
+volumes:
+  postgres_data:
+  localstack-data:

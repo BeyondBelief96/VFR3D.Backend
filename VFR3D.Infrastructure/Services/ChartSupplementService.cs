@@ -7,9 +7,9 @@ using System.IO.Compression;
 using System.Xml.Linq;
 using VFR3D.Domain.Entities;
 using VFR3D.Domain.ValueObjects.FaaPublications;
-using VFR3D.Infrastructure.Configuration;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Services.Interfaces;
+using VFR3D.Infrastructure.Settings;
 
 namespace VFR3D.Infrastructure.Services
 {
@@ -147,45 +147,37 @@ namespace VFR3D.Infrastructure.Services
                     .Where(cs => cs.AirportCode != null && batchCodes.Contains(cs.AirportCode))
                     .ToListAsync(cancellationToken);
 
-                var existingDict = existingSupplements.ToDictionary(x => x.AirportCode!);
+                // Group existing supplements by AirportCode and FileName
+                var existingLookup = existingSupplements
+                    .ToLookup(x => (x.AirportCode, x.FileName));
 
-                // Update existing records
-                foreach (var existing in existingSupplements)
+                foreach (var supplement in batch)
                 {
-                    var newData = batch.First(s => s.AirportCode == existing.AirportCode);
+                    // Look for an exact match on both AirportCode and FileName
+                    var existingMatch = existingLookup[(supplement.AirportCode, supplement.FileName)].FirstOrDefault();
 
-                    await _dbContext.ChartSupplements
-                        .Where(cs => cs.AirportCode == existing.AirportCode)
-                        .ExecuteUpdateAsync(s => s
-                            .SetProperty(b => b.AirportName, newData.AirportName)
-                            .SetProperty(b => b.AirportCity, newData.AirportCity)
-                            .SetProperty(b => b.FileName, newData.FileName),
-                            cancellationToken);
-                }
-
-                // Insert new records
-                var newRecords = batch
-                    .Where(s => !existingDict.ContainsKey(s.AirportCode!))
-                    .Select(s => new ChartSupplement
+                    if (existingMatch != null)
                     {
-                        AirportCode = s.AirportCode,
-                        NavigationalAidName = s.NavigationalAidName,
-                        AirportName = s.AirportName,
-                        AirportCity = s.AirportCity,
-                        FileName = s.FileName
-                    })
-                    .ToList();
-
-                if (newRecords.Any())
-                {
-                    await _dbContext.ChartSupplements.AddRangeAsync(newRecords, cancellationToken);
-                    await _dbContext.SaveChangesAsync(cancellationToken);
+                        // Update existing record if the content has changed
+                        await _dbContext.ChartSupplements
+                            .Where(cs => cs.Id == existingMatch.Id)
+                            .ExecuteUpdateAsync(s => s
+                                .SetProperty(b => b.AirportName, supplement.AirportName)
+                                .SetProperty(b => b.AirportCity, supplement.AirportCity),
+                                cancellationToken);
+                    }
+                    else
+                    {
+                        // This is a new combination of AirportCode and FileName
+                        await _dbContext.ChartSupplements.AddAsync(supplement, cancellationToken);
+                    }
                 }
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
 
                 _logger.LogInformation(
-                    "Processed airport batch: {Updated} updated, {Inserted} inserted",
-                    existingSupplements.Count,
-                    newRecords.Count);
+                    "Processed airport batch: {Count} supplements processed",
+                    batch.Count);
             }
         }
 
@@ -201,43 +193,37 @@ namespace VFR3D.Infrastructure.Services
                     .Where(cs => cs.NavigationalAidName != null && batchNames.Contains(cs.NavigationalAidName))
                     .ToListAsync(cancellationToken);
 
-                var existingDict = existingSupplements.ToDictionary(x => x.NavigationalAidName!);
+                // Group existing supplements by NavigationalAidName and FileName
+                var existingLookup = existingSupplements
+                    .ToLookup(x => (x.NavigationalAidName, x.FileName));
 
-                foreach (var existing in existingSupplements)
+                foreach (var supplement in batch)
                 {
-                    var newData = batch.First(s => s.NavigationalAidName == existing.NavigationalAidName);
+                    // Look for an exact match on both NavigationalAidName and FileName
+                    var existingMatch = existingLookup[(supplement.NavigationalAidName, supplement.FileName)].FirstOrDefault();
 
-                    await _dbContext.ChartSupplements
-                        .Where(cs => cs.NavigationalAidName == existing.NavigationalAidName)
-                        .ExecuteUpdateAsync(s => s
-                            .SetProperty(b => b.AirportName, newData.AirportName)
-                            .SetProperty(b => b.AirportCity, newData.AirportCity)
-                            .SetProperty(b => b.FileName, newData.FileName),
-                            cancellationToken);
-                }
-
-                var newRecords = batch
-                    .Where(s => !existingDict.ContainsKey(s.NavigationalAidName!))
-                    .Select(s => new ChartSupplement
+                    if (existingMatch != null)
                     {
-                        AirportCode = s.AirportCode,
-                        NavigationalAidName = s.NavigationalAidName,
-                        AirportName = s.AirportName,
-                        AirportCity = s.AirportCity,
-                        FileName = s.FileName
-                    })
-                    .ToList();
-
-                if (newRecords.Any())
-                {
-                    await _dbContext.ChartSupplements.AddRangeAsync(newRecords, cancellationToken);
-                    await _dbContext.SaveChangesAsync(cancellationToken);
+                        // Update existing record if the content has changed
+                        await _dbContext.ChartSupplements
+                            .Where(cs => cs.Id == existingMatch.Id)
+                            .ExecuteUpdateAsync(s => s
+                                .SetProperty(b => b.AirportName, supplement.AirportName)
+                                .SetProperty(b => b.AirportCity, supplement.AirportCity),
+                                cancellationToken);
+                    }
+                    else
+                    {
+                        // This is a new combination of NavigationalAidName and FileName
+                        await _dbContext.ChartSupplements.AddAsync(supplement, cancellationToken);
+                    }
                 }
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
 
                 _logger.LogInformation(
-                    "Processed navaid batch: {Updated} updated, {Inserted} inserted",
-                    existingSupplements.Count,
-                    newRecords.Count);
+                    "Processed navaid batch: {Count} supplements processed",
+                    batch.Count);
             }
         }
 
@@ -254,6 +240,8 @@ namespace VFR3D.Infrastructure.Services
             {
                 do
                 {
+                    _logger.LogInformation($"S3 Service URL: {_awsSettings.ServiceUrl}");
+                    _logger.LogInformation($"Bucket name: {_awsSettings.ChartSupplementsBucketName}");
                     var listResponse = await _s3Client.ListObjectsV2Async(listRequest, cancellationToken);
 
                     foreach(var item in listResponse.S3Objects)

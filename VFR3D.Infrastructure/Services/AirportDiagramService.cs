@@ -5,11 +5,11 @@ using Microsoft.Extensions.Options;
 using System.IO.Compression;
 using System.Xml.Linq;
 using VFR3D.Domain.Entities;
-using VFR3D.Infrastructure.Configuration;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using VFR3D.Domain.ValueObjects.FaaPublications;
+using VFR3D.Infrastructure.Settings;
 
 namespace VFR3D.Infrastructure.Services
 {
@@ -55,10 +55,8 @@ namespace VFR3D.Infrastructure.Services
                 var dateString = FormatDate(currentPublicationDate);
                 var regions = new[] { "A", "B", "C", "D", "E" };
 
-                // First, clear out all existing files from S3
                 await DeleteExistingS3Files(cancellationToken);
 
-                // Then process each region
                 foreach (var region in regions)
                 {
                     var faaUrl = $"https://aeronav.faa.gov/upload_313-d/terminal/DDTPP{region}_{dateString}.zip";

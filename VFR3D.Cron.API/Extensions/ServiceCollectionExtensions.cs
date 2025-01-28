@@ -1,6 +1,8 @@
-﻿using Amazon.Runtime;
+﻿using Amazon;
+using Amazon.Extensions.NETCore.Setup;
+using Amazon.Runtime;
 using Amazon.S3;
-using VFR3D.Infrastructure.Configuration;
+using VFR3D.Infrastructure.Settings;
 
 namespace VFR3D.Cron.API.Extensions
 {
@@ -9,18 +11,24 @@ namespace VFR3D.Cron.API.Extensions
         public static IServiceCollection AddAwsServices(this IServiceCollection services, IConfiguration configuration)
         {
             services.Configure<AwsSettings>(configuration.GetSection("AWS"));
+            var awsSettings = configuration.GetSection("AWS").Get<AwsSettings>();
 
-            var awsOptions = configuration.GetAWSOptions();
-            var accessKey = configuration["AWS:AccessKeyId"];
-            var secretKey = configuration["AWS:SecretAccessKey"];
-
-            if (!string.IsNullOrEmpty(accessKey) && !string.IsNullOrEmpty(secretKey))
+            var s3Config = new AmazonS3Config
             {
-                awsOptions.Credentials = new BasicAWSCredentials(accessKey, secretKey);
-            }
+                ServiceURL = awsSettings?.ServiceUrl ?? "http://localstack:4566",
+                ForcePathStyle = true,
+                UseHttp = true,
+                AuthenticationRegion = awsSettings?.Region ?? "us-east-1", 
+                DisableHostPrefixInjection = true,
+                UseArnRegion = false
+            };
 
-            services.AddDefaultAWSOptions(awsOptions);
-            services.AddAWSService<IAmazonS3>();
+            var credentials = new BasicAWSCredentials(
+                awsSettings?.AccessKeyId ?? "test123",
+                awsSettings?.SecretAccessKey ?? "test123"
+            );
+
+            services.AddSingleton<IAmazonS3>(new AmazonS3Client(credentials, s3Config));
 
             return services;
         }

@@ -1,0 +1,19 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0
+
+WORKDIR /app
+
+# Copy csproj files and restore dependencies
+COPY *.sln .
+COPY VFR3D.Domain/*.csproj ./VFR3D.Domain/
+COPY VFR3D.Infrastructure/*.csproj ./VFR3D.Infrastructure/
+COPY VFR3D.Cron.API/*.csproj ./VFR3D.Cron.API/
+RUN dotnet restore
+
+# Copy the rest of the code
+COPY . .
+
+# Install EF Core tools for migrations
+RUN dotnet tool install --global dotnet-ef
+ENV PATH="$PATH:/root/.dotnet/tools"
+
+EXPOSE 3001

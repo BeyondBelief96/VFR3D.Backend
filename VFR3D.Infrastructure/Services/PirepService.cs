@@ -31,10 +31,15 @@ namespace VFR3D.Infrastructure.Services
             try
             {
                 _logger.LogInformation("Starting PIREP data fetch and storage");
+
+                // First purge expired PIREPs
+                await PurgeExpiredPirepsAsync(cancellationToken);
+
+                // Then fetch and store new PIREPs
                 var xmlData = await FetchPirepXmlDataAsync(cancellationToken);
                 var pirepData = ParsePirepXmlData(xmlData);
                 await UpdateOrCreatePirepsAsync(pirepData, cancellationToken);
-                await PurgeExpiredPirepsAsync(cancellationToken);
+
                 _logger.LogInformation("Completed PIREP data update");
             }
             catch (Exception ex)
@@ -149,59 +154,31 @@ namespace VFR3D.Infrastructure.Services
         private async Task UpdateOrCreatePirepsAsync(IEnumerable<Pirep> pireps, CancellationToken cancellationToken)
         {
             var pirepsList = pireps.ToList();
-            var now = DateTime.UtcNow;
-            var thirtyMinutesAgo = now.AddMinutes(-30).ToString("O"); // ISO 8601 format
+            var thirtyMinutesAgo = DateTime.UtcNow.AddMinutes(-30).ToString("O");
 
-            // Filter out PIREPs older than 30 minutes and null observation times
+            // Filter out PIREPs older than 30 minutes
             var validPireps = pirepsList
                 .Where(p => p.ObservationTime != null &&
                             p.ObservationTime.CompareTo(thirtyMinutesAgo) >= 0)
                 .ToList();
 
-            // Get all existing PIREPs for these observations
-            var observationTimes = validPireps
-                .Where(p => p.ObservationTime != null)
-                .Select(p => p.ObservationTime!)
-                .ToList();
-
-            var existingPireps = await _dbContext.Pireps
-                .Where(p => p.ObservationTime != null && observationTimes.Contains(p.ObservationTime))
-                .ToDictionaryAsync(
-                    p => p.ObservationTime!, // The ! operator tells the compiler we know it's not null
-                    p => p,
-                    cancellationToken);
+            // Get all existing raw texts to check for duplicates
+            var existingRawTexts = await _dbContext.Pireps
+                .Where(p => p.RawText != null)
+                .Select(p => p.RawText!)
+                .ToListAsync(cancellationToken);
 
             foreach (var pirep in validPireps)
             {
-                if (pirep.ObservationTime != null && existingPireps.TryGetValue(pirep.ObservationTime, out var existingPirep))
+                // Skip if this raw text already exists
+                if (pirep.RawText != null && existingRawTexts.Contains(pirep.RawText))
                 {
-                    if (existingPirep.RawText != pirep.RawText)
-                    {
-                        _logger.LogDebug("Updating existing PIREP for {aircraftRef}", pirep.AircraftRef);
-                        existingPirep.ReceiptTime = pirep.ReceiptTime;
-                        existingPirep.QualityControlFlags = pirep.QualityControlFlags;
-                        existingPirep.AircraftRef = pirep.AircraftRef;
-                        existingPirep.Latitude = pirep.Latitude;
-                        existingPirep.Longitude = pirep.Longitude;
-                        existingPirep.AltitudeFtMsl = pirep.AltitudeFtMsl;
-                        existingPirep.SkyConditions = pirep.SkyConditions;
-                        existingPirep.TurbulenceConditions = pirep.TurbulenceConditions;
-                        existingPirep.IcingConditions = pirep.IcingConditions;
-                        existingPirep.VisibilityStatuteMi = pirep.VisibilityStatuteMi;
-                        existingPirep.WxString = pirep.WxString;
-                        existingPirep.TempC = pirep.TempC;
-                        existingPirep.WindDirDegrees = pirep.WindDirDegrees;
-                        existingPirep.WindSpeedKt = pirep.WindSpeedKt;
-                        existingPirep.VertGustKt = pirep.VertGustKt;
-                        existingPirep.ReportType = pirep.ReportType;
-                        existingPirep.RawText = pirep.RawText;
-                    }
+                    _logger.LogDebug("Duplicate PIREP found (matching raw_text). Skipping insertion.");
+                    continue;
                 }
-                else
-                {
-                    _logger.LogDebug("Creating new PIREP for {aircraftRef}", pirep.AircraftRef);
-                    await _dbContext.Pireps.AddAsync(pirep, cancellationToken);
-                }
+
+                _logger.LogDebug("Creating new PIREP");
+                await _dbContext.Pireps.AddAsync(pirep, cancellationToken);
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
@@ -209,7 +186,7 @@ namespace VFR3D.Infrastructure.Services
 
         private async Task PurgeExpiredPirepsAsync(CancellationToken cancellationToken)
         {
-            var thirtyMinutesAgo = DateTime.UtcNow.AddMinutes(-30).ToString("O"); // ISO 8601 format
+            var thirtyMinutesAgo = DateTime.UtcNow.AddMinutes(-30).ToString("O");
 
             var result = await _dbContext.Pireps
                 .Where(p => p.ObservationTime != null && p.ObservationTime.CompareTo(thirtyMinutesAgo) < 0)

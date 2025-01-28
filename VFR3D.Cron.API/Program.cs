@@ -3,11 +3,11 @@ using Microsoft.Extensions.Options;
 using Vfr3d.Domain.Entities;
 using VFR3D.Cron.API.Extensions;
 using VFR3D.Domain.Entities;
-using VFR3D.Infrastructure.Configuration;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Jobs;
 using VFR3D.Infrastructure.Services;
 using VFR3D.Infrastructure.Services.Interfaces;
+using VFR3D.Infrastructure.Settings;
 
 internal class Program
 {
@@ -31,6 +31,7 @@ internal class Program
         builder.Services.AddScoped<IAirportDiagramService, AirportDiagramService>();
         builder.Services.AddScoped<IFaaPublicationCycleService, FaaPublicationCycleService>();
         builder.Services.AddSingleton<IAwsSecretsService, AwsSecretsService>();
+        builder.Services.AddScoped<IAwsInitializationService, AwsInitializationService>();
         builder.Services.AddDbContext<CronServiceDbContext>((serviceProvider, options) =>
         {
             var dbSettings = serviceProvider.GetRequiredService<IOptions<DatabaseSettings>>().Value;
@@ -49,6 +50,7 @@ internal class Program
             }
         }, ServiceLifetime.Scoped);
 
+        builder.Services.AddHostedService<AwsInitializationHostedService>();
         builder.Services.AddHostedService<MetarJob>();
         builder.Services.AddHostedService<TafJob>();
         builder.Services.AddHostedService<PirepJob>();

@@ -13,7 +13,7 @@ namespace VFR3D.Infrastructure.Jobs
         public PirepJob(
             ILogger<PirepJob> logger,
             IServiceProvider serviceProvider)
-            : base("*/5 * * * *", TimeZoneInfo.Utc, logger)  // Runs every 5 minutes
+            : base("*/5 * * * *", TimeZoneInfo.Utc, logger)
         {
             _serviceProvider = serviceProvider;
         }
