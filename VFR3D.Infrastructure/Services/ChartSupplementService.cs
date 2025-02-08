@@ -10,6 +10,7 @@ using VFR3D.Domain.ValueObjects.FaaPublications;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Services.Interfaces;
 using VFR3D.Infrastructure.Settings;
+using VFR3D.Infrastructure.Utilities;
 
 namespace VFR3D.Infrastructure.Services
 {
@@ -48,11 +49,8 @@ namespace VFR3D.Infrastructure.Services
                     throw new Exception("No publication cycle found for Chart Supplements.");
                 }
 
-                var daysSinceKnown = (currentDate - publicationCycle.KnownValidDate).TotalDays;
-                var completeCycles = Math.Floor(daysSinceKnown / publicationCycle.CycleLengthDays);
-                var currentPublicationDate = publicationCycle.KnownValidDate.AddDays(completeCycles * publicationCycle.CycleLengthDays);
-
-                var dateString = FormatDate(currentPublicationDate);
+                var currentPublicationDate = FaaPublicationDateUtils.CalculateCurrentPublicationDate(publicationCycle.KnownValidDate, publicationCycle.CycleLengthDays);
+                var dateString = FaaPublicationDateUtils.FormatDateForChartSupplements(currentPublicationDate);
                 var faaChartSupplementUrl = $"https://aeronav.faa.gov/Upload_313-d/supplements/DCS_{dateString}.zip";
 
                 _logger.LogInformation(
@@ -329,11 +327,6 @@ namespace VFR3D.Infrastructure.Services
             }
 
             throw new ArgumentException($"Invalid file name format: {chartSupplementFileName}");
-        }
-
-        private static string FormatDate(DateTime date)
-        {
-            return date.ToString("yyyyMMdd");
         }
     }
 }

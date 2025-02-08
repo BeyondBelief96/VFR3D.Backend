@@ -7,6 +7,7 @@ using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Jobs;
 using VFR3D.Infrastructure.Services;
 using VFR3D.Infrastructure.Services.Interfaces;
+using VFR3D.Infrastructure.Services.NasrServices;
 using VFR3D.Infrastructure.Settings;
 
 internal class Program
@@ -29,6 +30,8 @@ internal class Program
         builder.Services.AddScoped<IAviationWeatherService<Airsigmet>, AirsigmetService>();
         builder.Services.AddScoped<IChartSupplementService, ChartSupplementService>();
         builder.Services.AddScoped<IAirportDiagramService, AirportDiagramService>();
+        builder.Services.AddScoped<AirportService>();
+        builder.Services.AddScoped<FrequencyService>();
         builder.Services.AddScoped<IFaaPublicationCycleService, FaaPublicationCycleService>();
         builder.Services.AddSingleton<IAwsSecretsService, AwsSecretsService>();
         builder.Services.AddScoped<IAwsInitializationService, AwsInitializationService>();
@@ -57,6 +60,8 @@ internal class Program
         builder.Services.AddHostedService<AirsigmetJob>();
         builder.Services.AddHostedService<ChartSupplementJob>();
         builder.Services.AddHostedService<AirportDiagramJob>();
+        builder.Services.AddHostedService<AirportsJob>();
+        builder.Services.AddHostedService<FrequencyJob>();
         builder.Services.AddAwsServices(builder.Configuration);
         builder.Services.AddHttpClient();
         builder.Services.AddControllers();

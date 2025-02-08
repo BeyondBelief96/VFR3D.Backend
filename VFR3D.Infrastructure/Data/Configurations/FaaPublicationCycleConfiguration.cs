@@ -17,11 +17,11 @@ namespace VFR3D.Infrastructure.Data.Configurations
             builder.HasData(
             new FaaPublicationCycle
             {
-                 Id = 1,
-                 PublicationType = PublicationType.ChartSupplement,
-                 CycleLengthDays = 56,
-                 KnownValidDate = new DateTime(2024, 12, 26, 0, 0, 0, DateTimeKind.Utc),
-                 LastSuccessfulUpdate = null
+                Id = 1,
+                PublicationType = PublicationType.ChartSupplement,
+                CycleLengthDays = 56,
+                KnownValidDate = new DateTime(2024, 12, 26, 0, 0, 0, DateTimeKind.Utc),
+                LastSuccessfulUpdate = null
             },
             new FaaPublicationCycle
             {
@@ -30,6 +30,13 @@ namespace VFR3D.Infrastructure.Data.Configurations
                 CycleLengthDays = 28,
                 KnownValidDate = new DateTime(2024, 12, 26, 0, 0, 0, DateTimeKind.Utc),
                 LastSuccessfulUpdate = null
+            },
+            new FaaPublicationCycle
+            {
+                Id = 3,
+                PublicationType = PublicationType.NasrSubscription,
+                CycleLengthDays = 28,
+                KnownValidDate = new DateTime(2025, 1, 23, 0, 0, 0, DateTimeKind.Utc)
             });
         }
     }

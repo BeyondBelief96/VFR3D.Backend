@@ -10,6 +10,7 @@ using VFR3D.Infrastructure.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using VFR3D.Domain.ValueObjects.FaaPublications;
 using VFR3D.Infrastructure.Settings;
+using VFR3D.Infrastructure.Utilities;
 
 namespace VFR3D.Infrastructure.Services
 {
@@ -48,11 +49,8 @@ namespace VFR3D.Infrastructure.Services
                     throw new Exception("No publication cycle found for Airport Diagrams.");
                 }
 
-                var daysSinceKnown = (currentDate - publicationCycle.KnownValidDate).TotalDays;
-                var completeCycles = Math.Floor(daysSinceKnown / publicationCycle.CycleLengthDays);
-                var currentPublicationDate = publicationCycle.KnownValidDate.AddDays(completeCycles * publicationCycle.CycleLengthDays);
-
-                var dateString = FormatDate(currentPublicationDate);
+                var currentPublicationDate = FaaPublicationDateUtils.CalculateCurrentPublicationDate(publicationCycle.KnownValidDate, publicationCycle.CycleLengthDays);
+                var dateString = FaaPublicationDateUtils.FormatDateForAirportDiagrams(currentPublicationDate);
                 var regions = new[] { "A", "B", "C", "D", "E" };
 
                 await DeleteExistingS3Files(cancellationToken);
@@ -218,11 +216,6 @@ namespace VFR3D.Infrastructure.Services
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-
-        private static string FormatDate(DateTime date)
-        {
-            return date.ToString("yyMMdd");
         }
     }
 }

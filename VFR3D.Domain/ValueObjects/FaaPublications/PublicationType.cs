@@ -4,5 +4,6 @@
     {
         ChartSupplement = 0,
         AirportDiagram = 1,
+        NasrSubscription
     }
 }

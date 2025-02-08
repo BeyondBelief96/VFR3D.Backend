@@ -47,7 +47,7 @@ namespace VFR3D.Infrastructure.Services
 
                     if (!cancellationToken.IsCancellationRequested)
                     {
-                        await ScheduleJob(cancellationToken);    // reschedule next
+                        await ScheduleJob(cancellationToken);
                     }
                 };
                 _timer.Start();

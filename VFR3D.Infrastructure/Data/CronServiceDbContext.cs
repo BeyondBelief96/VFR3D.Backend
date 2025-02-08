@@ -23,6 +23,10 @@ namespace VFR3D.Infrastructure.Data
 
         public DbSet<AirportDiagram> AirportDiagrams => Set<AirportDiagram>();
 
+        public DbSet<Airport> Airports => Set<Airport>();
+
+        public DbSet<CommunicationFrequency> CommunicationFrequency => Set<CommunicationFrequency>();
+
         public DbSet<FaaPublicationCycle> FaaPublicationCycles => Set<FaaPublicationCycle>();   
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

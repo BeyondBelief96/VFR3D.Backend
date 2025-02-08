@@ -1,5 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Amazon.SecretsManager.Model;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VFR3D.Domain.Entities;
 using VFR3D.Domain.ValueObjects.FaaPublications;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Services.Interfaces;
@@ -15,6 +17,15 @@ namespace VFR3D.Infrastructure.Services
         {
             _dbContext = dbContext;
             _logger = logger;
+        }
+
+        public async Task<FaaPublicationCycle?> GetPublicationCycleAsync(PublicationType type)
+        {
+                var publicationCycle = await _dbContext.FaaPublicationCycles
+                    .FirstOrDefaultAsync(p => p.PublicationType == type);
+
+                return publicationCycle ?? throw new ResourceNotFoundException($"No publication cycle found of type {type}.");
+            
         }
 
         public async Task<bool> ShouldRunUpdateAsync(PublicationType publicationType, DateTime currentDate)

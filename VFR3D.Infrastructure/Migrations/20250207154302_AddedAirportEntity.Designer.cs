@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VFR3D.Infrastructure.Data;
@@ -11,9 +12,11 @@ using VFR3D.Infrastructure.Data;
 namespace VFR3D.Infrastructure.Migrations
 {
     [DbContext(typeof(CronServiceDbContext))]
-    partial class CronServiceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250207154302_AddedAirportEntity")]
+    partial class AddedAirportEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -40,19 +43,29 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnType("varchar(3)")
                         .HasColumnName("ado_code");
 
+                    b.Property<int?>("AirTaxiOps")
+                        .HasColumnType("integer")
+                        .HasColumnName("air_taxi_ops");
+
                     b.Property<string>("AirframeRepairSerCode")
                         .HasColumnType("varchar(5)")
                         .HasColumnName("airframe_repair_ser_code");
+
+                    b.Property<DateTime?>("AnnualOpsDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("annual_ops_date");
 
                     b.Property<string>("ArptElevSource")
                         .HasColumnType("varchar(16)")
                         .HasColumnName("arpt_elev_source");
 
                     b.Property<string>("ArptId")
+                        .IsRequired()
                         .HasColumnType("varchar(4)")
                         .HasColumnName("arpt_id");
 
                     b.Property<string>("ArptName")
+                        .IsRequired()
                         .HasColumnType("varchar(50)")
                         .HasColumnName("arpt_name");
 
@@ -61,6 +74,7 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnName("arpt_psn_source");
 
                     b.Property<string>("ArptStatus")
+                        .IsRequired()
                         .HasColumnType("varchar(2)")
                         .HasColumnName("arpt_status");
 
@@ -75,6 +89,34 @@ namespace VFR3D.Infrastructure.Migrations
                     b.Property<string>("AttendanceMonth")
                         .HasColumnType("varchar(50)")
                         .HasColumnName("attendance_month");
+
+                    b.Property<int?>("BasedGliders")
+                        .HasColumnType("integer")
+                        .HasColumnName("based_gliders");
+
+                    b.Property<int?>("BasedHel")
+                        .HasColumnType("integer")
+                        .HasColumnName("based_hel");
+
+                    b.Property<int?>("BasedJetEng")
+                        .HasColumnType("integer")
+                        .HasColumnName("based_jet_eng");
+
+                    b.Property<int?>("BasedMilAcft")
+                        .HasColumnType("integer")
+                        .HasColumnName("based_mil_acft");
+
+                    b.Property<int?>("BasedMultiEng")
+                        .HasColumnType("integer")
+                        .HasColumnName("based_multi_eng");
+
+                    b.Property<int?>("BasedSingleEng")
+                        .HasColumnType("integer")
+                        .HasColumnName("based_single_eng");
+
+                    b.Property<int?>("BasedUltralightAcft")
+                        .HasColumnType("integer")
+                        .HasColumnName("based_ultralight_acft");
 
                     b.Property<string>("BcnLensColor")
                         .HasColumnType("varchar(3)")
@@ -97,8 +139,17 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnName("chart_name");
 
                     b.Property<string>("City")
+                        .IsRequired()
                         .HasColumnType("varchar(40)")
                         .HasColumnName("city");
+
+                    b.Property<int?>("CommercialOps")
+                        .HasColumnType("integer")
+                        .HasColumnName("commercial_ops");
+
+                    b.Property<int?>("CommuterOps")
+                        .HasColumnType("integer")
+                        .HasColumnName("commuter_ops");
 
                     b.Property<string>("ContactAddress1")
                         .HasColumnType("varchar(35)")
@@ -141,14 +192,17 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnName("contr_fuel_avbl");
 
                     b.Property<string>("CountryCode")
+                        .IsRequired()
                         .HasColumnType("varchar(2)")
                         .HasColumnName("country_code");
 
                     b.Property<string>("CountyAssocState")
+                        .IsRequired()
                         .HasColumnType("varchar(2)")
                         .HasColumnName("county_assoc_state");
 
                     b.Property<string>("CountyName")
+                        .IsRequired()
                         .HasColumnType("varchar(21)")
                         .HasColumnName("county_name");
 
@@ -172,7 +226,7 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("eff_date");
 
-                    b.Property<decimal?>("Elev")
+                    b.Property<decimal>("Elev")
                         .HasColumnType("decimal(6,1)")
                         .HasColumnName("elev");
 
@@ -185,14 +239,17 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnName("elevation_src_date");
 
                     b.Property<string>("FacilityUseCode")
+                        .IsRequired()
                         .HasColumnType("varchar(2)")
                         .HasColumnName("facility_use_code");
 
                     b.Property<string>("FssId")
+                        .IsRequired()
                         .HasColumnType("varchar(4)")
                         .HasColumnName("fss_id");
 
                     b.Property<string>("FssName")
+                        .IsRequired()
                         .HasColumnType("varchar(30)")
                         .HasColumnName("fss_name");
 
@@ -213,8 +270,13 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnName("inspect_method_code");
 
                     b.Property<string>("InspectorCode")
+                        .IsRequired()
                         .HasColumnType("varchar(1)")
                         .HasColumnName("inspector_code");
+
+                    b.Property<int?>("ItnrntOps")
+                        .HasColumnType("integer")
+                        .HasColumnName("itnrnt_ops");
 
                     b.Property<string>("JointUseFlag")
                         .HasColumnType("varchar(1)")
@@ -228,25 +290,9 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_inspection");
 
-                    b.Property<decimal?>("LatDecimal")
+                    b.Property<decimal>("LatDecimal")
                         .HasColumnType("decimal(10,8)")
                         .HasColumnName("lat_decimal");
-
-                    b.Property<int?>("LatDeg")
-                        .HasColumnType("int")
-                        .HasColumnName("lat_deg");
-
-                    b.Property<string>("LatHemis")
-                        .HasColumnType("varchar(1)")
-                        .HasColumnName("lat_hemis");
-
-                    b.Property<int?>("LatMin")
-                        .HasColumnType("int")
-                        .HasColumnName("lat_min");
-
-                    b.Property<decimal?>("LatSec")
-                        .HasColumnType("decimal(6,2)")
-                        .HasColumnName("lat_sec");
 
                     b.Property<string>("LgtSked")
                         .HasColumnType("varchar(7)")
@@ -260,25 +306,13 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnType("varchar(1)")
                         .HasColumnName("lndg_rights_flag");
 
-                    b.Property<decimal?>("LongDecimal")
+                    b.Property<int?>("LocalOps")
+                        .HasColumnType("integer")
+                        .HasColumnName("local_ops");
+
+                    b.Property<decimal>("LongDecimal")
                         .HasColumnType("decimal(11,8)")
                         .HasColumnName("long_decimal");
-
-                    b.Property<int?>("LongDeg")
-                        .HasColumnType("int")
-                        .HasColumnName("long_deg");
-
-                    b.Property<string>("LongHemis")
-                        .HasColumnType("varchar(1)")
-                        .HasColumnName("long_hemis");
-
-                    b.Property<int?>("LongMin")
-                        .HasColumnType("int")
-                        .HasColumnName("long_min");
-
-                    b.Property<decimal?>("LongSec")
-                        .HasColumnType("decimal(6,2)")
-                        .HasColumnName("long_sec");
 
                     b.Property<string>("MagHemis")
                         .HasColumnType("varchar(1)")
@@ -296,11 +330,16 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnType("varchar(1)")
                         .HasColumnName("medical_use_flag");
 
+                    b.Property<int?>("MilAcftOps")
+                        .HasColumnType("integer")
+                        .HasColumnName("mil_acft_ops");
+
                     b.Property<string>("MilLndgFlag")
                         .HasColumnType("varchar(1)")
                         .HasColumnName("mil_lndg_flag");
 
                     b.Property<string>("MinOpNetwork")
+                        .IsRequired()
                         .HasColumnType("varchar(1)")
                         .HasColumnName("min_op_network");
 
@@ -321,6 +360,7 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnName("other_services");
 
                     b.Property<string>("OwnershipTypeCode")
+                        .IsRequired()
                         .HasColumnType("varchar(2)")
                         .HasColumnName("ownership_type_code");
 
@@ -337,6 +377,7 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnName("region_code");
 
                     b.Property<string>("RespArtccId")
+                        .IsRequired()
                         .HasColumnType("varchar(4)")
                         .HasColumnName("resp_artcc_id");
 
@@ -382,6 +423,7 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnName("trns_strg_tie_flag");
 
                     b.Property<string>("TwrTypeCode")
+                        .IsRequired()
                         .HasColumnType("varchar(12)")
                         .HasColumnName("twr_type_code");
 
@@ -540,131 +582,6 @@ namespace VFR3D.Infrastructure.Migrations
                     b.HasIndex("NavigationalAidName");
 
                     b.ToTable("chart_supplement");
-                });
-
-            modelBuilder.Entity("VFR3D.Domain.Entities.CommunicationFrequency", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("ArtccOrFssId")
-                        .HasMaxLength(4)
-                        .HasColumnType("varchar(4)")
-                        .HasColumnName("artcc_or_fss_id");
-
-                    b.Property<string>("Cpdlc")
-                        .HasMaxLength(100)
-                        .HasColumnType("varchar(100)")
-                        .HasColumnName("cpdlc");
-
-                    b.Property<DateTime>("EffectiveDate")
-                        .HasColumnType("date")
-                        .HasColumnName("effective_date");
-
-                    b.Property<string>("FacilityCode")
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)")
-                        .HasColumnName("facility_code");
-
-                    b.Property<string>("FacilityName")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("facility_name");
-
-                    b.Property<string>("FacilityType")
-                        .IsRequired()
-                        .HasMaxLength(12)
-                        .HasColumnType("varchar(12)")
-                        .HasColumnName("facility_type");
-
-                    b.Property<string>("Frequency")
-                        .HasMaxLength(40)
-                        .HasColumnType("varchar(40)")
-                        .HasColumnName("frequency");
-
-                    b.Property<string>("FrequencyUse")
-                        .HasMaxLength(600)
-                        .HasColumnType("varchar(600)")
-                        .HasColumnName("frequency_use");
-
-                    b.Property<decimal?>("Latitude")
-                        .HasColumnType("decimal(10,8)")
-                        .HasColumnName("latitude");
-
-                    b.Property<decimal?>("Longitude")
-                        .HasColumnType("decimal(11,8)")
-                        .HasColumnName("longitude");
-
-                    b.Property<string>("PrimaryApproachRadioCall")
-                        .HasMaxLength(26)
-                        .HasColumnType("varchar(26)")
-                        .HasColumnName("primary_approach_radio_call");
-
-                    b.Property<string>("Remark")
-                        .HasMaxLength(1500)
-                        .HasColumnType("varchar(1500)")
-                        .HasColumnName("remark");
-
-                    b.Property<string>("Sectorization")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("sectorization");
-
-                    b.Property<string>("ServicedCity")
-                        .HasMaxLength(40)
-                        .HasColumnType("varchar(40)")
-                        .HasColumnName("serviced_city");
-
-                    b.Property<string>("ServicedCountry")
-                        .HasMaxLength(2)
-                        .HasColumnType("varchar(2)")
-                        .HasColumnName("serviced_country");
-
-                    b.Property<string>("ServicedFacility")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)")
-                        .HasColumnName("serviced_facility");
-
-                    b.Property<string>("ServicedFacilityName")
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("serviced_facility_name");
-
-                    b.Property<string>("ServicedSiteType")
-                        .HasMaxLength(25)
-                        .HasColumnType("varchar(25)")
-                        .HasColumnName("serviced_site_type");
-
-                    b.Property<string>("ServicedState")
-                        .HasMaxLength(2)
-                        .HasColumnType("varchar(2)")
-                        .HasColumnName("serviced_state");
-
-                    b.Property<string>("TowerHours")
-                        .HasMaxLength(200)
-                        .HasColumnType("varchar(200)")
-                        .HasColumnName("tower_hours");
-
-                    b.Property<string>("TowerOrCommCall")
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)")
-                        .HasColumnName("tower_or_comm_call");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FacilityCode");
-
-                    b.HasIndex("ServicedFacility");
-
-                    b.HasIndex("ServicedState");
-
-                    b.HasIndex("FacilityCode", "ServicedFacility", "ServicedSiteType", "ServicedState", "Frequency", "FrequencyUse", "Sectorization")
-                        .IsUnique()
-                        .HasFilter("\"facility_code\" IS NOT NULL AND \"serviced_facility\" IS NOT NULL AND \"serviced_site_type\" IS NOT NULL AND \"serviced_state\" IS NOT NULL AND \"frequency\" IS NOT NULL AND \"frequency_use\" IS NOT NULL AND \"sectorization\" IS NOT NULL");
-
-                    b.ToTable("communication_frequencies", (string)null);
                 });
 
             modelBuilder.Entity("VFR3D.Domain.Entities.FaaPublicationCycle", b =>

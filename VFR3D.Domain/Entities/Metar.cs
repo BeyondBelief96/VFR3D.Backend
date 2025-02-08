@@ -1,5 +1,4 @@
-﻿// Vfr3d.Domain/Entities/Metar.cs
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using VFR3D.Domain.ValueObjects.Metar;
 
