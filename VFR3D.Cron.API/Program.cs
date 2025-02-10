@@ -57,7 +57,7 @@ internal class Program
             }
         }, ServiceLifetime.Scoped);
 
-        builder.Services.AddHostedService<AwsInitializationHostedService>();
+        builder.Services.AddHostedService<AwsInitializationJob>();
         builder.Services.AddHostedService<MetarJob>();
         builder.Services.AddHostedService<TafJob>();
         builder.Services.AddHostedService<PirepJob>();

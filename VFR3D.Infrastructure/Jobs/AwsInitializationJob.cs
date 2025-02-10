@@ -3,16 +3,16 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using VFR3D.Infrastructure.Services.Interfaces;
 
-namespace VFR3D.Infrastructure.Services
+namespace VFR3D.Infrastructure.Jobs
 {
-    public class AwsInitializationHostedService : IHostedService
+    public class AwsInitializationJob : IHostedService
     {
         private readonly IServiceProvider _serviceProvider;
-        private readonly ILogger<AwsInitializationHostedService> _logger;
+        private readonly ILogger<AwsInitializationJob> _logger;
 
-        public AwsInitializationHostedService(
+        public AwsInitializationJob(
             IServiceProvider serviceProvider,
-            ILogger<AwsInitializationHostedService> logger)
+            ILogger<AwsInitializationJob> logger)
         {
             _serviceProvider = serviceProvider;
             _logger = logger;
