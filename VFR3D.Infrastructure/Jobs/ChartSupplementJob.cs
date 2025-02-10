@@ -10,7 +10,7 @@ namespace VFR3D.Infrastructure.Jobs
     {
         private IServiceProvider _serviceProvider;
 
-        public ChartSupplementJob(IServiceProvider serviceProvider, ILogger<ChartSupplementJob> logger) : base("*/2 * * * *", TimeZoneInfo.Utc, logger)
+        public ChartSupplementJob(IServiceProvider serviceProvider, ILogger<ChartSupplementJob> logger) : base("0 0 * * *", TimeZoneInfo.Utc, logger)
         {
             _serviceProvider = serviceProvider;
         }

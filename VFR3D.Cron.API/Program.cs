@@ -23,6 +23,8 @@ internal class Program
             .AddEnvironmentVariables(prefix: "VFR3D_")
             .AddUserSecrets<Program>(optional: true);
 
+        builder.Logging.AddAzureWebAppDiagnostics();
+
         builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"));
         builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
         builder.Services.AddScoped<IAviationWeatherService<Metar>, MetarService>();
