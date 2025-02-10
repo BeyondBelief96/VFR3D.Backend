@@ -6,6 +6,7 @@ using VFR3D.Domain.Entities;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Jobs;
 using VFR3D.Infrastructure.Services;
+using VFR3D.Infrastructure.Services.ArcgisServices;
 using VFR3D.Infrastructure.Services.Interfaces;
 using VFR3D.Infrastructure.Services.NasrServices;
 using VFR3D.Infrastructure.Settings;
@@ -32,6 +33,8 @@ internal class Program
         builder.Services.AddScoped<IAirportDiagramService, AirportDiagramService>();
         builder.Services.AddScoped<AirportService>();
         builder.Services.AddScoped<FrequencyService>();
+        builder.Services.AddScoped<IAirspaceService<Airspace>, AirspaceService>();
+        builder.Services.AddScoped<IAirspaceService<SpecialUseAirspace>, SpecialUseAirspaceService>();
         builder.Services.AddScoped<IFaaPublicationCycleService, FaaPublicationCycleService>();
         builder.Services.AddSingleton<IAwsSecretsService, AwsSecretsService>();
         builder.Services.AddScoped<IAwsInitializationService, AwsInitializationService>();
@@ -44,6 +47,7 @@ internal class Program
                 {
                     npgsqlOptions.EnableRetryOnFailure(3);
                     npgsqlOptions.CommandTimeout(30);
+                    npgsqlOptions.UseNetTopologySuite();
                 });
 
             if (builder.Environment.IsDevelopment())
@@ -62,6 +66,8 @@ internal class Program
         builder.Services.AddHostedService<AirportDiagramJob>();
         builder.Services.AddHostedService<AirportsJob>();
         builder.Services.AddHostedService<FrequencyJob>();
+        builder.Services.AddHostedService<AirspaceJob>();
+        builder.Services.AddHostedService<SpecialUseAirspaceJob>();
         builder.Services.AddAwsServices(builder.Configuration);
         builder.Services.AddHttpClient();
         builder.Services.AddControllers();

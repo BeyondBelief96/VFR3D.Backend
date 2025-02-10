@@ -17,16 +17,14 @@ namespace VFR3D.Infrastructure.Data.Configurations
                 PropertyNameCaseInsensitive = true
             };
 
-            // String length constraints
             builder.Property(e => e.StationId).HasMaxLength(4);
             builder.Property(e => e.WindDirDegrees).HasMaxLength(3);
             builder.Property(e => e.FlightCategory).HasMaxLength(4);
             builder.Property(e => e.MetarType).HasMaxLength(5);
 
-            // Indexes for performance
             builder.HasIndex(e => e.StationId);
             builder.HasIndex(e => e.ObservationTime);
-            // Add composite index for station and observation time
+
             builder.HasIndex(e => new { e.StationId, e.ObservationTime });
 
             // JSON conversions

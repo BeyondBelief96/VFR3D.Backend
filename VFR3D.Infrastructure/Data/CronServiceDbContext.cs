@@ -27,6 +27,10 @@ namespace VFR3D.Infrastructure.Data
 
         public DbSet<CommunicationFrequency> CommunicationFrequency => Set<CommunicationFrequency>();
 
+        public DbSet<Airspace> Airspaces => Set<Airspace>();
+
+        public DbSet<SpecialUseAirspace> SpecialUseAirspaces => Set<SpecialUseAirspace>();
+
         public DbSet<FaaPublicationCycle> FaaPublicationCycles => Set<FaaPublicationCycle>();   
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

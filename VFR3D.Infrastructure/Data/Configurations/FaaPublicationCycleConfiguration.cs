@@ -38,6 +38,14 @@ namespace VFR3D.Infrastructure.Data.Configurations
                 CycleLengthDays = 28,
                 KnownValidDate = new DateTime(2025, 1, 23, 0, 0, 0, DateTimeKind.Utc)
             });
+            new FaaPublicationCycle
+            {
+                Id = 4,
+                PublicationType = PublicationType.Airspaces,
+                CycleLengthDays = 56,
+                KnownValidDate = new DateTime(2024, 12, 26, 0, 0, 0, DateTimeKind.Utc),
+                LastSuccessfulUpdate = null
+            };
         }
     }
 }

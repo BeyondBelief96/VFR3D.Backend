@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using VFR3D.Domain.ValueObjects.FaaPublications;
 using VFR3D.Infrastructure.Services;
 using VFR3D.Infrastructure.Services.Interfaces;
+using VFR3D.Infrastructure.Services.NasrServices;
 
 namespace VFR3D.Infrastructure.Jobs
 {

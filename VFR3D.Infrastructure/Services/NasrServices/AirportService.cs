@@ -5,7 +5,7 @@ using VFR3D.Infrastructure.Services.Enums;
 using VFR3D.Infrastructure.Services.Interfaces;
 using VFR3D.Infrastructure.Services.NasrServices.Mappings;
 
-namespace VFR3D.Infrastructure.Services
+namespace VFR3D.Infrastructure.Services.NasrServices
 {
     public class AirportService : FaaNasrBaseService<Airport>
     {

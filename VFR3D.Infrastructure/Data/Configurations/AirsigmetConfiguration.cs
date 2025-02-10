@@ -17,46 +17,38 @@ namespace VFR3D.Infrastructure.Data.Configurations
                 PropertyNameCaseInsensitive = true
             };
 
-            // Indexes for querying
             builder.HasIndex(e => e.ValidTimeFrom);
             builder.HasIndex(e => e.ValidTimeTo);
             builder.HasIndex(e => e.AirsigmetType);
 
-            // Configure JSON conversions
             builder.Property(x => x.Altitude)
                 .HasConversion(
-                    v => JsonSerializer.Serialize(v ?? new AirsigmetAltitude(), jsonOptions),
-                    v => JsonSerializer.Deserialize<AirsigmetAltitude>(v ?? "{}", jsonOptions),
+                    v => v == null ? "{}" : JsonSerializer.Serialize(v, jsonOptions),
+                    v => string.IsNullOrEmpty(v) ? new AirsigmetAltitude() : JsonSerializer.Deserialize<AirsigmetAltitude>(v, jsonOptions) ?? new AirsigmetAltitude(),
                     new ValueComparer<AirsigmetAltitude>(
-                        (l, r) => JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions),
+                        (l, r) => (l == null && r == null) || (l != null && r != null && JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions)),
                         v => v == null ? 0 : JsonSerializer.Serialize(v, jsonOptions).GetHashCode(),
-                        v => JsonSerializer.Deserialize<AirsigmetAltitude>(
-                            JsonSerializer.Serialize(v ?? new AirsigmetAltitude(), jsonOptions),
-                            jsonOptions)
+                        v => v == null ? new AirsigmetAltitude() : JsonSerializer.Deserialize<AirsigmetAltitude>(JsonSerializer.Serialize(v, jsonOptions), jsonOptions) ?? new AirsigmetAltitude()
                     ));
 
             builder.Property(x => x.Hazard)
                 .HasConversion(
-                    v => JsonSerializer.Serialize(v ?? new AirsigmetHazard(), jsonOptions),
-                    v => JsonSerializer.Deserialize<AirsigmetHazard>(v ?? "{}", jsonOptions),
+                    v => v == null ? "{}" : JsonSerializer.Serialize(v, jsonOptions),
+                    v => string.IsNullOrEmpty(v) ? new AirsigmetHazard() : JsonSerializer.Deserialize<AirsigmetHazard>(v, jsonOptions) ?? new AirsigmetHazard(),
                     new ValueComparer<AirsigmetHazard>(
-                        (l, r) => JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions),
+                        (l, r) => (l == null && r == null) || (l != null && r != null && JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions)),
                         v => v == null ? 0 : JsonSerializer.Serialize(v, jsonOptions).GetHashCode(),
-                        v => JsonSerializer.Deserialize<AirsigmetHazard>(
-                            JsonSerializer.Serialize(v ?? new AirsigmetHazard(), jsonOptions),
-                            jsonOptions)
+                        v => v == null ? new AirsigmetHazard() : JsonSerializer.Deserialize<AirsigmetHazard>(JsonSerializer.Serialize(v, jsonOptions), jsonOptions) ?? new AirsigmetHazard()
                     ));
 
             builder.Property(x => x.Areas)
                 .HasConversion(
-                    v => JsonSerializer.Serialize(v ?? new List<AirsigmetArea>(), jsonOptions),
-                    v => JsonSerializer.Deserialize<List<AirsigmetArea>>(v ?? "[]", jsonOptions),
+                    v => v == null ? "[]" : JsonSerializer.Serialize(v, jsonOptions),
+                    v => string.IsNullOrEmpty(v) ? new List<AirsigmetArea>() : JsonSerializer.Deserialize<List<AirsigmetArea>>(v, jsonOptions) ?? new List<AirsigmetArea>(),
                     new ValueComparer<List<AirsigmetArea>>(
-                        (l, r) => JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions),
+                        (l, r) => (l == null && r == null) || (l != null && r != null && JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions)),
                         v => v == null ? 0 : JsonSerializer.Serialize(v, jsonOptions).GetHashCode(),
-                        v => JsonSerializer.Deserialize<List<AirsigmetArea>>(
-                            JsonSerializer.Serialize(v ?? new List<AirsigmetArea>(), jsonOptions),
-                            jsonOptions)
+                        v => v == null ? new List<AirsigmetArea>() : JsonSerializer.Deserialize<List<AirsigmetArea>>(JsonSerializer.Serialize(v, jsonOptions), jsonOptions) ?? new List<AirsigmetArea>()
                     ));
         }
     }

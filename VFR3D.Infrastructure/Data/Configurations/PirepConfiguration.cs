@@ -17,70 +17,48 @@ namespace VFR3D.Infrastructure.Data.Configurations
                 PropertyNameCaseInsensitive = true
             };
 
-            // Indexes for better query performance
             builder.HasIndex(e => e.ObservationTime);
             builder.HasIndex(e => e.ReceiptTime);
             builder.HasIndex(e => new { e.Latitude, e.Longitude });
 
-            // JSON conversions with value comparers
             builder.Property(x => x.QualityControlFlags)
                 .HasConversion(
-                    v => JsonSerializer.Serialize(v ?? new PirepQualityControlFlags(), jsonOptions),
-                    v => JsonSerializer.Deserialize<PirepQualityControlFlags>(v ?? "{}", jsonOptions),
+                    v => v == null ? "{}" : JsonSerializer.Serialize(v, jsonOptions),
+                    v => string.IsNullOrEmpty(v) ? new PirepQualityControlFlags() : JsonSerializer.Deserialize<PirepQualityControlFlags>(v, jsonOptions) ?? new PirepQualityControlFlags(),
                     new ValueComparer<PirepQualityControlFlags>(
-                        (l, r) => l == null && r == null ||
-                                 (l != null && r != null &&
-                                  JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions)),
+                        (l, r) => (l == null && r == null) || (l != null && r != null && JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions)),
                         v => v == null ? 0 : JsonSerializer.Serialize(v, jsonOptions).GetHashCode(),
-                        v => v == null ? null :
-                             JsonSerializer.Deserialize<PirepQualityControlFlags>(
-                                 JsonSerializer.Serialize(v ?? new PirepQualityControlFlags(), jsonOptions),
-                                 jsonOptions)
+                        v => v == null ? new PirepQualityControlFlags() : JsonSerializer.Deserialize<PirepQualityControlFlags>(JsonSerializer.Serialize(v, jsonOptions), jsonOptions) ?? new PirepQualityControlFlags()
                     ));
 
             builder.Property(x => x.SkyConditions)
                 .HasConversion(
-                    v => JsonSerializer.Serialize(v ?? new List<PirepSkyCondition>(), jsonOptions),
-                    v => JsonSerializer.Deserialize<List<PirepSkyCondition>>(v ?? "[]", jsonOptions),
+                    v => v == null ? "[]" : JsonSerializer.Serialize(v, jsonOptions),
+                    v => string.IsNullOrEmpty(v) ? new List<PirepSkyCondition>() : JsonSerializer.Deserialize<List<PirepSkyCondition>>(v, jsonOptions) ?? new List<PirepSkyCondition>(),
                     new ValueComparer<List<PirepSkyCondition>>(
-                        (l, r) => l == null && r == null ||
-                                 (l != null && r != null &&
-                                  JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions)),
+                        (l, r) => (l == null && r == null) || (l != null && r != null && JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions)),
                         v => v == null ? 0 : JsonSerializer.Serialize(v, jsonOptions).GetHashCode(),
-                        v => v == null ? null :
-                             JsonSerializer.Deserialize<List<PirepSkyCondition>>(
-                                 JsonSerializer.Serialize(v ?? new List<PirepSkyCondition>(), jsonOptions),
-                                 jsonOptions)
+                        v => v == null ? new List<PirepSkyCondition>() : JsonSerializer.Deserialize<List<PirepSkyCondition>>(JsonSerializer.Serialize(v, jsonOptions), jsonOptions) ?? new List<PirepSkyCondition>()
                     ));
 
             builder.Property(x => x.TurbulenceConditions)
                 .HasConversion(
-                    v => JsonSerializer.Serialize(v ?? new List<PirepTurbulenceCondition>(), jsonOptions),
-                    v => JsonSerializer.Deserialize<List<PirepTurbulenceCondition>>(v ?? "[]", jsonOptions),
+                    v => v == null ? "[]" : JsonSerializer.Serialize(v, jsonOptions),
+                    v => string.IsNullOrEmpty(v) ? new List<PirepTurbulenceCondition>() : JsonSerializer.Deserialize<List<PirepTurbulenceCondition>>(v, jsonOptions) ?? new List<PirepTurbulenceCondition>(),
                     new ValueComparer<List<PirepTurbulenceCondition>>(
-                        (l, r) => l == null && r == null ||
-                                 (l != null && r != null &&
-                                  JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions)),
+                        (l, r) => (l == null && r == null) || (l != null && r != null && JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions)),
                         v => v == null ? 0 : JsonSerializer.Serialize(v, jsonOptions).GetHashCode(),
-                        v => v == null ? null :
-                             JsonSerializer.Deserialize<List<PirepTurbulenceCondition>>(
-                                 JsonSerializer.Serialize(v ?? new List<PirepTurbulenceCondition>(), jsonOptions),
-                                 jsonOptions)
+                        v => v == null ? new List<PirepTurbulenceCondition>() : JsonSerializer.Deserialize<List<PirepTurbulenceCondition>>(JsonSerializer.Serialize(v, jsonOptions), jsonOptions) ?? new List<PirepTurbulenceCondition>()
                     ));
 
             builder.Property(x => x.IcingConditions)
                 .HasConversion(
-                    v => JsonSerializer.Serialize(v ?? new List<PirepIcingCondition>(), jsonOptions),
-                    v => JsonSerializer.Deserialize<List<PirepIcingCondition>>(v ?? "[]", jsonOptions),
+                    v => v == null ? "[]" : JsonSerializer.Serialize(v, jsonOptions),
+                    v => string.IsNullOrEmpty(v) ? new List<PirepIcingCondition>() : JsonSerializer.Deserialize<List<PirepIcingCondition>>(v, jsonOptions) ?? new List<PirepIcingCondition>(),
                     new ValueComparer<List<PirepIcingCondition>>(
-                        (l, r) => l == null && r == null ||
-                                 (l != null && r != null &&
-                                  JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions)),
+                        (l, r) => (l == null && r == null) || (l != null && r != null && JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions)),
                         v => v == null ? 0 : JsonSerializer.Serialize(v, jsonOptions).GetHashCode(),
-                        v => v == null ? null :
-                             JsonSerializer.Deserialize<List<PirepIcingCondition>>(
-                                 JsonSerializer.Serialize(v ?? new List<PirepIcingCondition>(), jsonOptions),
-                                 jsonOptions)
+                        v => v == null ? new List<PirepIcingCondition>() : JsonSerializer.Deserialize<List<PirepIcingCondition>>(JsonSerializer.Serialize(v, jsonOptions), jsonOptions) ?? new List<PirepIcingCondition>()
                     ));
         }
     }
