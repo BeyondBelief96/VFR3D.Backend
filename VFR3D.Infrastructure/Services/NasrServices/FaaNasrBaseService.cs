@@ -2,14 +2,14 @@
 using Microsoft.Extensions.Logging;
 using System.IO.Compression;
 using VFR3D.Infrastructure.Data;
-using VFR3D.Infrastructure.Services.Enums;
 using CsvHelper;
 using System.Globalization;
 using VFR3D.Infrastructure.Utilities;
-using VFR3D.Infrastructure.Services.Interfaces;
 using VFR3D.Domain.ValueObjects.FaaPublications;
 using CsvHelper.Configuration;
 using VFR3D.Infrastructure.Services.NasrServices.Utils;
+using VFR3D.Infrastructure.Enums;
+using VFR3D.Infrastructure.Interfaces;
 
 namespace VFR3D.Infrastructure.Services.NasrServices
 {

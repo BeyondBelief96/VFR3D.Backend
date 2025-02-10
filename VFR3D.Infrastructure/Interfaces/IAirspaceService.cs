@@ -1,4 +1,4 @@
-﻿namespace VFR3D.Infrastructure.Services.Interfaces
+﻿namespace VFR3D.Infrastructure.Interfaces
 {
     public interface IAirspaceService<TEntity>
     {

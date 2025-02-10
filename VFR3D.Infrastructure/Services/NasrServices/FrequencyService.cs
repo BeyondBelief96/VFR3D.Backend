@@ -1,26 +1,32 @@
 ﻿using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
 using VFR3D.Infrastructure.Data;
-using VFR3D.Infrastructure.Services.Enums;
-using VFR3D.Infrastructure.Services.Interfaces;
+using VFR3D.Infrastructure.Enums;
+using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Services.NasrServices.Mappings;
 
 namespace VFR3D.Infrastructure.Services.NasrServices
 {
-    public class AirportService : FaaNasrBaseService<Airport>
+    public class FrequencyService : FaaNasrBaseService<CommunicationFrequency>
     {
-        protected override NasrDataType DataType => NasrDataType.APT;
-        protected override string[] UniqueIdentifiers => new[] { "SiteNo" };
+        protected override NasrDataType DataType => NasrDataType.FRQ;
+        protected override string[] UniqueIdentifiers => new[] {
+            "FacilityCode",
+            "ServicedFacility",
+            "ServicedSiteType",
+            "ServicedState",
+            "Frequency",
+            "FrequencyUse",
+            "Sectorization"
+        };
         protected override IEnumerable<(string FileName, Type ClassMap, bool IsBaseData)> CsvMappings =>
         new[]
         {
-            ("APT_BASE.csv", typeof(AirportBaseMap), true),
-            ("APT_ATT.csv", typeof(AirportAttendanceMap), false),
-            ("APT_CON.csv", typeof(AirportContactMap), false)
+            ("FRQ.csv", typeof(FrequencyMap), true),
         };
 
-        public AirportService(
-            ILogger<AirportService> logger,
+        public FrequencyService(
+            ILogger<FrequencyService> logger,
             IHttpClientFactory httpClientFactory,
             IFaaPublicationCycleService faaPublicationCycleService,
             CronServiceDbContext dbContext)

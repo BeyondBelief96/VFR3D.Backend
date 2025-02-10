@@ -2,8 +2,8 @@
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
 using VFR3D.Infrastructure.Data;
+using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Services.ArcgisServices.Models;
-using VFR3D.Infrastructure.Services.Interfaces;
 
 namespace VFR3D.Infrastructure.Services.ArcgisServices
 {

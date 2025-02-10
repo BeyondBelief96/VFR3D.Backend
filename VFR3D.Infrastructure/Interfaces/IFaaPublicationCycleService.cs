@@ -1,7 +1,7 @@
 ﻿using VFR3D.Domain.Entities;
 using VFR3D.Domain.ValueObjects.FaaPublications;
 
-namespace VFR3D.Infrastructure.Services.Interfaces
+namespace VFR3D.Infrastructure.Interfaces
 {
     public interface IFaaPublicationCycleService
     {

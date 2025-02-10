@@ -4,20 +4,20 @@ using System.Xml.Linq;
 using Vfr3d.Domain.Entities;
 using VFR3D.Domain.ValueObjects.Metar;
 using VFR3D.Infrastructure.Data;
-using VFR3D.Infrastructure.Services.Interfaces;
+using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Utilities;
 
-namespace VFR3D.Infrastructure.Services
+namespace VFR3D.Infrastructure.Services.CronJobServices
 {
-    public class MetarService : IAviationWeatherService<Metar>
+    public class MetarCronService : IAviationWeatherService<Metar>
     {
-        private readonly ILogger<MetarService> _logger;
+        private readonly ILogger<MetarCronService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly CronServiceDbContext _dbContext;
         private const string MetarUrl = "https://aviationweather.gov/data/cache/metars.cache.xml.gz";
 
-        public MetarService(
-        ILogger<MetarService> logger,
+        public MetarCronService(
+        ILogger<MetarCronService> logger,
         IHttpClientFactory httpClientFactory,
         CronServiceDbContext dbContext)
         {
@@ -72,7 +72,7 @@ namespace VFR3D.Infrastructure.Services
 
                 // Only process US stations (starting with K or P)
                 if (string.IsNullOrEmpty(stationId) ||
-                    (!stationId.StartsWith("K") && !stationId.StartsWith("P")))
+                    !stationId.StartsWith("K") && !stationId.StartsWith("P"))
                 {
                     continue;
                 }

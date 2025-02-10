@@ -1,4 +1,4 @@
-﻿namespace VFR3D.Infrastructure.Services.Enums
+﻿namespace VFR3D.Infrastructure.Enums
 {
     public enum NasrDataType
     {

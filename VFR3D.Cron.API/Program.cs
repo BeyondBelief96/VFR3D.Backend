@@ -4,10 +4,11 @@ using Vfr3d.Domain.Entities;
 using VFR3D.Cron.API.Extensions;
 using VFR3D.Domain.Entities;
 using VFR3D.Infrastructure.Data;
+using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Jobs;
 using VFR3D.Infrastructure.Services;
 using VFR3D.Infrastructure.Services.ArcgisServices;
-using VFR3D.Infrastructure.Services.Interfaces;
+using VFR3D.Infrastructure.Services.CronJobServices;
 using VFR3D.Infrastructure.Services.NasrServices;
 using VFR3D.Infrastructure.Settings;
 
@@ -27,12 +28,12 @@ internal class Program
 
         builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"));
         builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
-        builder.Services.AddScoped<IAviationWeatherService<Metar>, MetarService>();
-        builder.Services.AddScoped<IAviationWeatherService<Taf>, TafService>();
-        builder.Services.AddScoped<IAviationWeatherService<Pirep>, PirepService>();
-        builder.Services.AddScoped<IAviationWeatherService<Airsigmet>, AirsigmetService>();
-        builder.Services.AddScoped<IChartSupplementService, ChartSupplementService>();
-        builder.Services.AddScoped<IAirportDiagramService, AirportDiagramService>();
+        builder.Services.AddScoped<IAviationWeatherService<Metar>, MetarCronService>();
+        builder.Services.AddScoped<IAviationWeatherService<Taf>, TafCronService>();
+        builder.Services.AddScoped<IAviationWeatherService<Pirep>, PirepCronService>();
+        builder.Services.AddScoped<IAviationWeatherService<Airsigmet>, AirsigmetCronService>();
+        builder.Services.AddScoped<IChartSupplementService, ChartSupplementCronService>();
+        builder.Services.AddScoped<IAirportDiagramService, AirportDiagramCronService>();
         builder.Services.AddScoped<AirportService>();
         builder.Services.AddScoped<FrequencyService>();
         builder.Services.AddScoped<IAirspaceService<Airspace>, AirspaceService>();

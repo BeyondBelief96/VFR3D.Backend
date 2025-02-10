@@ -6,24 +6,24 @@ using System.IO.Compression;
 using System.Xml.Linq;
 using VFR3D.Domain.Entities;
 using VFR3D.Infrastructure.Data;
-using VFR3D.Infrastructure.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using VFR3D.Domain.ValueObjects.FaaPublications;
 using VFR3D.Infrastructure.Settings;
 using VFR3D.Infrastructure.Utilities;
+using VFR3D.Infrastructure.Interfaces;
 
-namespace VFR3D.Infrastructure.Services
+namespace VFR3D.Infrastructure.Services.CronJobServices
 {
-    public class AirportDiagramService : IAirportDiagramService
+    public class AirportDiagramCronService : IAirportDiagramService
     {
-        private readonly ILogger<AirportDiagramService> _logger;
+        private readonly ILogger<AirportDiagramCronService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly CronServiceDbContext _dbContext;
         private readonly IAmazonS3 _s3Client;
         private readonly AwsSettings _awsSettings;
 
-        public AirportDiagramService(
-            ILogger<AirportDiagramService> logger,
+        public AirportDiagramCronService(
+            ILogger<AirportDiagramCronService> logger,
             IHttpClientFactory httpClientFactory,
             CronServiceDbContext dbContext,
             IAmazonS3 s3Client,

@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
-using VFR3D.Infrastructure.Services;
-using VFR3D.Infrastructure.Services.Interfaces;
+using VFR3D.Infrastructure.Interfaces;
+using VFR3D.Infrastructure.Services.CronJobServices;
 
 namespace VFR3D.Infrastructure.Jobs
 {

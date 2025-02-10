@@ -4,20 +4,20 @@ using System.Xml.Linq;
 using VFR3D.Domain.Entities;
 using VFR3D.Domain.ValueObjects.Airsigmets;
 using VFR3D.Infrastructure.Data;
-using VFR3D.Infrastructure.Services.Interfaces;
+using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Utilities;
 
-namespace VFR3D.Infrastructure.Services
+namespace VFR3D.Infrastructure.Services.CronJobServices
 {
-    public class AirsigmetService : IAviationWeatherService<Airsigmet>
+    public class AirsigmetCronService : IAviationWeatherService<Airsigmet>
     {
-        private readonly ILogger<AirsigmetService> _logger;
+        private readonly ILogger<AirsigmetCronService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly CronServiceDbContext _dbContext;
         private const string AirsigmetUrl = "https://aviationweather.gov/data/cache/airsigmets.cache.xml.gz";
 
-        public AirsigmetService(
-            ILogger<AirsigmetService> logger,
+        public AirsigmetCronService(
+            ILogger<AirsigmetCronService> logger,
             IHttpClientFactory httpClientFactory,
             CronServiceDbContext dbContext)
         {

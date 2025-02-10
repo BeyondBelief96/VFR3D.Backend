@@ -3,7 +3,7 @@ using Amazon.S3.Model;
 using Amazon.S3.Util;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using VFR3D.Infrastructure.Services.Interfaces;
+using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Settings;
 
 namespace VFR3D.Infrastructure.Services

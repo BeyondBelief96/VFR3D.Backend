@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using VFR3D.Infrastructure.Services.Interfaces;
+using VFR3D.Infrastructure.Interfaces;
 
 namespace VFR3D.Infrastructure.Jobs
 {

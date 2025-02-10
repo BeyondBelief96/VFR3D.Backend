@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace VFR3D.Infrastructure.Services
+namespace VFR3D.Infrastructure.Services.CronJobServices
 {
     public abstract class CronJobService : IHostedService, IDisposable
     {

@@ -8,22 +8,22 @@ using System.Xml.Linq;
 using VFR3D.Domain.Entities;
 using VFR3D.Domain.ValueObjects.FaaPublications;
 using VFR3D.Infrastructure.Data;
-using VFR3D.Infrastructure.Services.Interfaces;
+using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Settings;
 using VFR3D.Infrastructure.Utilities;
 
-namespace VFR3D.Infrastructure.Services
+namespace VFR3D.Infrastructure.Services.CronJobServices
 {
-    public class ChartSupplementService : IChartSupplementService
+    public class ChartSupplementCronService : IChartSupplementService
     {
-        private readonly ILogger<ChartSupplementService> _logger;
+        private readonly ILogger<ChartSupplementCronService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly CronServiceDbContext _dbContext;
         private readonly IAmazonS3 _s3Client;
         private readonly AwsSettings _awsSettings;
 
-        public ChartSupplementService(
-        ILogger<ChartSupplementService> logger,
+        public ChartSupplementCronService(
+        ILogger<ChartSupplementCronService> logger,
         IHttpClientFactory httpClientFactory,
         CronServiceDbContext dbContext,
         IAmazonS3 s3Client,
@@ -44,7 +44,7 @@ namespace VFR3D.Infrastructure.Services
 
                 var publicationCycle = await _dbContext.FaaPublicationCycles.FirstOrDefaultAsync(p => p.PublicationType == PublicationType.ChartSupplement);
 
-                if(publicationCycle == null )
+                if (publicationCycle == null)
                 {
                     throw new Exception("No publication cycle found for Chart Supplements.");
                 }
@@ -63,7 +63,7 @@ namespace VFR3D.Infrastructure.Services
                 using var zipArchive = new ZipArchive(response);
 
                 var xmlEntry = zipArchive.Entries.FirstOrDefault(e => e.Name.EndsWith(".xml"));
-                if(xmlEntry == null)
+                if (xmlEntry == null)
                 {
                     throw new Exception("Chart Supplment Database XML file not found in zip archive.");
                 }
@@ -79,7 +79,7 @@ namespace VFR3D.Infrastructure.Services
 
                 _logger.LogInformation("Completed chart supplement processing.");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing chart supplements");
                 throw;
@@ -242,13 +242,13 @@ namespace VFR3D.Infrastructure.Services
                     _logger.LogInformation($"Bucket name: {_awsSettings.ChartSupplementsBucketName}");
                     var listResponse = await _s3Client.ListObjectsV2Async(listRequest, cancellationToken);
 
-                    foreach(var item in listResponse.S3Objects)
+                    foreach (var item in listResponse.S3Objects)
                     {
                         var baseName = ExtractBaseName(item.Key);
                         existingObjects[baseName] = item.Key;
                     }
 
-                    if(listResponse.IsTruncated)
+                    if (listResponse.IsTruncated)
                     {
                         listRequest.ContinuationToken = listResponse.NextContinuationToken;
                     }
@@ -262,7 +262,7 @@ namespace VFR3D.Infrastructure.Services
                 _logger.LogInformation("Found {Count} existing chart supplements in S3", existingObjects.Count);
 
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error listing existing objects in S3 Bucket: {_awsSettings.ChartSupplementsBucketName}");
                 throw;

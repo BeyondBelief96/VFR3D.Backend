@@ -4,20 +4,20 @@ using System.Xml.Linq;
 using VFR3D.Domain.Entities;
 using VFR3D.Domain.ValueObjects.Taf;
 using VFR3D.Infrastructure.Data;
-using VFR3D.Infrastructure.Services.Interfaces;
+using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Utilities;
 
-namespace VFR3D.Infrastructure.Services
+namespace VFR3D.Infrastructure.Services.CronJobServices
 {
-    public class TafService : IAviationWeatherService<Taf>
+    public class TafCronService : IAviationWeatherService<Taf>
     {
-        private readonly ILogger<TafService> _logger;
+        private readonly ILogger<TafCronService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly CronServiceDbContext _dbContext;
         private const string TafUrl = "https://aviationweather.gov/data/cache/tafs.cache.xml.gz";
 
-        public TafService(
-        ILogger<TafService> logger,
+        public TafCronService(
+        ILogger<TafCronService> logger,
         IHttpClientFactory httpClientFactory,
         CronServiceDbContext dbContext)
         {
@@ -72,7 +72,7 @@ namespace VFR3D.Infrastructure.Services
 
                 // Only process US stations (starting with K or P)
                 if (string.IsNullOrEmpty(stationId) ||
-                    (!stationId.StartsWith("K") && !stationId.StartsWith("P")))
+                    !stationId.StartsWith("K") && !stationId.StartsWith("P"))
                 {
                     continue;
                 }

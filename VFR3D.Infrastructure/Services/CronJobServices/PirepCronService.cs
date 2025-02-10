@@ -4,20 +4,20 @@ using System.Xml.Linq;
 using VFR3D.Domain.Entities;
 using VFR3D.Domain.ValueObjects.Pireps;
 using VFR3D.Infrastructure.Data;
-using VFR3D.Infrastructure.Services.Interfaces;
+using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Utilities;
 
-namespace VFR3D.Infrastructure.Services
+namespace VFR3D.Infrastructure.Services.CronJobServices
 {
-    public class PirepService : IAviationWeatherService<Pirep>
+    public class PirepCronService : IAviationWeatherService<Pirep>
     {
-        private readonly ILogger<PirepService> _logger;
+        private readonly ILogger<PirepCronService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly CronServiceDbContext _dbContext;
         private const string PirepUrl = "https://aviationweather.gov/data/cache/aircraftreports.cache.xml.gz";
 
-        public PirepService(
-            ILogger<PirepService> logger,
+        public PirepCronService(
+            ILogger<PirepCronService> logger,
             IHttpClientFactory httpClientFactory,
             CronServiceDbContext dbContext)
         {
