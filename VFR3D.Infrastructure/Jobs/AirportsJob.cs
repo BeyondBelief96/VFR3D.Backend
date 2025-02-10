@@ -14,7 +14,7 @@ namespace VFR3D.Infrastructure.Jobs
         public AirportsJob(
             IServiceProvider serviceProvider,
             ILogger<AirportsJob> logger)
-            : base("*/2 * * * *", TimeZoneInfo.Utc, logger)
+            : base("0 0 * * *", TimeZoneInfo.Utc, logger)
         {
             _serviceProvider = serviceProvider;
         }
