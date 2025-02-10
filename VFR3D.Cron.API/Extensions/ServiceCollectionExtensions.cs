@@ -1,4 +1,5 @@
-﻿using Amazon.Runtime;
+﻿using Amazon;
+using Amazon.Runtime;
 using Amazon.S3;
 using VFR3D.Infrastructure.Settings;
 
@@ -11,10 +12,12 @@ namespace VFR3D.Cron.API.Extensions
             services.Configure<AwsSettings>(configuration.GetSection("AWS"));
             var awsSettings = configuration.GetSection("AWS").Get<AwsSettings>();
             var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            var regionEndpoint = RegionEndpoint.GetBySystemName(awsSettings?.Region ?? "us-east-1");
 
             var s3Config = new AmazonS3Config
             {
-                AuthenticationRegion = awsSettings?.Region ?? "us-east-1"
+                RegionEndpoint = regionEndpoint,
+                ForcePathStyle = true
             };
 
             // Configure for local development with LocalStack
