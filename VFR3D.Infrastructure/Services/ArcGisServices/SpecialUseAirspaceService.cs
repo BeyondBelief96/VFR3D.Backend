@@ -14,7 +14,7 @@ namespace VFR3D.Infrastructure.Services.ArcgisServices
         public SpecialUseAirspaceService(
             ILogger<SpecialUseAirspaceService> logger,
             IHttpClientFactory httpClientFactory,
-            CronServiceDbContext dbContext)
+            VFR3DDbContext dbContext)
             : base(logger, httpClientFactory, dbContext)
         {
         }

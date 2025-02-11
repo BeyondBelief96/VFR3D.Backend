@@ -11,7 +11,7 @@ using VFR3D.Infrastructure.Data;
 
 namespace VFR3D.Infrastructure.Migrations
 {
-    [DbContext(typeof(CronServiceDbContext))]
+    [DbContext(typeof(VFR3DDbContext))]
     [Migration("20250208155424_UpdatingAirportEntityKey-SiteNo")]
     partial class UpdatingAirportEntityKeySiteNo
     {

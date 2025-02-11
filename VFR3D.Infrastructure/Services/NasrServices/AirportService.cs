@@ -23,7 +23,7 @@ namespace VFR3D.Infrastructure.Services.NasrServices
             ILogger<AirportService> logger,
             IHttpClientFactory httpClientFactory,
             IFaaPublicationCycleService faaPublicationCycleService,
-            CronServiceDbContext dbContext)
+            VFR3DDbContext dbContext)
             : base(logger, httpClientFactory, faaPublicationCycleService, dbContext)
         {
         }

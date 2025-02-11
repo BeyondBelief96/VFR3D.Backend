@@ -10,7 +10,7 @@ using VFR3D.Infrastructure.Data;
 
 namespace VFR3D.Infrastructure.Migrations
 {
-    [DbContext(typeof(CronServiceDbContext))]
+    [DbContext(typeof(VFR3DDbContext))]
     [Migration("20250110214346_AddedTafEntity")]
     partial class AddedTafEntity
     {

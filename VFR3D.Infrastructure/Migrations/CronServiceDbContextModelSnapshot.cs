@@ -11,8 +11,8 @@ using VFR3D.Infrastructure.Data;
 
 namespace VFR3D.Infrastructure.Migrations
 {
-    [DbContext(typeof(CronServiceDbContext))]
-    partial class CronServiceDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(VFR3DDbContext))]
+    partial class VFR3DDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {

@@ -10,10 +10,10 @@ namespace VFR3D.Infrastructure.Services
 {
     public class FaaPublicationCycleService : IFaaPublicationCycleService
     {
-        private readonly CronServiceDbContext _dbContext;
+        private readonly VFR3DDbContext _dbContext;
         private readonly ILogger<FaaPublicationCycleService> _logger;
 
-        public FaaPublicationCycleService(CronServiceDbContext dbContext, ILogger<FaaPublicationCycleService> logger)
+        public FaaPublicationCycleService(VFR3DDbContext dbContext, ILogger<FaaPublicationCycleService> logger)
         {
             _dbContext = dbContext;
             _logger = logger;

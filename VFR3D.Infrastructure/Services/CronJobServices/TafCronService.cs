@@ -13,13 +13,13 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
     {
         private readonly ILogger<TafCronService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly CronServiceDbContext _dbContext;
+        private readonly VFR3DDbContext _dbContext;
         private const string TafUrl = "https://aviationweather.gov/data/cache/tafs.cache.xml.gz";
 
         public TafCronService(
         ILogger<TafCronService> logger,
         IHttpClientFactory httpClientFactory,
-        CronServiceDbContext dbContext)
+        VFR3DDbContext dbContext)
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;

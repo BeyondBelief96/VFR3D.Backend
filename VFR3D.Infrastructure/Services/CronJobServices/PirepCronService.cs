@@ -13,13 +13,13 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
     {
         private readonly ILogger<PirepCronService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly CronServiceDbContext _dbContext;
+        private readonly VFR3DDbContext _dbContext;
         private const string PirepUrl = "https://aviationweather.gov/data/cache/aircraftreports.cache.xml.gz";
 
         public PirepCronService(
             ILogger<PirepCronService> logger,
             IHttpClientFactory httpClientFactory,
-            CronServiceDbContext dbContext)
+            VFR3DDbContext dbContext)
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;

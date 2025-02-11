@@ -12,7 +12,7 @@ namespace VFR3D.Infrastructure.Services.ArcgisServices
     {
         protected readonly ILogger _logger;
         protected readonly IHttpClientFactory _httpClientFactory;
-        protected readonly CronServiceDbContext _dbContext;
+        protected readonly VFR3DDbContext _dbContext;
         protected readonly JsonSerializerOptions _jsonOptions;
         protected readonly GeometryFactory _geometryFactory;
         protected abstract string BaseUrl { get; }
@@ -20,7 +20,7 @@ namespace VFR3D.Infrastructure.Services.ArcgisServices
         protected ArcGisBaseService(
             ILogger logger,
             IHttpClientFactory httpClientFactory,
-            CronServiceDbContext dbContext)
+            VFR3DDbContext dbContext)
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;

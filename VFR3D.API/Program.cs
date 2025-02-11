@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Services.CensusServices;
+using VFR3D.Infrastructure.Services.WeatherServices;
 using VFR3D.Infrastructure.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -14,6 +16,7 @@ builder.Logging.AddDebug();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddMemoryCache();
 builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 {
     var dbSettings = serviceProvider.GetRequiredService<IOptions<DatabaseSettings>>().Value;
@@ -32,8 +35,16 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
         options.EnableSensitiveDataLogging();
     }
 }, ServiceLifetime.Scoped);
+builder.Services.AddScoped<CensusGeocodingService>();
+builder.Services.AddScoped<ICensusGeocodingService>(sp =>
+{
+    var baseService = sp.GetRequiredService<CensusGeocodingService>();
+    var cache = sp.GetRequiredService<IMemoryCache>();
+    var logger = sp.GetRequiredService<ILogger<MemCacheCensusGeocodingService>>();
 
-builder.Services.AddSingleton<ICensusGeocodingService, CensusGeocodingService>();
+    return new MemCacheCensusGeocodingService(baseService, cache, logger);
+});
+builder.Services.AddScoped<IMetarService, MetarService>();
 builder.Services.AddHttpClient();
 
 builder.Services.AddCors(options =>

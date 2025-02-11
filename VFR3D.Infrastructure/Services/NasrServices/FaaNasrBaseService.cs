@@ -17,7 +17,7 @@ namespace VFR3D.Infrastructure.Services.NasrServices
     {
         protected readonly ILogger _logger;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly CronServiceDbContext _dbContext;
+        private readonly VFR3DDbContext _dbContext;
         private readonly IFaaPublicationCycleService _faaPublicationCycleService;
         private readonly string _baseUrl = "https://nfdc.faa.gov/webContent/28DaySub/extra/";
 
@@ -29,7 +29,7 @@ namespace VFR3D.Infrastructure.Services.NasrServices
             ILogger logger,
             IHttpClientFactory httpClientFactory,
             IFaaPublicationCycleService publicationCycleService,
-            CronServiceDbContext dbContext)
+            VFR3DDbContext dbContext)
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;

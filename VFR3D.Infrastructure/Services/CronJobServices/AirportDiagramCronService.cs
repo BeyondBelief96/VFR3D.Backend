@@ -18,14 +18,14 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
     {
         private readonly ILogger<AirportDiagramCronService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly CronServiceDbContext _dbContext;
+        private readonly VFR3DDbContext _dbContext;
         private readonly IAmazonS3 _s3Client;
         private readonly AwsSettings _awsSettings;
 
         public AirportDiagramCronService(
             ILogger<AirportDiagramCronService> logger,
             IHttpClientFactory httpClientFactory,
-            CronServiceDbContext dbContext,
+            VFR3DDbContext dbContext,
             IAmazonS3 s3Client,
             IOptions<AwsSettings> awsSettings)
         {

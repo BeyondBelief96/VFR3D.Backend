@@ -13,13 +13,13 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
     {
         private readonly ILogger<AirsigmetCronService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly CronServiceDbContext _dbContext;
+        private readonly VFR3DDbContext _dbContext;
         private const string AirsigmetUrl = "https://aviationweather.gov/data/cache/airsigmets.cache.xml.gz";
 
         public AirsigmetCronService(
             ILogger<AirsigmetCronService> logger,
             IHttpClientFactory httpClientFactory,
-            CronServiceDbContext dbContext)
+            VFR3DDbContext dbContext)
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;
