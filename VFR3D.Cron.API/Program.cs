@@ -9,7 +9,7 @@ using VFR3D.Infrastructure.Jobs;
 using VFR3D.Infrastructure.Services;
 using VFR3D.Infrastructure.Services.ArcgisServices;
 using VFR3D.Infrastructure.Services.CronJobServices;
-using VFR3D.Infrastructure.Services.NasrServices;
+using VFR3D.Infrastructure.Services.CronJobServices.NasrServices;
 using VFR3D.Infrastructure.Settings;
 
 internal class Program

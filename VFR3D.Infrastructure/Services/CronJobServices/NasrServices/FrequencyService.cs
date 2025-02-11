@@ -3,9 +3,9 @@ using VFR3D.Domain.Entities;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Enums;
 using VFR3D.Infrastructure.Interfaces;
-using VFR3D.Infrastructure.Services.NasrServices.Mappings;
+using VFR3D.Infrastructure.Services.CronJobServices.NasrServices.Mappings;
 
-namespace VFR3D.Infrastructure.Services.NasrServices
+namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
 {
     public class FrequencyService : FaaNasrBaseService<CommunicationFrequency>
     {

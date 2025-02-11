@@ -117,6 +117,8 @@ namespace VFR3D.Infrastructure.Data.Configurations
             builder.HasIndex(e => e.IcaoId);
             builder.HasIndex(e => e.ArptId);
             builder.HasIndex(e => e.StateCode);
+            builder.HasIndex(a => new { a.StateCode, a.IcaoId });
+            builder.HasIndex(a => new { a.StateCode, a.ArptId });
             builder.HasIndex(e => new { e.LatDecimal, e.LongDecimal });
         }
     }

@@ -7,11 +7,11 @@ using System.Globalization;
 using VFR3D.Infrastructure.Utilities;
 using VFR3D.Domain.ValueObjects.FaaPublications;
 using CsvHelper.Configuration;
-using VFR3D.Infrastructure.Services.NasrServices.Utils;
 using VFR3D.Infrastructure.Enums;
 using VFR3D.Infrastructure.Interfaces;
+using VFR3D.Infrastructure.Services.CronJobServices.NasrServices.Utils;
 
-namespace VFR3D.Infrastructure.Services.NasrServices
+namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
 {
     public abstract class FaaNasrBaseService<T> where T : class
     {

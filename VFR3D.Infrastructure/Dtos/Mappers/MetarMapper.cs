@@ -1,7 +1,7 @@
 ﻿using Vfr3d.Domain.Entities;
 using VFR3D.Infrastructure.Dtos;
 
-namespace VFR3D.Infrastructure.Mappers;
+namespace VFR3D.Infrastructure.Dtos.Mappers;
 
 public static class MetarMapper
 {

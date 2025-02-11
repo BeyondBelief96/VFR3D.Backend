@@ -1,8 +1,8 @@
 ﻿using CsvHelper.Configuration;
 using VFR3D.Domain.Entities;
-using VFR3D.Infrastructure.Services.NasrServices.Utils;
+using VFR3D.Infrastructure.Services.CronJobServices.NasrServices.Utils;
 
-namespace VFR3D.Infrastructure.Services.NasrServices.Mappings
+namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices.Mappings
 {
     public sealed class FrequencyMap : ClassMap<CommunicationFrequency>
     {

@@ -405,6 +405,10 @@ namespace VFR3D.Infrastructure.Migrations
 
                     b.HasIndex("LatDecimal", "LongDecimal");
 
+                    b.HasIndex("StateCode", "ArptId");
+
+                    b.HasIndex("StateCode", "IcaoId");
+
                     b.ToTable("airports", (string)null);
                 });
 

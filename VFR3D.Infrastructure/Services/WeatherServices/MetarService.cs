@@ -3,24 +3,21 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos;
+using VFR3D.Infrastructure.Dtos.Mappers;
 using VFR3D.Infrastructure.Interfaces;
-using VFR3D.Infrastructure.Mappers;
 
 namespace VFR3D.Infrastructure.Services.WeatherServices
 {
     public class MetarService : IMetarService
     {
         private readonly VFR3DDbContext _context;
-        private readonly ICensusGeocodingService _censusService;
         private readonly ILogger<MetarService> _logger;
 
         public MetarService(
             VFR3DDbContext context,
-            ICensusGeocodingService censusService,
             ILogger<MetarService> logger)
         {
             _context = context;
-            _censusService = censusService;
             _logger = logger;
         }
 
@@ -60,69 +57,39 @@ namespace VFR3D.Infrastructure.Services.WeatherServices
 
         public async Task<IEnumerable<MetarDto>> GetMetarsByState(string stateCode)
         {
+            var upperStateCode = stateCode.ToUpper();
+
             var metars = await _context.Metars
-                .Where(m => m.Latitude != null && m.Longitude != null)
+                .Where(m => _context.Airports.Any(a =>
+                    a.StateCode == upperStateCode &&
+                    (a.IcaoId == m.StationId ||
+                     (m.StationId != null &&
+                      m.StationId.Length > 1 &&
+                      (m.StationId.StartsWith("K") || m.StationId.StartsWith("P")) &&
+                      a.ArptId == m.StationId.Substring(1)) ||
+                     a.ArptId == m.StationId)))
                 .ToListAsync();
 
-            var stateMetars = new List<MetarDto>();
-
-            foreach (var metar in metars)
-            {
-                try
-                {
-                    var stateInfo = await _censusService.GetStateFromCoordinates(
-                        metar.Latitude!.Value,
-                        metar.Longitude!.Value);
-
-                    if (stateInfo?.StateCode == stateCode.ToUpper())
-                    {
-                        stateMetars.Add(MetarMapper.ToDto(metar));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex,
-                        "Error checking state for METAR at coordinates: {Latitude}, {Longitude}",
-                        metar.Latitude,
-                        metar.Longitude);
-                }
-            }
-
-            return stateMetars;
+            return metars.Select(MetarMapper.ToDto);
         }
 
         public async Task<IEnumerable<MetarDto>> GetMetarsByStates(string[] stateCodes)
         {
-            var upperStateCodes = stateCodes.Select(s => s.ToUpper()).ToHashSet();
+            var upperStateCodes = stateCodes.Select(s => s?.ToUpper()).Where(s => s != null).ToHashSet();
+
             var metars = await _context.Metars
-                .Where(m => m.Latitude != null && m.Longitude != null)
+                .Where(m => _context.Airports.Any(a =>
+                    a.StateCode != null &&
+                    upperStateCodes.Contains(a.StateCode) &&
+                    (a.IcaoId == m.StationId ||
+                     (m.StationId != null &&
+                      m.StationId.Length > 1 &&
+                      (m.StationId.StartsWith("K") || m.StationId.StartsWith("P")) &&
+                      a.ArptId == m.StationId.Substring(1)) ||
+                     a.ArptId == m.StationId)))
                 .ToListAsync();
 
-            var stateMetars = new List<MetarDto>();
-
-            foreach (var metar in metars)
-            {
-                try
-                {
-                    var stateInfo = await _censusService.GetStateFromCoordinates(
-                        metar.Latitude!.Value,
-                        metar.Longitude!.Value);
-
-                    if (stateInfo != null && upperStateCodes.Contains(stateInfo.StateCode))
-                    {
-                        stateMetars.Add(MetarMapper.ToDto(metar));
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex,
-                        "Error checking state for METAR at coordinates: {Latitude}, {Longitude}",
-                        metar.Latitude,
-                        metar.Longitude);
-                }
-            }
-
-            return stateMetars;
+            return metars.Select(MetarMapper.ToDto);
         }
     }
 }

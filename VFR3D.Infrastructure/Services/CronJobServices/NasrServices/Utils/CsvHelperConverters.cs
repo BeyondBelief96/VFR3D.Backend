@@ -3,7 +3,7 @@ using CsvHelper.TypeConversion;
 using CsvHelper;
 using System.Globalization;
 
-namespace VFR3D.Infrastructure.Services.NasrServices.Utils
+namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices.Utils
 {
     public class OptionalDecimalConverter : DecimalConverter
     {
