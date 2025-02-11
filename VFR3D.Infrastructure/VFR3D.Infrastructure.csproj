@@ -28,8 +28,4 @@
     <ProjectReference Include="..\VFR3D.Domain\VFR3D.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Services\WeatherServices\" />
-  </ItemGroup>
-
 </Project>

@@ -41,7 +41,7 @@ internal class Program
         builder.Services.AddScoped<IFaaPublicationCycleService, FaaPublicationCycleService>();
         builder.Services.AddSingleton<IAwsSecretsService, AwsSecretsService>();
         builder.Services.AddScoped<IAwsInitializationService, AwsInitializationService>();
-        builder.Services.AddDbContext<CronServiceDbContext>((serviceProvider, options) =>
+        builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
         {
             var dbSettings = serviceProvider.GetRequiredService<IOptions<DatabaseSettings>>().Value;
 
@@ -59,7 +59,6 @@ internal class Program
                 options.EnableSensitiveDataLogging();
             }
         }, ServiceLifetime.Scoped);
-
         builder.Services.AddHostedService<AwsInitializationJob>();
         builder.Services.AddHostedService<MetarJob>();
         builder.Services.AddHostedService<TafJob>();

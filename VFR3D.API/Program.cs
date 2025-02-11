@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using VFR3D.Infrastructure.Data;
+using VFR3D.Infrastructure.Interfaces;
+using VFR3D.Infrastructure.Services.CensusServices;
 using VFR3D.Infrastructure.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,6 +32,9 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
         options.EnableSensitiveDataLogging();
     }
 }, ServiceLifetime.Scoped);
+
+builder.Services.AddSingleton<ICensusGeocodingService, CensusGeocodingService>();
+builder.Services.AddHttpClient();
 
 builder.Services.AddCors(options =>
 {
