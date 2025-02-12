@@ -159,7 +159,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
             // Filter out PIREPs older than 30 minutes
             var validPireps = pirepsList
                 .Where(p => p.ObservationTime != null &&
-                            p.ObservationTime.CompareTo(thirtyMinutesAgo) >= 0)
+                            String.Compare(p.ObservationTime, thirtyMinutesAgo, StringComparison.Ordinal) >= 0)
                 .ToList();
 
             // Get all existing raw texts to check for duplicates

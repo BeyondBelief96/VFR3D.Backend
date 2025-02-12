@@ -51,8 +51,8 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
         private async Task<string> FetchMetarXmlDataAsync(CancellationToken cancellationToken)
         {
             using var client = _httpClientFactory.CreateClient();
-            using var response = await client.GetStreamAsync(MetarUrl, cancellationToken);
-            using var decompressedStream = new System.IO.Compression.GZipStream(
+            await using var response = await client.GetStreamAsync(MetarUrl, cancellationToken);
+            await using var decompressedStream = new System.IO.Compression.GZipStream(
                 response,
                 System.IO.Compression.CompressionMode.Decompress);
             using var reader = new StreamReader(decompressedStream);
