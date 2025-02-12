@@ -29,7 +29,7 @@ namespace VFR3D.Infrastructure.Jobs
 
                 if (await publicationService.ShouldRunUpdateAsync(PublicationType.NasrSubscription, currentDate))
                 {
-                    var frequencyService = scope.ServiceProvider.GetRequiredService<FrequencyService>();
+                    var frequencyService = scope.ServiceProvider.GetRequiredService<CommunicationFrequencyCronService>();
                     await frequencyService.DownloadAndProcessDataAsync(cancellationToken);
                     await publicationService.UpdateLastSuccessfulRunAsync(PublicationType.NasrSubscription, currentDate);
                 }

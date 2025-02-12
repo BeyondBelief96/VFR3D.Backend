@@ -7,26 +7,20 @@ using VFR3D.Infrastructure.Services.CronJobServices.NasrServices.Mappings;
 
 namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
 {
-    public class FrequencyService : FaaNasrBaseService<CommunicationFrequency>
+    public class AirportCronService : FaaNasrBaseService<Airport>
     {
-        protected override NasrDataType DataType => NasrDataType.FRQ;
-        protected override string[] UniqueIdentifiers => new[] {
-            "FacilityCode",
-            "ServicedFacility",
-            "ServicedSiteType",
-            "ServicedState",
-            "Frequency",
-            "FrequencyUse",
-            "Sectorization"
-        };
+        protected override NasrDataType DataType => NasrDataType.APT;
+        protected override string[] UniqueIdentifiers => new[] { "SiteNo" };
         protected override IEnumerable<(string FileName, Type ClassMap, bool IsBaseData)> CsvMappings =>
         new[]
         {
-            ("FRQ.csv", typeof(FrequencyMap), true),
+            ("APT_BASE.csv", typeof(AirportBaseMap), true),
+            ("APT_ATT.csv", typeof(AirportAttendanceMap), false),
+            ("APT_CON.csv", typeof(AirportContactMap), false)
         };
 
-        public FrequencyService(
-            ILogger<FrequencyService> logger,
+        public AirportCronService(
+            ILogger<AirportCronService> logger,
             IHttpClientFactory httpClientFactory,
             IFaaPublicationCycleService faaPublicationCycleService,
             VFR3DDbContext dbContext)

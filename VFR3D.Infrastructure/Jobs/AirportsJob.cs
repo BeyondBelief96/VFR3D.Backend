@@ -29,7 +29,7 @@ namespace VFR3D.Infrastructure.Jobs
 
                 if (await publicationService.ShouldRunUpdateAsync(PublicationType.NasrSubscription, currentDate))
                 {
-                    var airportService = scope.ServiceProvider.GetRequiredService<AirportService>();
+                    var airportService = scope.ServiceProvider.GetRequiredService<AirportCronService>();
                     await airportService.DownloadAndProcessDataAsync(cancellationToken);
                     await publicationService.UpdateLastSuccessfulRunAsync(PublicationType.NasrSubscription, currentDate);
                 }
