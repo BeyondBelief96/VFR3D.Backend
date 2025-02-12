@@ -32,6 +32,10 @@ namespace VFR3D.Infrastructure.Data
         public DbSet<SpecialUseAirspace> SpecialUseAirspaces => Set<SpecialUseAirspace>();
 
         public DbSet<FaaPublicationCycle> FaaPublicationCycles => Set<FaaPublicationCycle>();   
+        
+        public DbSet<Flight> Flights => Set<Flight>();
+        
+        public DbSet<AircraftPerformanceProfile> AircraftPerformanceProfiles => Set<AircraftPerformanceProfile>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
