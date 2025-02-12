@@ -45,6 +45,7 @@ builder.Services.AddScoped<IPirepService, PirepService>();
 builder.Services.AddScoped<ITafService, TafService>();
 builder.Services.AddScoped<IAirsigmetService, AirsigmetService>();
 builder.Services.AddScoped<IAirportDiagramService, AirportDiagramService>();
+builder.Services.AddScoped<IChartSupplementService, ChartSupplementService>();  
 builder.Services.AddHttpClient();
 
 builder.Services.AddCors(options =>
