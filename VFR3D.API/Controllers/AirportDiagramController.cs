@@ -6,7 +6,7 @@ using VFR3D.Infrastructure.Interfaces;
 namespace VFR3D.API.Controllers;
 
 [ApiController]
-[Route("api/airport-diagrams")]
+[Route("api/[controller]")]
 public class AirportDiagramController : ControllerBase
 {
     private readonly IAirportDiagramService _airportDiagramService;

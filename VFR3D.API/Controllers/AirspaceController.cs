@@ -5,7 +5,7 @@ using VFR3D.Infrastructure.Interfaces;
 namespace VFR3D.API.Controllers
 {
     [ApiController]
-    [Route("api/airspaces")]
+    [Route("api/[controller]")]
     public class AirspaceController : ControllerBase
     {
         private readonly IAirspaceService _airspaceService;

@@ -5,7 +5,7 @@ using VFR3D.Infrastructure.Interfaces;
 namespace VFR3D.API.Controllers
 {
     [ApiController]
-    [Route("api/communication-frequency")]
+    [Route("api/[controller]")]
     public class CommunicationFrequencyController : ControllerBase
     {
         private readonly ICommunicationFrequencyService _frequencyService;

@@ -6,7 +6,7 @@ using VFR3D.Infrastructure.Interfaces;
 namespace VFR3D.API.Controllers;
 
 [ApiController]
-[Route("api/chartsupplements")]
+[Route("api/[controller]")]
 public class ChartSupplementController : ControllerBase
 {
     private readonly IChartSupplementService _chartSupplementService;
