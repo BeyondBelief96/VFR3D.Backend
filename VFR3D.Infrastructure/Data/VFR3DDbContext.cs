@@ -25,7 +25,7 @@ namespace VFR3D.Infrastructure.Data
 
         public DbSet<Airport> Airports => Set<Airport>();
 
-        public DbSet<CommunicationFrequency> CommunicationFrequency => Set<CommunicationFrequency>();
+        public DbSet<CommunicationFrequency> CommunicationFrequencies => Set<CommunicationFrequency>();
 
         public DbSet<Airspace> Airspaces => Set<Airspace>();
 

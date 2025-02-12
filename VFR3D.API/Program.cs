@@ -1,12 +1,15 @@
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using VFR3D.Cron.API.Extensions;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Services;
+using VFR3D.Infrastructure.Services.AirportInformationServices;
 using VFR3D.Infrastructure.Services.DocumentServices;
 using VFR3D.Infrastructure.Services.WeatherServices;
 using VFR3D.Infrastructure.Settings;
+using VFR3D.Infrastructure.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +17,13 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new GeometryJsonConverter());
+        options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals;
+        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddMemoryCache();
@@ -48,6 +57,8 @@ builder.Services.AddScoped<IAirsigmetService, AirsigmetService>();
 builder.Services.AddScoped<IAirportDiagramService, AirportDiagramService>();
 builder.Services.AddScoped<IChartSupplementService, ChartSupplementService>();  
 builder.Services.AddScoped<IAirportService, AirportService>();
+builder.Services.AddScoped<ICommunicationFrequencyService, CommunicationFrequencyService>();
+builder.Services.AddScoped<IAirspaceService, AirspaceService>();
 builder.Services.AddHttpClient();
 
 builder.Services.AddCors(options =>
