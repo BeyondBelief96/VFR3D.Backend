@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using VFR3D.Cron.API.Extensions;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Interfaces;
+using VFR3D.Infrastructure.Services.DocumentServices;
 using VFR3D.Infrastructure.Services.WeatherServices;
 using VFR3D.Infrastructure.Settings;
 
@@ -36,10 +38,13 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
         options.EnableSensitiveDataLogging();
     }
 }, ServiceLifetime.Scoped);
+
+builder.Services.AddAwsServices(builder.Configuration);
 builder.Services.AddScoped<IMetarService, MetarService>();
 builder.Services.AddScoped<IPirepService, PirepService>();
 builder.Services.AddScoped<ITafService, TafService>();
 builder.Services.AddScoped<IAirsigmetService, AirsigmetService>();
+builder.Services.AddScoped<IAirportDiagramService, AirportDiagramService>();
 builder.Services.AddHttpClient();
 
 builder.Services.AddCors(options =>

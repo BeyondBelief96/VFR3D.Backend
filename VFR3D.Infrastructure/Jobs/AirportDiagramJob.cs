@@ -25,7 +25,7 @@ namespace VFR3D.Infrastructure.Jobs
 
                 if (await publicationService.ShouldRunUpdateAsync(PublicationType.AirportDiagram, currentDate))
                 {
-                    var airportDiagramService = scope.ServiceProvider.GetRequiredService<IAirportDiagramService>();
+                    var airportDiagramService = scope.ServiceProvider.GetRequiredService<IAirportDiagramCronService>();
                     await airportDiagramService.DownloadAndProcessAirportDiagramsAsync(cancellationToken);
                     await publicationService.UpdateLastSuccessfulRunAsync(PublicationType.AirportDiagram, currentDate);
                 }

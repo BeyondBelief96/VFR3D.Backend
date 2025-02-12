@@ -1,7 +1,8 @@
-﻿namespace VFR3D.Infrastructure.Interfaces
+﻿using VFR3D.Infrastructure.Dtos;
+
+namespace VFR3D.Infrastructure.Interfaces;
+
+public interface IAirportDiagramService
 {
-    public interface IAirportDiagramService
-    {
-        Task DownloadAndProcessAirportDiagramsAsync(CancellationToken cancellationToken = default);
-    }
+    Task<AirportDiagramUrlDto> GetAirportDiagramUrlByAirportCode(string airportCode);
 }

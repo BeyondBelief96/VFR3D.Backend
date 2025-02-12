@@ -25,7 +25,7 @@ namespace VFR3D.Infrastructure.Jobs
 
                 if(await publicationService.ShouldRunUpdateAsync(PublicationType.ChartSupplement, currentDate))
                 {
-                    var chartSupplementService = scope.ServiceProvider.GetRequiredService<IChartSupplementService>();
+                    var chartSupplementService = scope.ServiceProvider.GetRequiredService<IChartSupplementCronService>();
                     await chartSupplementService.DownloadAndProcessChartSupplementsAsync(cancellationToken);
                     await publicationService.UpdateLastSuccessfulRunAsync(PublicationType.ChartSupplement, currentDate);
                 }

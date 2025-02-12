@@ -14,16 +14,16 @@ using VFR3D.Infrastructure.Interfaces;
 
 namespace VFR3D.Infrastructure.Services.CronJobServices
 {
-    public class AirportDiagramCronService : IAirportDiagramService
+    public class AirportDiagramCronCronService : IAirportDiagramCronService
     {
-        private readonly ILogger<AirportDiagramCronService> _logger;
+        private readonly ILogger<AirportDiagramCronCronService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly VFR3DDbContext _dbContext;
         private readonly IAmazonS3 _s3Client;
         private readonly AwsSettings _awsSettings;
 
-        public AirportDiagramCronService(
-            ILogger<AirportDiagramCronService> logger,
+        public AirportDiagramCronCronService(
+            ILogger<AirportDiagramCronCronService> logger,
             IHttpClientFactory httpClientFactory,
             VFR3DDbContext dbContext,
             IAmazonS3 s3Client,

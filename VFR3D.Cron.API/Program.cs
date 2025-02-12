@@ -32,8 +32,8 @@ internal class Program
         builder.Services.AddScoped<IAviationWeatherService<Taf>, TafCronService>();
         builder.Services.AddScoped<IAviationWeatherService<Pirep>, PirepCronService>();
         builder.Services.AddScoped<IAviationWeatherService<Airsigmet>, AirsigmetCronService>();
-        builder.Services.AddScoped<IChartSupplementService, ChartSupplementCronService>();
-        builder.Services.AddScoped<IAirportDiagramService, AirportDiagramCronService>();
+        builder.Services.AddScoped<IChartSupplementCronService, ChartSupplementCronCronService>();
+        builder.Services.AddScoped<IAirportDiagramCronService, AirportDiagramCronCronService>();
         builder.Services.AddScoped<AirportService>();
         builder.Services.AddScoped<FrequencyService>();
         builder.Services.AddScoped<IAirspaceService<Airspace>, AirspaceService>();
