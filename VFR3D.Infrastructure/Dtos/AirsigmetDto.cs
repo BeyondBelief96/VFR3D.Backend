@@ -4,13 +4,13 @@ namespace VFR3D.Infrastructure.Dtos;
 
 public class AirsigmetDto
 {
-    public string? RawText { get; set; }
-    public string? ValidTimeFrom { get; set; }
-    public string? ValidTimeTo { get; set; }
-    public AirsigmetAltitude? Altitude { get; set; }
-    public int? MovementDirDegrees { get; set; }
-    public int? MovementSpeedKt { get; set; }
-    public AirsigmetHazard? Hazard { get; set; }
-    public string? AirsigmetType { get; set; }
-    public List<AirsigmetArea>? Areas { get; set; }
+    public string? RawText { get; init; }
+    public string? ValidTimeFrom { get; init; }
+    public string? ValidTimeTo { get; init; }
+    public AirsigmetAltitude? Altitude { get; init; }
+    public int? MovementDirDegrees { get; init; }
+    public int? MovementSpeedKt { get; init; }
+    public AirsigmetHazard? Hazard { get; init; }
+    public string? AirsigmetType { get; init; }
+    public List<AirsigmetArea>? Areas { get; init; }
 }

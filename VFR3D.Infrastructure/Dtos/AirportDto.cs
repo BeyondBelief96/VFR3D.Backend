@@ -2,22 +2,22 @@
 {
     public class AirportDto
     {
-        public string SiteNo { get; set; } = string.Empty;
-        public string? IcaoId { get; set; }
-        public string? ArptId { get; set; }
-        public string? ArptName { get; set; }
-        public string? City { get; set; }
-        public string? StateCode { get; set; }
-        public string? StateName { get; set; }
-        public decimal? LatDecimal { get; set; }
-        public decimal? LongDecimal { get; set; }
-        public decimal? Elev { get; set; }
-        public string? ChartName { get; set; }
-        public string? ArptStatus { get; set; }
-        public string? FuelTypes { get; set; }
-        public DateTime? LastInspection { get; set; }
-        public DateTime? LastInfoResponse { get; set; }
-        public string? ContactName { get; set; }
-        public string? ContactPhoneNumber { get; set; }
+        public string SiteNo { get; init; } = string.Empty;
+        public string? IcaoId { get; init; }
+        public string? ArptId { get; init; }
+        public string? ArptName { get; init; }
+        public string? City { get; init; }
+        public string? StateCode { get; init; }
+        public string? StateName { get; init; }
+        public decimal? LatDecimal { get; init; }
+        public decimal? LongDecimal { get; init; }
+        public decimal? Elev { get; init; }
+        public string? ChartName { get; init; }
+        public string? ArptStatus { get; init; }
+        public string? FuelTypes { get; init; }
+        public DateTime? LastInspection { get; init; }
+        public DateTime? LastInfoResponse { get; init; }
+        public string? ContactName { get; init; }
+        public string? ContactPhoneNumber { get; init; }
     }
 }

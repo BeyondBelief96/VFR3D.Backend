@@ -2,40 +2,40 @@
 {
     public class MetarDto
     {
-        public string? RawText { get; set; }
-        public string? StationId { get; set; }
-        public string? ObservationTime { get; set; }
-        public float? Latitude { get; set; }
-        public float? Longitude { get; set; }
-        public float? TempC { get; set; }
-        public float? DewpointC { get; set; }
-        public string? WindDirDegrees { get; set; }
-        public int? WindSpeedKt { get; set; }
-        public int? WindGustKt { get; set; }
-        public string? VisibilityStatuteMi { get; set; }
-        public float? AltimInHg { get; set; }
-        public float? SeaLevelPressureMb { get; set; }
-        public MetarQualityControlFlagsDto? QualityControlFlags { get; set; }
-        public string? WxString { get; set; }
-        public List<MetarSkyConditionDto>? SkyCondition { get; set; }
-        public string? FlightCategory { get; set; }
+        public string? RawText { get; init; }
+        public string? StationId { get; init; }
+        public string? ObservationTime { get; init; }
+        public float? Latitude { get; init; }
+        public float? Longitude { get; init; }
+        public float? TempC { get; init; }
+        public float? DewpointC { get; init; }
+        public string? WindDirDegrees { get; init; }
+        public int? WindSpeedKt { get; init; }
+        public int? WindGustKt { get; init; }
+        public string? VisibilityStatuteMi { get; init; }
+        public float? AltimInHg { get; init; }
+        public float? SeaLevelPressureMb { get; init; }
+        public MetarQualityControlFlagsDto? QualityControlFlags { get; init; }
+        public string? WxString { get; init; }
+        public List<MetarSkyConditionDto>? SkyCondition { get; init; } = [];
+        public string? FlightCategory { get; init; }
     }
 
     public class MetarQualityControlFlagsDto
     {
-        public string? Corrected { get; set; }
-        public string? Auto { get; set; }
-        public string? AutoStation { get; set; }
-        public string? MaintenanceIndicatorOn { get; set; }
-        public string? NoSignal { get; set; }
-        public string? LightningSensorOff { get; set; }
-        public string? FreezingRainSensorOff { get; set; }
-        public string? PresentWeatherSensorOff { get; set; }
+        public string? Corrected { get; init; }
+        public string? Auto { get; init; }
+        public string? AutoStation { get; init; }
+        public string? MaintenanceIndicatorOn { get; init; }
+        public string? NoSignal { get; init; }
+        public string? LightningSensorOff { get; init; }
+        public string? FreezingRainSensorOff { get; init; }
+        public string? PresentWeatherSensorOff { get; init; }
     }
 
     public class MetarSkyConditionDto
     {
-        public string SkyCover { get; set; } = string.Empty;
-        public int? CloudBaseFtAgl { get; set; }
+        public string SkyCover { get; init; } = string.Empty;
+        public int? CloudBaseFtAgl { get; init; }
     }
 }

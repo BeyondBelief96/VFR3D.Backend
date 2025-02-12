@@ -2,5 +2,5 @@
 
 public class AirportDiagramUrlDto
 {
-    public string PdfUrl { get; set; } = string.Empty;
+    public string PdfUrl { get; init; } = string.Empty;
 }
