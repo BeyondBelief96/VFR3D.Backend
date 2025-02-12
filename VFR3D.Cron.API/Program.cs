@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Vfr3d.Domain.Entities;
 using VFR3D.Cron.API.Extensions;
+using Vfr3d.Domain.Entities;
 using VFR3D.Domain.Entities;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Interfaces;
@@ -11,6 +11,8 @@ using VFR3D.Infrastructure.Services.ArcgisServices;
 using VFR3D.Infrastructure.Services.CronJobServices;
 using VFR3D.Infrastructure.Services.CronJobServices.NasrServices;
 using VFR3D.Infrastructure.Settings;
+
+namespace VFR3D.Cron.API;
 
 internal class Program
 {
