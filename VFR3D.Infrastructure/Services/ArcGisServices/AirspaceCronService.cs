@@ -7,12 +7,12 @@ using VFR3D.Infrastructure.Services.ArcgisServices.Models;
 
 namespace VFR3D.Infrastructure.Services.ArcgisServices
 {
-    public class SpecialUseAirspaceService : ArcGisBaseService<SpecialUseAirspace>, IAirspaceService<SpecialUseAirspace>
+    public class AirspaceCronService : ArcGisBaseService<Airspace>, IAirspaceCronService<Airspace>
     {
-        protected override string BaseUrl => "https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/Special_Use_Airspace/FeatureServer/0/query";
+        protected override string BaseUrl => "https://services6.arcgis.com/ssFJjBXIUyZDrSYZ/arcgis/rest/services/Class_Airspace/FeatureServer/0/query";
 
-        public SpecialUseAirspaceService(
-            ILogger<SpecialUseAirspaceService> logger,
+        public AirspaceCronService(
+            ILogger<AirspaceCronService> logger,
             IHttpClientFactory httpClientFactory,
             VFR3DDbContext dbContext)
             : base(logger, httpClientFactory, dbContext)
@@ -21,15 +21,23 @@ namespace VFR3D.Infrastructure.Services.ArcgisServices
 
         public async Task UpdateAirspacesAsync(CancellationToken cancellationToken = default)
         {
-            _logger.LogInformation("Updating special use airspaces");
+            foreach (var airspaceClass in new[] { "B", "C", "D", "E" })
+            {
+                await UpdateAirspacesByClass(airspaceClass, cancellationToken);
+            }
+        }
+
+        private async Task UpdateAirspacesByClass(string airspaceClass, CancellationToken cancellationToken)
+        {
+            _logger.LogInformation("Updating Class {Class} airspaces", airspaceClass);
 
             var parameters = new Dictionary<string, string>
             {
-                ["where"] = "1=1",
+                ["where"] = $"CLASS = '{airspaceClass}'",
                 ["outFields"] = "*"
             };
 
-            var response = await QueryFeatures<SpecialUseAirspaceModel>(parameters, cancellationToken);
+            var response = await QueryFeatures<AirspaceModel>(parameters, cancellationToken);
 
             foreach (var feature in response.Features)
             {
@@ -39,38 +47,42 @@ namespace VFR3D.Infrastructure.Services.ArcgisServices
                 MapFieldsToEntity(existingAirspace, feature.Attributes);
                 existingAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
 
-                if (await _dbContext.SpecialUseAirspaces.FindAsync(new object[] { existingAirspace.ObjectId }, cancellationToken) == null)
+                if (existingAirspace.Id == 0)
                 {
-                    await _dbContext.SpecialUseAirspaces.AddAsync(existingAirspace, cancellationToken);
+                    await _dbContext.Airspaces.AddAsync(existingAirspace, cancellationToken);
                 }
                 else
                 {
-                    _dbContext.SpecialUseAirspaces.Update(existingAirspace);
+                    _dbContext.Airspaces.Update(existingAirspace);
                 }
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Updated {Count} special use airspaces", response.Features.Count);
+            _logger.LogInformation("Updated {Count} Class {Class} airspaces", response.Features.Count, airspaceClass);
         }
 
-        protected override async Task<SpecialUseAirspace?> FindExistingEntity(object id, CancellationToken cancellationToken)
+        protected override async Task<Airspace?> FindExistingEntity(object id, CancellationToken cancellationToken)
         {
-            return await _dbContext.SpecialUseAirspaces.FirstOrDefaultAsync(a => a.ObjectId == (int)id, cancellationToken);
+            return await _dbContext.Airspaces.FirstOrDefaultAsync(a => a.ObjectId == (int)id, cancellationToken);
         }
 
-        protected override SpecialUseAirspace CreateNewEntity(object id)
+        protected override Airspace CreateNewEntity(object id)
         {
-            return new SpecialUseAirspace { ObjectId = (int)id };
+            return new Airspace { ObjectId = (int)id };
         }
 
-        protected override void MapFieldsToEntity(SpecialUseAirspace entity, object attributes)
+        protected override void MapFieldsToEntity(Airspace entity, object attributes)
         {
-            if (attributes is not SpecialUseAirspaceModel attrs) return;
+            if (attributes is not AirspaceModel attrs) return;
 
             entity.GlobalId = attrs.GlobalId;
+            entity.Ident = attrs.Ident;
+            entity.IcaoId = attrs.IcaoId;
             entity.Name = attrs.Name;
             entity.TypeCode = attrs.TypeCode;
+            entity.LocalType = attrs.LocalType;
             entity.Class = attrs.Class;
+            entity.MilCode = attrs.MilCode;
             entity.UpperDesc = attrs.UpperDesc;
             entity.UpperVal = attrs.UpperVal;
             entity.UpperUom = attrs.UpperUom;
@@ -79,20 +91,23 @@ namespace VFR3D.Infrastructure.Services.ArcgisServices
             entity.LowerVal = attrs.LowerVal;
             entity.LowerUom = attrs.LowerUom;
             entity.LowerCode = attrs.LowerCode;
-            entity.City = attrs.City;
-            entity.State = attrs.State;
-            entity.Country = attrs.Country;
-            entity.ContAgent = attrs.ContAgent;
+            entity.Level = attrs.Level;
             entity.Sector = attrs.Sector;
             entity.Onshore = attrs.Onshore;
             entity.Exclusion = attrs.Exclusion;
-            entity.TimesOfUse = attrs.TimesOfUse;
+            entity.WkhrCode = attrs.WkhrCode;
+            entity.WkhrRmk = attrs.WkhrRmk;
+            entity.Dst = attrs.Dst;
             entity.GmtOffset = attrs.GmtOffset;
-            entity.Remarks = attrs.Remarks;
-            entity.AkLow = attrs.AkLow;
-            entity.AkHigh = attrs.AkHigh;
-            entity.UsLow = attrs.UsLow;
+            entity.ContAgent = attrs.ContAgent;
+            entity.City = attrs.City;
+            entity.State = attrs.State;
+            entity.Country = attrs.Country;
+            entity.AdhpId = attrs.AdhpId;
             entity.UsHigh = attrs.UsHigh;
+            entity.AkHigh = attrs.AkHigh;
+            entity.AkLow = attrs.AkLow;
+            entity.UsLow = attrs.UsLow;
             entity.UsArea = attrs.UsArea;
             entity.Pacific = attrs.Pacific;
             entity.ShapeArea = attrs.ShapeArea;

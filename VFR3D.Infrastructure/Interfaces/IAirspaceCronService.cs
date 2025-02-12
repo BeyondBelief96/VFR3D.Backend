@@ -1,6 +1,6 @@
 ﻿namespace VFR3D.Infrastructure.Interfaces
 {
-    public interface IAirspaceService<TEntity>
+    public interface IAirspaceCronService<TEntity>
     {
         Task UpdateAirspacesAsync(CancellationToken cancellationToken = default);
     }

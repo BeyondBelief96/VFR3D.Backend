@@ -30,7 +30,7 @@ namespace VFR3D.Infrastructure.Jobs
                 
                 if(await publicationService.ShouldRunUpdateAsync(PublicationType.Airspaces, currentDate))
                 {
-                    var airspaceService = scope.ServiceProvider.GetRequiredService<IAirspaceService<Airspace>>();
+                    var airspaceService = scope.ServiceProvider.GetRequiredService<IAirspaceCronService<Airspace>>();
                     await airspaceService.UpdateAirspacesAsync(cancellationToken);
                     _logger.LogInformation("Completed airspace update job");
                 }

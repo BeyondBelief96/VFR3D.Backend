@@ -36,8 +36,8 @@ internal class Program
         builder.Services.AddScoped<IAirportDiagramCronService, AirportDiagramCronCronService>();
         builder.Services.AddScoped<AirportService>();
         builder.Services.AddScoped<FrequencyService>();
-        builder.Services.AddScoped<IAirspaceService<Airspace>, AirspaceService>();
-        builder.Services.AddScoped<IAirspaceService<SpecialUseAirspace>, SpecialUseAirspaceService>();
+        builder.Services.AddScoped<IAirspaceCronService<Airspace>, AirspaceCronService>();
+        builder.Services.AddScoped<IAirspaceCronService<SpecialUseAirspace>, SpecialUseAirspaceCronService>();
         builder.Services.AddScoped<IFaaPublicationCycleService, FaaPublicationCycleService>();
         builder.Services.AddSingleton<IAwsSecretsService, AwsSecretsService>();
         builder.Services.AddScoped<IAwsInitializationService, AwsInitializationService>();
