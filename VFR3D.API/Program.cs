@@ -38,6 +38,8 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 }, ServiceLifetime.Scoped);
 builder.Services.AddScoped<IMetarService, MetarService>();
 builder.Services.AddScoped<IPirepService, PirepService>();
+builder.Services.AddScoped<ITafService, TafService>();
+builder.Services.AddScoped<IAirsigmetService, AirsigmetService>();
 builder.Services.AddHttpClient();
 
 builder.Services.AddCors(options =>
