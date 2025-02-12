@@ -1,6 +1,6 @@
 ﻿namespace VFR3D.Infrastructure.Dtos
 {
-    public class MetarDto
+    public record MetarDto
     {
         public string? RawText { get; init; }
         public string? StationId { get; init; }
@@ -21,7 +21,7 @@
         public string? FlightCategory { get; init; }
     }
 
-    public class MetarQualityControlFlagsDto
+    public record MetarQualityControlFlagsDto
     {
         public string? Corrected { get; init; }
         public string? Auto { get; init; }
@@ -33,7 +33,7 @@
         public string? PresentWeatherSensorOff { get; init; }
     }
 
-    public class MetarSkyConditionDto
+    public record MetarSkyConditionDto
     {
         public string SkyCover { get; init; } = string.Empty;
         public int? CloudBaseFtAgl { get; init; }

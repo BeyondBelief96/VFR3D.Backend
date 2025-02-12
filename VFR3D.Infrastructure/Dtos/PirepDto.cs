@@ -2,7 +2,7 @@
 
 namespace VFR3D.Infrastructure.Dtos
 {
-    public class PirepDto
+    public record PirepDto
     {
         public int Id { get; init; }
         public string? RawText { get; init; }

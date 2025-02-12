@@ -1,6 +1,6 @@
 ﻿namespace VFR3D.Infrastructure.Dtos
 {
-    public class AirportDto
+    public record AirportDto
     {
         public string SiteNo { get; init; } = string.Empty;
         public string? IcaoId { get; init; }

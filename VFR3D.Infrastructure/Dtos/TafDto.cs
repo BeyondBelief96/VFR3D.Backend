@@ -2,7 +2,7 @@
 
 namespace VFR3D.Infrastructure.Dtos;
 
-public class TafDto
+public record TafDto
 {
     public string? RawText { get; init; }
     public string? StationId { get; init; }

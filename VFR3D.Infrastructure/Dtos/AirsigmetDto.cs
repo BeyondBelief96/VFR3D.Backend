@@ -2,7 +2,7 @@
 
 namespace VFR3D.Infrastructure.Dtos;
 
-public class AirsigmetDto
+public record AirsigmetDto
 {
     public string? RawText { get; init; }
     public string? ValidTimeFrom { get; init; }
