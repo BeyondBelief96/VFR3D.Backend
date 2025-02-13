@@ -64,6 +64,8 @@ builder.Services.AddScoped<IAirspaceService, AirspaceService>();
 builder.Services.AddScoped<IMagneticVariationService, MagneticVariationService>();
 builder.Services.AddScoped<IWindsAloftService, WindsAloftService>();
 builder.Services.AddScoped<INavlogService, NavlogService>();
+builder.Services.AddScoped<IFlightService, FlightService>();
+
 builder.Services.AddHttpClient();
 
 builder.Services.AddCors(options =>

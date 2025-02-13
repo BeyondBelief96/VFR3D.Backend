@@ -1,4 +1,6 @@
-﻿namespace VFR3D.Domain.ValueObjects.Flights;
+﻿using VFR3D.Infrastructure.Enums;
+
+namespace VFR3D.Domain.ValueObjects.Flights;
 
 public class Waypoint
 {
@@ -7,5 +9,5 @@ public class Waypoint
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public double Altitude { get; set; }
-    public string? WaypointType { get; set; }
+    public WaypointType? WaypointType { get; set; }
 }
