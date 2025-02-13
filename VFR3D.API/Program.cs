@@ -28,7 +28,8 @@ builder.Services.AddControllers()
 
 builder.Services.AddOpenApiDocument();
 builder.Services.AddMemoryCache();
-builder.Services.Configure<ApiKeys>(builder.Configuration.GetSection("ApiKeys"));
+builder.Services.Configure<NOAASettings>(builder.Configuration.GetSection("NOAASettings"));
+builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("StripeSettings"));
 builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"));
 builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
 
@@ -65,6 +66,7 @@ builder.Services.AddScoped<IMagneticVariationService, MagneticVariationService>(
 builder.Services.AddScoped<IWindsAloftService, WindsAloftService>();
 builder.Services.AddScoped<INavlogService, NavlogService>();
 builder.Services.AddScoped<IFlightService, FlightService>();
+builder.Services.AddScoped<IStripeService, StripeService>();
 
 builder.Services.AddHttpClient();
 

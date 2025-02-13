@@ -1,6 +1,6 @@
 ﻿namespace VFR3D.Infrastructure.Settings;
 
-public class ApiKeys
+public class NOAASettings
 {
     public string NOAAApiKey { get; init; }
 }

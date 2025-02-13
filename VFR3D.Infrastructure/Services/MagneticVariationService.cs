@@ -17,7 +17,7 @@ public class MagneticVariationService : IMagneticVariationService
 
     public MagneticVariationService(
         IHttpClientFactory httpClientFactory,
-        IOptions<ApiKeys> apiKeys,
+        IOptions<NOAASettings> apiKeys,
         ILogger<MagneticVariationService> logger)
     {
         _httpClientFactory = httpClientFactory;
