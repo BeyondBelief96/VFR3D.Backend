@@ -26,13 +26,13 @@ public class AircraftPerformanceProfile
     public int CruiseTrueAirspeed { get; set; }
 
     [Column("cruise_fuel_burn")]
-    public decimal CruiseFuelBurn { get; set; }
+    public double CruiseFuelBurn { get; set; }
 
     [Column("climb_fuel_burn")]
-    public decimal ClimbFuelBurn { get; set; }
+    public double ClimbFuelBurn { get; set; }
 
     [Column("descent_fuel_burn")]
-    public decimal DescentFuelBurn { get; set; }
+    public double DescentFuelBurn { get; set; }
 
     [Column("climb_fpm")]
     public int ClimbFpm { get; set; }
@@ -44,10 +44,10 @@ public class AircraftPerformanceProfile
     public int DescentTrueAirspeed { get; set; }
 
     [Column("stt_fuel_gals")]
-    public decimal SttFuelGals { get; set; }
+    public double SttFuelGals { get; set; }
 
     [Column("fuel_on_board_gals")]
-    public decimal FuelOnBoardGals { get; set; }
+    public double FuelOnBoardGals { get; set; }
 
     // Navigation Properties
     public virtual ICollection<Flight> Flights { get; set; } = new List<Flight>();

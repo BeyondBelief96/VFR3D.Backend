@@ -1,9 +1,9 @@
-﻿namespace VFR3D.Domain.ValueObjects.Flights;
+﻿namespace VFR3D.Infrastructure.Dtos.Navlog;
 
-public class NavlogLeg
+public record NavigationLegDto
 {
-    public Waypoint LegStartPoint { get; set; } = new();
-    public Waypoint LegEndPoint { get; set; } = new();
+    public WaypointDto LegStartPoint { get; set; } = new();
+    public WaypointDto LegEndPoint { get; set; } = new();
     public double TrueCourse { get; set; }
     public double MagneticHeading { get; set; }
     public double MagneticCourse { get; set; }

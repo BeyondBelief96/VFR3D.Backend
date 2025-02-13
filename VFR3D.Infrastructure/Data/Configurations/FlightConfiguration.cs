@@ -40,19 +40,19 @@ namespace VFR3D.Infrastructure.Data.Configurations
                 .HasColumnName("aircraft_performance_id");
 
             builder.Property(e => e.TotalRouteDistance)
-                .HasColumnType("decimal(8,2)")
+                .HasColumnType("double precision")
                 .HasColumnName("total_route_distance");
 
             builder.Property(e => e.TotalRouteTimeHours)
-                .HasColumnType("decimal(5,2)")
+                .HasColumnType("double precision")
                 .HasColumnName("total_route_time_hours");
 
             builder.Property(e => e.TotalFuelUsed)
-                .HasColumnType("decimal(6,2)")
+                .HasColumnType("double precision")
                 .HasColumnName("total_fuel_used");
 
             builder.Property(e => e.AverageWindComponent)
-                .HasColumnType("decimal(5,2)")
+                .HasColumnType("double precision")
                 .HasColumnName("average_wind_component");
 
             builder.Property(e => e.Legs)

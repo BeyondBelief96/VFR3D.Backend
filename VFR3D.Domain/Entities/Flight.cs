@@ -37,16 +37,16 @@ namespace VFR3D.Domain.Entities
         public string AircraftPerformanceId { get; set; } = string.Empty;
 
         [Column("total_route_distance")]
-        public decimal TotalRouteDistance { get; set; }
+        public double TotalRouteDistance { get; set; }
 
         [Column("total_route_time_hours")]
-        public decimal TotalRouteTimeHours { get; set; }
+        public double TotalRouteTimeHours { get; set; }
 
         [Column("total_fuel_used")]
-        public decimal TotalFuelUsed { get; set; }
+        public double TotalFuelUsed { get; set; }
 
         [Column("average_wind_component")]
-        public decimal AverageWindComponent { get; set; }
+        public double AverageWindComponent { get; set; }
 
         [Column("legs", TypeName = "jsonb")]
         public List<NavlogLeg> Legs { get; set; } = [];

@@ -4,8 +4,8 @@ public class Waypoint
 {
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
-    public decimal Latitude { get; set; }
-    public decimal Longitude { get; set; }
-    public decimal Altitude { get; set; }
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
+    public double Altitude { get; set; }
     public string? WaypointType { get; set; }
 }
