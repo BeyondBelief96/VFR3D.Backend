@@ -54,7 +54,7 @@ public class FlightService : IFlightService
             _context.Flights.Add(flight);
             await _context.SaveChangesAsync();
 
-            return await GetFlight(userId, flight.Id);
+            return FlightMapper.MapToDto(flight);
         }
         catch (Exception ex)
         {
