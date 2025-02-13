@@ -1,9 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VFR3D.Domain.Entities;
-using VFR3D.Domain.ValueObjects.Flights;
 using VFR3D.Infrastructure.Data;
-using VFR3D.Infrastructure.Dtos.AircraftPerformanceProfiles;
 using VFR3D.Infrastructure.Dtos.Flights;
 using VFR3D.Infrastructure.Dtos.Mappers;
 using VFR3D.Infrastructure.Dtos.Navlog;
