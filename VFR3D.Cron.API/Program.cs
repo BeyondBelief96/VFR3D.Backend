@@ -21,8 +21,8 @@ internal class Program
         var builder = WebApplication.CreateBuilder(args);
 
         builder.Configuration.SetBasePath(builder.Environment.ContentRootPath)
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-            .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+            .AddJsonFile("cron.api.appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonFile($"cron.api.appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
             .AddEnvironmentVariables(prefix: "VFR3D_")
             .AddUserSecrets<Program>(optional: true);
 

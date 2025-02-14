@@ -18,6 +18,12 @@ using VFR3D.Infrastructure.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration
+    .SetBasePath(builder.Environment.ContentRootPath)
+    .AddJsonFile("api.appsettings.json", optional: false)
+    .AddJsonFile($"api.appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
+    .AddEnvironmentVariables();
+
 // Setup CORS
 builder.Services.AddCors(options =>
 {
