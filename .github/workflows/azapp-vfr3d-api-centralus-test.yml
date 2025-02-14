@@ -1,4 +1,4 @@
-name: Build and deploy VFR3D API to Azure
+name: Build and deploy VFR3D API Azure
 on:
   push:
     branches:
@@ -9,14 +9,12 @@ on:
       - 'VFR3D.Domain/**'
       - 'VFR3D.Infrastructure/**'
       - 'VFR3D.Common/**'
-
 env:
   AZURE_WEBAPP_NAME: azapp-vfr3d-api-centralus-test
   AZURE_WEBAPP_PACKAGE_PATH: VFR3D.API\publish
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 8.0.x
   WORKING_DIRECTORY: VFR3D.API
-
 jobs:
   build:
     runs-on: windows-latest
@@ -33,21 +31,12 @@ jobs:
       - name: Test
         run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
       - name: Publish
-        run: |
-          dotnet publish "${{ env.WORKING_DIRECTORY }}" `
-            --configuration ${{ env.CONFIGURATION }} `
-            --no-build `
-            --no-restore `
-            --self-contained false `
-            /p:IncludeNativeLibrariesForSelfExtract=true `
-            /p:PublishSingleFile=true `
-            --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+        run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
       - name: Publish Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: webapp
           path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-
   deploy:
     runs-on: windows-latest
     needs: build
