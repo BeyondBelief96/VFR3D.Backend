@@ -108,6 +108,16 @@ services:
       - AWS__ChartSupplementsBucketName=vfr3d-development-digital-chart-supplement-bucket
       - AWS__AirportDiagramsBucketName=vfr3d-development-airport-diagrams-bucket
       - AWS__DbSslCertSecretName=VFR3D-Dev-Db-SSL-Cert
+      # Stripe Settings
+      - StripeSettings__StripeSecretKey=sk_test_51PpD2EDdx3lXaRF74Y2c0ATwwxqkYEVytQlcJd0ekJI5yqZfAKYgDccTPK5FHkB3O8gRPh3XexWW8jaE0bBMwBVY00ByeCbkjD
+      - StripeSettings__StripeMonthlySubscriptionPriceId=price_1PpMqiDdx3lXaRF7yPMTYOMW
+      - StripeSettings__Domain=https://localhost:7014
+      # NOAA API Settings
+      - NOAASettings__NOAAApiKey=zNEw7
+      # Auth0 Settings
+      - Auth0Settings__Auth0ApiIdentifier=testAuth0ApiIdentifier
+      - Auth0Settings__Auth0Domain=testAuth0Domain
+      - Auth0Settings__RequireAuthenticationInDevelopment=false
     ports:
       - "5000:80"  # Map container port 80 to host port 5000
     volumes:
