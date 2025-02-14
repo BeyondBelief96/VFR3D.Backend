@@ -1,4 +1,4 @@
-name: Build and deploy .NET Core application to Web App azapp-vfr3d-cron-service-centralus-test
+name: Build and deploy VFR3D Cron Service Azure
 on:
   push:
     branches:

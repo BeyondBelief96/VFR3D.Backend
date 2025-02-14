@@ -1,4 +1,4 @@
-name: Build and deploy API to Azure Web App
+name: Build and deploy VFR3D API to Azure
 on:
   push:
     branches:
@@ -33,7 +33,15 @@ jobs:
       - name: Test
         run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
       - name: Publish
-        run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+        run: |
+          dotnet publish "${{ env.WORKING_DIRECTORY }}" `
+            --configuration ${{ env.CONFIGURATION }} `
+            --no-build `
+            --no-restore `
+            --self-contained false `
+            /p:IncludeNativeLibrariesForSelfExtract=true `
+            /p:PublishSingleFile=true `
+            --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
       - name: Publish Artifacts
         uses: actions/upload-artifact@v4
         with:
