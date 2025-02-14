@@ -1,4 +1,4 @@
-﻿using VFR3D.Infrastructure.Enums;
+﻿using VFR3D.Domain.Enums;
 
 namespace VFR3D.Domain.ValueObjects.Flights;
 

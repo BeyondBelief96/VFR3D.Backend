@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
+using VFR3D.Domain.Enums;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.Navlog;
 using VFR3D.Infrastructure.Enums;
@@ -68,7 +69,7 @@ public class NavlogService : INavlogService
 
             var previousLegEndTime = request.TimeOfDeparture;
 
-            for (int i = 0; i < waypointsWithClimbAndDescent.Count - 1; i++)
+            for (var i = 0; i < waypointsWithClimbAndDescent.Count - 1; i++)
             {
                 var isClimbLeg = i == 0;
                 var isDescentLeg = i == waypointsWithClimbAndDescent.Count - 2;
@@ -140,7 +141,7 @@ public class NavlogService : INavlogService
         // Calculate climb point
         var altitudeDifference = plannedCruisingAltitude - startPoint.Altitude;
         var climbTime = altitudeDifference / (performance.ClimbFpm * 60); // convert to hours
-        var climbDistance = performance.ClimbTrueAirspeed * climbTime;
+        var climbDistance = performance.ClimbTrueAirspeed * climbTime; // Nautical Miles
 
         var topOfClimbPoint = FindPointAtDistance(
             startPoint,
@@ -160,7 +161,7 @@ public class NavlogService : INavlogService
         // Calculate descent point
         var descentAltitudeDifference = plannedCruisingAltitude - endPoint.Altitude;
         var descentTime = descentAltitudeDifference / (performance.DescentFpm * 60); // convert to hours
-        var descentDistance = performance.DescentTrueAirspeed * descentTime;
+        var descentDistance = performance.DescentTrueAirspeed * descentTime; // Nautical Miles
 
         var topOfDescentPoint = FindPointAtDistance(
             endPoint,
@@ -412,9 +413,9 @@ public class NavlogService : INavlogService
             return legs.Average(leg => leg.HeadwindComponent);
         }
 
-        private WaypointDto FindPointAtDistance(WaypointDto startPoint, double distance, double trueCourse)
+        private WaypointDto FindPointAtDistance(WaypointDto startPoint, double distanceNauticalMiles, double trueCourse)
         {
-            var distanceMeters = (distance / Constants.NauticalMile);
+            var distanceMeters = (distanceNauticalMiles * Constants.NauticalMile);
             var result = Geodesic.WGS84.ArcDirect(
                 startPoint.Latitude,
                 startPoint.Longitude,

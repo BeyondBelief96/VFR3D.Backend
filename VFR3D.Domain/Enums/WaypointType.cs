@@ -1,9 +1,12 @@
-﻿namespace VFR3D.Infrastructure.Enums;
+﻿using System.Text.Json.Serialization;
 
+namespace VFR3D.Domain.Enums;
+
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum WaypointType
 {
-    Airport = 1,
-    Custom = 2,
-    CalculatedPoint = 3,
-    Navaid = 4,
+    Airport,
+    Custom,
+    CalculatedPoint,
+    Navaid,
 }

@@ -13,6 +13,20 @@ using VFR3D.Infrastructure.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowedOrigins",
+        policy =>
+        {
+            policy.WithOrigins(
+                    "http://localhost:5173",
+                    "https://www.vfr3d.com",
+                    "https://vfr3d.netlify.app")
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        });
+});
+
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
@@ -65,26 +79,17 @@ builder.Services.AddScoped<IAirspaceService, AirspaceService>();
 builder.Services.AddScoped<IMagneticVariationService, MagneticVariationService>();
 builder.Services.AddScoped<IWindsAloftService, WindsAloftService>();
 builder.Services.AddScoped<INavlogService, NavlogService>();
+builder.Services.AddScoped<IAircraftPerformanceProfileService, AircraftPerformanceProfileService>();
 builder.Services.AddScoped<IFlightService, FlightService>();
 builder.Services.AddScoped<IStripeService, StripeService>();
 
 builder.Services.AddHttpClient();
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowedOrigins",
-        policy =>
-        {
-            policy.WithOrigins(
-                    "http://localhost:5173",
-                    "https://www.vfr3d.com",
-                    "https://vfr3d.netlify.app")
-                .AllowAnyMethod()
-                .AllowAnyHeader();
-        });
-});
+
 
 var app = builder.Build();
+
+app.UseCors("AllowedOrigins");
 
 if(app.Environment.IsProduction())
 {
@@ -98,7 +103,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();

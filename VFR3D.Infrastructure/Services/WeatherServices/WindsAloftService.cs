@@ -10,6 +10,7 @@ namespace VFR3D.Infrastructure.Services.WeatherServices
         private readonly HttpClient _httpClient;
         private readonly ILogger<WindsAloftService> _logger;
         private readonly JsonSerializerOptions _jsonOptions;
+        private static readonly int[] AltitudeLevels = { 30, 60, 90, 120, 180, 240, 300, 340, 390 };
 
         public WindsAloftService(
             HttpClient httpClient,
@@ -33,29 +34,28 @@ namespace VFR3D.Infrastructure.Services.WeatherServices
                 }
 
                 const string baseUrl = "https://aviationweather.gov/api/data/windtemp";
-                
-                // First, get the text response for valid times
+                var formattedFcst = fcstHours.ToString("D2");
+
                 var textResponse = await _httpClient.GetStringAsync(
-                    $"{baseUrl}?region=us&level=low&fcst={fcstHours:D2}");
+                    $"{baseUrl}?region=us&level=low&fcst={formattedFcst}");
 
                 var validTime = ExtractValidTime(textResponse);
                 var (forUseStartTime, forUseEndTime) = ExtractForUseTimes(textResponse);
 
-                var altitudeLevels = new[] { 30, 60, 90, 120, 180, 240, 300, 340, 390 };
-                var data = new List<WindsAloftSiteDto>();
+                var tasks = AltitudeLevels.Select(level => 
+                    _httpClient.GetStringAsync($"{baseUrl}?region=us&level={level}&fcst={formattedFcst}&format=json"));
+                
+                var responses = await Task.WhenAll(tasks);
                 var airportDataMap = new Dictionary<string, WindsAloftSiteDto>();
 
-                foreach (var level in altitudeLevels)
+                foreach (var response in responses)
                 {
-                    var response = await _httpClient.GetStringAsync(
-                        $"{baseUrl}?region=us&level={level}&fcst={fcstHours:D2}&format=json");
-                    
                     var levelData = JsonSerializer.Deserialize<WindsAloftLevelData>(response, _jsonOptions);
                     if (levelData?.Sites == null) continue;
 
                     foreach (var site in levelData.Sites)
                     {
-                        var altitude = (level * 100).ToString();
+                        var altitude = (int.Parse(levelData.Level) * 100).ToString();
 
                         if (!airportDataMap.TryGetValue(site.Id, out var airportData))
                         {
@@ -93,7 +93,7 @@ namespace VFR3D.Infrastructure.Services.WeatherServices
             }
         }
 
-        private DateTime ExtractValidTime(string rawText)
+        private static DateTime ExtractValidTime(string rawText)
         {
             var validTimeMatch = System.Text.RegularExpressions.Regex.Match(rawText, @"VALID (\d{6})");
             if (!validTimeMatch.Success)
@@ -107,13 +107,17 @@ namespace VFR3D.Infrastructure.Services.WeatherServices
             var minute = int.Parse(validTimeString.Substring(4, 2));
 
             var validTime = DateTime.UtcNow;
-            validTime = validTime.AddDays(day - validTime.Day); // Adjust to correct day
-            validTime = validTime.Date.AddHours(hour).AddMinutes(minute);
-
-            return validTime;
+            return new DateTime(
+                validTime.Year,
+                validTime.Month,
+                day,
+                hour,
+                minute,
+                0,
+                DateTimeKind.Utc);
         }
 
-        private (DateTime ForUseStartTime, DateTime ForUseEndTime) ExtractForUseTimes(string rawText)
+        private static (DateTime ForUseStartTime, DateTime ForUseEndTime) ExtractForUseTimes(string rawText)
         {
             var forUseMatch = System.Text.RegularExpressions.Regex.Match(rawText, @"FOR USE (\d{4})-(\d{4})");
             if (!forUseMatch.Success)
@@ -125,37 +129,46 @@ namespace VFR3D.Infrastructure.Services.WeatherServices
             
             var startHour = int.Parse(forUseMatch.Groups[1].Value[..2]);
             var startMinute = int.Parse(forUseMatch.Groups[1].Value.Substring(2, 2));
-            var forUseStartTime = new DateTime(validTime.Year, validTime.Month, validTime.Day);
-
-            if (startHour < validTime.Hour)
+            
+            var forUseStartTime = new DateTime(
+                validTime.Year,
+                validTime.Month,
+                validTime.Day,
+                startHour,
+                startMinute,
+                0,
+                DateTimeKind.Utc);
+            // If the "for use" start time is earlier than the valid time, it refers to the same day as the valid time
+            // If the "for use" start time is later than the valid time, it refers to the day before the valid time
+            if (startHour > validTime.Hour)
             {
-                forUseStartTime = forUseStartTime.AddDays(1);
+                forUseStartTime = forUseStartTime.AddDays(-1);
             }
-
-            forUseStartTime = forUseStartTime.AddHours(startHour).AddMinutes(startMinute);
 
             var endHour = int.Parse(forUseMatch.Groups[2].Value[..2]);
             var endMinute = int.Parse(forUseMatch.Groups[2].Value.Substring(2, 2));
-            var forUseEndTime = new DateTime(validTime.Year, validTime.Month, validTime.Day);
+            
+            var forUseEndTime = new DateTime(
+                validTime.Year,
+                validTime.Month,
+                validTime.Day,
+                endHour,
+                endMinute,
+                0,
+                DateTimeKind.Utc);
 
             if (endHour == 0 && endMinute == 0)
             {
                 forUseEndTime = forUseEndTime.AddDays(1);
             }
-            else if (endHour < startHour)
-            {
-                forUseEndTime = forUseEndTime.AddDays(1);
-            }
-
-            forUseEndTime = forUseEndTime.AddHours(endHour).AddMinutes(endMinute);
 
             return (forUseStartTime, forUseEndTime);
         }
 
         private class WindsAloftLevelData
         {
-            public List<WindsAloftSite>? Sites { get; init; } = [];
-            public int Level { get; init; }
+            public List<WindsAloftSite>? Sites { get; init; }
+            public string Level { get; init; }
         }
 
         private record WindsAloftSite

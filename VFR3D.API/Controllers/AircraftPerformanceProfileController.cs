@@ -7,7 +7,6 @@ namespace VFR3D.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
 public class AircraftPerformanceProfileController : ControllerBase
 {
     private readonly IAircraftPerformanceProfileService _performanceProfileService;

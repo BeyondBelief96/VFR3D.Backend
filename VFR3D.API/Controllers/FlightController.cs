@@ -147,7 +147,7 @@ public class FlightController : ControllerBase
     /// <summary>
     /// Regenerates the navlog for a flight with updated weather data
     /// </summary>
-    [HttpPost("{id}/regenerate")]
+    [HttpPost("[action]/{id}")]
     [ProducesResponseType(typeof(FlightDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
