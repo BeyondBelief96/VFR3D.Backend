@@ -1,6 +1,11 @@
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using NSwag;
+using NSwag.Generation.Processors.Security;
+using VFR3D.API.Authentication;
 using VFR3D.Cron.API.Extensions;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Interfaces;
@@ -13,6 +18,7 @@ using VFR3D.Infrastructure.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Setup CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowedOrigins",
@@ -27,26 +33,62 @@ builder.Services.AddCors(options =>
         });
 });
 
+// Setup Logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
 
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
+// Setup Controller Json Serialization Handling
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.Converters.Add(new GeometryJsonConverter());
+    options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals;
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+});
+
+// Setup Authentication
+builder.Services.AddAuthentication(options =>
     {
-        options.JsonSerializerOptions.Converters.Add(new GeometryJsonConverter());
-        options.JsonSerializerOptions.NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals;
-        options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
-    });
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(options =>
+    {
+        var auth0Settings = builder.Configuration.GetSection("Auth0Settings").Get<Auth0Settings>();
+        Auth0Handler.ConfigureJwtBearer(options, auth0Settings);
+    })
+    .AddScheme<AuthenticationSchemeOptions, ConditionalAuthHandler>("Conditional", null);
 
 
-builder.Services.AddOpenApiDocument();
-builder.Services.AddMemoryCache();
+// Setup Swagger
+builder.Services.AddOpenApiDocument(options =>
+{
+    options.Title = "VFR3D API";
+    options.Version = "v1";
+    
+    // Add security definition
+    options.AddSecurity("JWT", [],
+        new OpenApiSecurityScheme
+        {
+            Type = OpenApiSecuritySchemeType.ApiKey,
+            Name = "Authorization",
+            In = OpenApiSecurityApiKeyLocation.Header,
+            Description = "Enter your Bearer token in the format: Bearer {token}"
+        });
+
+    // Add security requirement to all operations
+    options.OperationProcessors.Add(
+        new AspNetCoreOperationSecurityScopeProcessor("JWT"));
+});
+
+// Setup Environment Variable Settings
 builder.Services.Configure<NOAASettings>(builder.Configuration.GetSection("NOAASettings"));
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("StripeSettings"));
+builder.Services.Configure<Auth0Settings>(builder.Configuration.GetSection("Auth0Settings"));
 builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"));
 builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
 
+// Setup DB Context
 builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 {
     var dbSettings = serviceProvider.GetRequiredService<IOptions<DatabaseSettings>>().Value;
@@ -66,6 +108,8 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
     }
 }, ServiceLifetime.Scoped);
 
+// Configure Services
+builder.Services.AddMemoryCache();
 builder.Services.AddAwsServices(builder.Configuration);
 builder.Services.AddScoped<IMetarService, MetarService>();
 builder.Services.AddScoped<IPirepService, PirepService>();
@@ -82,10 +126,9 @@ builder.Services.AddScoped<INavlogService, NavlogService>();
 builder.Services.AddScoped<IAircraftPerformanceProfileService, AircraftPerformanceProfileService>();
 builder.Services.AddScoped<IFlightService, FlightService>();
 builder.Services.AddScoped<IStripeService, StripeService>();
+builder.Services.AddScoped<ConditionalAuthHandler>();
 
 builder.Services.AddHttpClient();
-
-
 
 var app = builder.Build();
 
@@ -103,6 +146,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();

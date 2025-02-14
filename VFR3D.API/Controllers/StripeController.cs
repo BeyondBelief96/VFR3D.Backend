@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using VFR3D.API.Authentication;
 using VFR3D.Infrastructure.Dtos.Stripe;
 using VFR3D.Infrastructure.Interfaces;
 
@@ -7,6 +8,7 @@ namespace VFR3D.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[ConditionalAuth]
 public class StripeController : ControllerBase
 {
     private readonly IStripeService _stripeService;

@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using VFR3D.API.Authentication;
 using VFR3D.Infrastructure.Dtos;
 using VFR3D.Infrastructure.Interfaces;
 
@@ -6,6 +7,7 @@ namespace VFR3D.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [ConditionalAuth]
     public class AirspaceController : ControllerBase
     {
         private readonly IAirspaceService _airspaceService;

@@ -2,5 +2,5 @@
 
 public class NOAASettings
 {
-    public string NOAAApiKey { get; init; }
+    public string? NOAAApiKey { get; init; }
 }

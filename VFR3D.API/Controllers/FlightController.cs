@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using VFR3D.API.Authentication;
 using VFR3D.Infrastructure.Dtos.Flights;
 using VFR3D.Infrastructure.Interfaces;
 
@@ -6,6 +7,7 @@ namespace VFR3D.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[ConditionalAuth]
 public class FlightController : ControllerBase
 {
     private readonly IFlightService _flightService;
@@ -42,15 +44,15 @@ public class FlightController : ControllerBase
     /// <summary>
     /// Gets a specific flight by ID
     /// </summary>
-    [HttpGet("{id}")]
+    [HttpGet("{flightId}")]
     [ProducesResponseType(typeof(FlightDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<FlightDto>> GetFlight(string userId, string id)
+    public async Task<ActionResult<FlightDto>> GetFlight(string userId, string flightId)
     {
         try
         {
-            var flight = await _flightService.GetFlight(userId, id);
+            var flight = await _flightService.GetFlight(userId, flightId);
             return Ok(flight);
         }
         catch (KeyNotFoundException ex)
@@ -59,7 +61,7 @@ public class FlightController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting flight {FlightId} for user {UserId}", id, userId);
+            _logger.LogError(ex, "Error getting flight {FlightId} for user {UserId}", flightId, userId);
             return StatusCode(500, "An error occurred while retrieving the flight");
         }
     }
@@ -94,18 +96,18 @@ public class FlightController : ControllerBase
     /// <summary>
     /// Updates an existing flight
     /// </summary>
-    [HttpPatch("{id}")]
+    [HttpPatch("{flightId}")]
     [ProducesResponseType(typeof(FlightDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<FlightDto>> UpdateFlight(
         string userId,
-        string id,
+        string flightId,
         [FromBody] UpdateFlightRequestDto request)
     {
         try
         {
-            var flight = await _flightService.UpdateFlight(userId, id, request);
+            var flight = await _flightService.UpdateFlight(userId, flightId, request);
             return Ok(flight);
         }
         catch (KeyNotFoundException ex)
@@ -114,7 +116,7 @@ public class FlightController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating flight {FlightId} for user {UserId}", id, userId);
+            _logger.LogError(ex, "Error updating flight {FlightId} for user {UserId}", flightId, userId);
             return StatusCode(500, "An error occurred while updating the flight");
         }
     }
@@ -122,15 +124,15 @@ public class FlightController : ControllerBase
     /// <summary>
     /// Deletes a flight
     /// </summary>
-    [HttpDelete("{id}")]
+    [HttpDelete("{flightId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> DeleteFlight(string userId, string id)
+    public async Task<IActionResult> DeleteFlight(string userId, string flightId)
     {
         try
         {
-            await _flightService.DeleteFlight(userId, id);
+            await _flightService.DeleteFlight(userId, flightId);
             return Ok();
         }
         catch (KeyNotFoundException ex)
@@ -139,7 +141,7 @@ public class FlightController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting flight {FlightId} for user {UserId}", id, userId);
+            _logger.LogError(ex, "Error deleting flight {FlightId} for user {UserId}", flightId, userId);
             return StatusCode(500, "An error occurred while deleting the flight");
         }
     }
@@ -147,15 +149,15 @@ public class FlightController : ControllerBase
     /// <summary>
     /// Regenerates the navlog for a flight with updated weather data
     /// </summary>
-    [HttpPost("[action]/{id}")]
+    [HttpPost("[action]/{flightId}")]
     [ProducesResponseType(typeof(FlightDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<FlightDto>> RegenerateNavlog(string userId, string id)
+    public async Task<ActionResult<FlightDto>> RegenerateNavlog(string userId, string flightId)
     {
         try
         {
-            var flight = await _flightService.RegenerateNavlog(userId, id);
+            var flight = await _flightService.RegenerateNavlog(userId, flightId);
             return Ok(flight);
         }
         catch (KeyNotFoundException ex)
@@ -165,7 +167,7 @@ public class FlightController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error regenerating navlog for flight {FlightId} for user {UserId}", 
-                id, userId);
+                flightId, userId);
             return StatusCode(500, "An error occurred while regenerating the navlog");
         }
     }
