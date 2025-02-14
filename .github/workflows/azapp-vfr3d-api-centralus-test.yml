@@ -4,6 +4,7 @@ on:
     branches:
       - main
     paths:
+      - '.github/workflow/azapp-vfr3d-api-centralus-test.yml'
       - 'VFR3D.API/**'
       - 'VFR3D.Domain/**'
       - 'VFR3D.Infrastructure/**'

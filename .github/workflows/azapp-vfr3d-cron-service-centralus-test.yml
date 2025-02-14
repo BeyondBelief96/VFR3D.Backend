@@ -2,8 +2,9 @@ name: Build and deploy .NET Core application to Web App azapp-vfr3d-cron-service
 on:
   push:
     branches:
-    - main]
+    - main
     paths:
+      - '.github/workflow/azapp-vfr3d-cron-service-centralus-test.yml'
       - 'VFR3D.Cron.API/**'
       - 'VFR3D.Domain/**'
       - 'VFR3D.Infrastructure/**'
