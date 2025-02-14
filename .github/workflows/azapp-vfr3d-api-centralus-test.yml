@@ -36,9 +36,6 @@ jobs:
           --configuration ${{ env.CONFIGURATION }} `
           --no-build `
           --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}" `
-          /p:IncludeProjects=VFR3D.API `
-          /p:SolutionDir= `
-          /p:SolutionFileName=
       - name: Publish Artifacts
         uses: actions/upload-artifact@v4
         with:
