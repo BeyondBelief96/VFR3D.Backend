@@ -4,7 +4,7 @@ on:
     branches:
     - main
     paths:
-      - '.github/workflow/azapp-vfr3d-cron-service-centralus-test.yml'
+      - '.github/workflows/azapp-vfr3d-cron-service-centralus-test.yml'
       - 'VFR3D.Cron.API/**'
       - 'VFR3D.Domain/**'
       - 'VFR3D.Infrastructure/**'
