@@ -2,6 +2,11 @@
 
 public record BearingAndDistanceRequestDto
 {
-    public WaypointDto StartPoint { get; set; } = new();
-    public WaypointDto EndPoint { get; set; } = new();
+    public double StartLatitude { get; init; }
+    
+    public double StartLongitude { get; init; }
+    
+    public double EndLatitude { get; init; }
+    
+    public double EndLongitude { get; init; }
 }

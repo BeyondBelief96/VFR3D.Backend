@@ -106,20 +106,16 @@ public class NavlogService : INavlogService
 
     public async Task<BearingAndDistanceResponseDto> CalculateBearingAndDistance(BearingAndDistanceRequestDto request)
     {
-        var result = Geodesic.WGS84.Direct(
-            request.StartPoint.Latitude, 
-            request.StartPoint.Longitude,
-            request.EndPoint.Latitude, 
-            request.EndPoint.Longitude);
-
-        var distance = result.Distance * Constants.NauticalMile; 
-        var trueCourse = result.Azimuth2; // azi1 is initial bearing
-        var magneticCourse = await CalculateMagneticCourse(request.StartPoint, trueCourse);
+        var inverseGeodesicResult = CalculateInverseGeodesic(request.StartLatitude, request.StartLongitude, request.EndLatitude,
+            request.EndLongitude);
+        
+        if(inverseGeodesicResult == null) return new BearingAndDistanceResponseDto();
+        var magneticCourse = await CalculateMagneticCourse(request.StartLatitude, request.StartLongitude, inverseGeodesicResult.Azimuth2);
 
         return new BearingAndDistanceResponseDto
         {
-            Distance = distance,
-            TrueCourse = trueCourse,
+            Distance = inverseGeodesicResult.Distance / Constants.NauticalMile,
+            TrueCourse = inverseGeodesicResult.Azimuth2,
             MagneticCourse = magneticCourse
         };
     }
@@ -146,8 +142,8 @@ public class NavlogService : INavlogService
         var topOfClimbPoint = FindPointAtDistance(
             startPoint,
             climbDistance,
-            CalculateTrueCourse(startPoint, waypoints[1]));
-
+            CalculateTrueCourse(startPoint.Latitude, startPoint.Longitude, waypoints[1].Latitude, waypoints[1].Longitude));
+        
         var topOfClimbWaypoint = new WaypointDto
         {
             Id = "TOC",
@@ -166,7 +162,7 @@ public class NavlogService : INavlogService
         var topOfDescentPoint = FindPointAtDistance(
             endPoint,
             -descentDistance,
-            CalculateTrueCourse(waypoints[^2], endPoint));
+            CalculateTrueCourse(waypoints[^2].Latitude, waypoints[^2].Longitude, endPoint.Latitude, endPoint.Longitude));
 
         var topOfDescentWaypoint = new WaypointDto
         {
@@ -197,17 +193,24 @@ public class NavlogService : INavlogService
         DateTime previousLegEndTime,
         WindsAloftDto? windsAloftData)
     {
-        var trueCourse = CalculateTrueCourse(startPoint, endPoint);
-        var magneticCourse = await CalculateMagneticCourse(startPoint, trueCourse);
-        var legDistance = CalculateLegDistance(startPoint, endPoint);
-
-        var leg = new NavigationLegDto()
+        var inverseGeodesicResult = CalculateInverseGeodesic(startPoint.Latitude, startPoint.Longitude, endPoint.Latitude, endPoint.Longitude);
+        var leg = new NavigationLegDto
         {
             LegStartPoint = startPoint,
             LegEndPoint = endPoint,
-            TrueCourse = trueCourse,
+            StartLegTime = previousLegEndTime,
+        };
+
+        if (inverseGeodesicResult == null) return leg;
+        var magneticCourse = await CalculateMagneticCourse(startPoint.Latitude, startPoint.Longitude, inverseGeodesicResult.Azimuth2);
+
+        leg = new NavigationLegDto()
+        {
+            LegStartPoint = startPoint,
+            LegEndPoint = endPoint,
+            TrueCourse = inverseGeodesicResult.Azimuth2,
             MagneticCourse = magneticCourse,
-            LegDistance = legDistance,
+            LegDistance = inverseGeodesicResult.Distance / Constants.NauticalMile,
             StartLegTime = previousLegEndTime
         };
 
@@ -220,13 +223,13 @@ public class NavlogService : INavlogService
         return leg;
     }
 
-    private double CalculateTrueCourse(WaypointDto startPoint, WaypointDto endPoint)
+    private double CalculateTrueCourse(double startLatitude, double startLongitude, double endLatitude, double endLongitude)
     {
-        var result = Geodesic.WGS84.Direct(
-            startPoint.Latitude, 
-            startPoint.Longitude,
-            endPoint.Latitude, 
-            endPoint.Longitude);
+        var result = Geodesic.WGS84.Inverse(
+            startLatitude, 
+            startLongitude,
+            endLatitude, 
+            endLongitude);
 
         // Normalize to 0-360
         var course = result.Azimuth2;
@@ -236,13 +239,14 @@ public class NavlogService : INavlogService
         return course;
     }
 
-    private async Task<double> CalculateMagneticCourse(WaypointDto point, double trueCourse)
+    private async Task<double> CalculateMagneticCourse(double latitude, double longitude, double trueCourse)
     {
         var magneticVariation = await _magneticVariationService.GetMagneticVariation(
-            point.Latitude, 
-            point.Longitude);
-            
-        var magneticCourse = trueCourse + magneticVariation;
+            latitude, 
+            longitude);
+        // West headings come out negative, so we need to (subtract, which would come out to adding) it to our true course.
+        // Easterly headings come out positive, so they get subtracted from our true course.
+        var magneticCourse = trueCourse - magneticVariation;
 
         // Normalize to 0-360
         while (magneticCourse < 0) magneticCourse += 360;
@@ -250,16 +254,21 @@ public class NavlogService : INavlogService
 
         return magneticCourse;
     }
-
-    private double CalculateLegDistance(WaypointDto startPoint, WaypointDto endPoint)
+    
+    private InverseGeodesicResult? CalculateInverseGeodesic(double startLatitude, double startLongitude, double endLatitude, double endLongitude)
     {
-        var result = Geodesic.WGS84.Direct(
-            startPoint.Latitude, 
-            startPoint.Longitude,
-            endPoint.Latitude, 
-            endPoint.Longitude);
+        var result = Geodesic.WGS84.Inverse(
+            startLatitude, 
+            startLongitude,
+            endLatitude, 
+            endLongitude);
 
-        return (result.Distance * Constants.NauticalMile);
+        if (result == null)
+        {
+            _logger.LogWarning("Inverse geodesic calculation result was null. Bearing and distance calculations will not be accurate.");
+        }
+
+        return result;
     }
 
     private int GetLegTas(bool isClimbLeg, bool isDescentLeg, AircraftPerformanceProfile performance)
@@ -322,7 +331,7 @@ public class NavlogService : INavlogService
     private double CalculateGroundSpeed(int legTrueAirSpeed, WindTempDto windTempData, double trueCourse)
     {
         const double radiansPerDegree = Math.PI / 180.0;
-        var relativeWind = Math.Abs((double)(trueCourse - ((windTempData.Direction ?? 0) + 180) % 360));
+        var relativeWind = Math.Abs(trueCourse - ((windTempData.Direction ?? 0) + 180) % 360);
         var headwindComponent = windTempData.Speed * Math.Cos(relativeWind * radiansPerDegree);
         return legTrueAirSpeed + headwindComponent;
     }
@@ -416,7 +425,7 @@ public class NavlogService : INavlogService
         private WaypointDto FindPointAtDistance(WaypointDto startPoint, double distanceNauticalMiles, double trueCourse)
         {
             var distanceMeters = (distanceNauticalMiles * Constants.NauticalMile);
-            var result = Geodesic.WGS84.ArcDirect(
+            var result = Geodesic.WGS84.Direct(
                 startPoint.Latitude,
                 startPoint.Longitude,
                 trueCourse,
@@ -426,7 +435,8 @@ public class NavlogService : INavlogService
             {
                 Latitude = result.Latitude,
                 Longitude = result.Longitude,
-                Altitude = startPoint.Altitude
+                Altitude = startPoint.Altitude,
+                WaypointType = WaypointType.CalculatedPoint
             };
         }
 
@@ -492,9 +502,9 @@ public class NavlogService : INavlogService
             // If no exact match, find nearest airport using geodesic calculations
             var airports = windsAloftData.WindTemp.Select(a =>
             {
-                var result = Geodesic.WGS84.Direct(
-                    (double)waypoint.Latitude,
-                    (double)waypoint.Longitude,
+                var result = Geodesic.WGS84.Inverse(
+                    waypoint.Latitude,
+                    waypoint.Longitude,
                     a.Lat,
                     a.Lon);
 
