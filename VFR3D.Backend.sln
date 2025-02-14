@@ -20,6 +20,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VFR3D.Tests", "VFR3D.Tests\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VFR3D.API", "VFR3D.API\VFR3D.API.csproj", "{4C4F65F6-78A6-4924-B619-B58D4C2E1BA6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Github Actions", "Github Actions", "{6345C756-6060-477B-80D1-E10500184627}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\azapp-vfr3d-cron-service-centralus-test.yml = .github\workflows\azapp-vfr3d-cron-service-centralus-test.yml
+		.github\workflows\azapp-vfr3d-api-centralus-test.yml = .github\workflows\azapp-vfr3d-api-centralus-test.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -70,5 +76,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6345C756-6060-477B-80D1-E10500184627} = {C381B140-85CE-46A5-BEF7-D9B6760FD686}
 	EndGlobalSection
 EndGlobal

@@ -43,7 +43,7 @@ jobs:
     - name: Azure Login
       uses: azure/login@v2
       with:
-        creds: ${{ secrets.azapp_vfr3d_cron_service_centralus_test_SPN }}
+        creds: ${{ secrets.AZAPP_SERVICE_PRINCIPAL_TEST }}
     - name: Deploy to Azure WebApp
       uses: azure/webapps-deploy@v2
       with:
