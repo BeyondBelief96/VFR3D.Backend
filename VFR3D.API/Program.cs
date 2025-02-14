@@ -43,6 +43,10 @@ builder.Services.AddCors(options =>
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
+if (builder.Environment.IsProduction())
+{
+    builder.Logging.AddAzureWebAppDiagnostics();
+}
 
 // Setup Controller Json Serialization Handling
 builder.Services.AddControllers().AddJsonOptions(options =>
@@ -139,11 +143,6 @@ builder.Services.AddHttpClient();
 var app = builder.Build();
 
 app.UseCors("AllowedOrigins");
-
-if(app.Environment.IsProduction())
-{
-    builder.Logging.AddAzureWebAppDiagnostics();
-}
 
 if (app.Environment.IsDevelopment())
 {
