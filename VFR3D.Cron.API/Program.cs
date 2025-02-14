@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.AzureAppServices;
 using Microsoft.Extensions.Options;
 using VFR3D.Cron.API.Extensions;
 using Vfr3d.Domain.Entities;
@@ -27,6 +28,12 @@ internal class Program
             .AddUserSecrets<Program>(optional: true);
 
         builder.Logging.AddAzureWebAppDiagnostics();
+        builder.Services.Configure<AzureFileLoggerOptions>(options =>
+        {
+            options.FileName = "VFR3D-cron-api-log";
+            options.FileSizeLimit = 50 * 1024;
+            options.RetainedFileCountLimit = 5;
+        });
 
         builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"));
         builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));

@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.AzureAppServices;
 using Microsoft.Extensions.Options;
 using NSwag;
 using NSwag.Generation.Processors.Security;
@@ -47,6 +48,13 @@ if (builder.Environment.IsProduction())
 {
     builder.Logging.AddAzureWebAppDiagnostics();
 }
+
+builder.Services.Configure<AzureFileLoggerOptions>(options =>
+{
+    options.FileName = "VFR3D-api-log";
+    options.FileSizeLimit = 50 * 1024;
+    options.RetainedFileCountLimit = 5;
+});
 
 // Setup Controller Json Serialization Handling
 builder.Services.AddControllers().AddJsonOptions(options =>
