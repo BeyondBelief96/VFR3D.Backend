@@ -15,7 +15,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
 {
     public abstract class FaaNasrBaseService<T> where T : class
     {
-        protected readonly ILogger _logger;
+        private readonly ILogger _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly VFR3DDbContext _dbContext;
         private readonly IFaaPublicationCycleService _faaPublicationCycleService;
@@ -51,7 +51,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
                 {
                     _logger.LogInformation($"Downloading {DataType} data from {zipUrl}");
                     using var client = _httpClientFactory.CreateClient();
-                    using var response = await client.GetStreamAsync(zipUrl, cancellationToken);
+                    await using var response = await client.GetStreamAsync(zipUrl, cancellationToken);
                     using var archive = new ZipArchive(response);
 
                     // Process base data first
@@ -91,7 +91,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
 
         private async Task ProcessBaseCsvFileAsync(ZipArchiveEntry entry, Type classMap, CancellationToken cancellationToken)
         {
-            using var entryStream = entry.Open();
+            await using var entryStream = entry.Open();
             using var reader = new StreamReader(entryStream);
             var config = GetCsvConfiguration();
             using var csv = new CsvReader(reader, config);
@@ -127,7 +127,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
                         entities.Clear();
                     }
                 }
-                if (entities.Any())
+                if (entities.Count != 0)
                 {
                     await SaveOrUpdateEntitiesAsync(entities, cancellationToken);
                 }
@@ -141,12 +141,17 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
 
         private async Task ProcessSupplementaryCsvFileAsync(ZipArchiveEntry entry, Type classMap, CancellationToken cancellationToken)
         {
-            using var entryStream = entry.Open();
+            await using var entryStream = entry.Open();
             using var reader = new StreamReader(entryStream);
             var config = GetCsvConfiguration();
             using var csv = new CsvReader(reader, config);
 
             ConfigureCsvReader(csv);
+            
+            // Get the mapped properties from the class map
+            var mapInstance = Activator.CreateInstance(classMap) as ClassMap;
+            var mappedProperties = mapInstance?.MemberMaps.Select(m => m.Data.Member?.Name).ToHashSet() ?? new HashSet<string>();
+
             csv.Context.RegisterClassMap(classMap);
 
             try
@@ -156,13 +161,22 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
 
                 await foreach (var record in csv.GetRecordsAsync<T>(cancellationToken))
                 {
-                    // Get the SiteNo property value
+                    // Create a new instance with only mapped properties
+                    var selectiveRecord = Activator.CreateInstance<T>();
+                    foreach (var property in typeof(T).GetProperties())
+                    {
+                        if (mappedProperties.Contains(property.Name))
+                        {
+                            property.SetValue(selectiveRecord, property.GetValue(record));
+                        }
+                    }
+
+                    // Rest of your existing code, but use selectiveRecord instead of record
                     var siteNoProperty = typeof(T).GetProperty("SiteNo");
                     if (siteNoProperty != null)
                     {
-                        var siteNo = siteNoProperty.GetValue(record)?.ToString();
+                        var siteNo = siteNoProperty.GetValue(selectiveRecord)?.ToString();
 
-                        // Skip if we've already seen this SiteNo
                         if (!string.IsNullOrEmpty(siteNo) && !processedSiteNos.Add(siteNo))
                         {
                             _logger.LogWarning($"Skipping duplicate SiteNo {siteNo} in CSV file");
@@ -170,20 +184,19 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
                         }
                     }
 
-                    var existingEntity = await FindExistingEntityAsync(record, cancellationToken);
+                    var existingEntity = await FindExistingEntityAsync(selectiveRecord, cancellationToken);
                     if (existingEntity != null)
                     {
-                        // Update only the non-null properties from the supplementary data
                         foreach (var property in typeof(T).GetProperties())
                         {
-                            var value = property.GetValue(record);
-                            if (value != null)
+                            if (mappedProperties.Contains(property.Name))
                             {
+                                var value = property.GetValue(selectiveRecord);
                                 property.SetValue(existingEntity, value);
                             }
                         }
 
-                        entities.Add(record);
+                        entities.Add(existingEntity);
                         if (entities.Count >= 1000)
                         {
                             await SaveOrUpdateEntitiesAsync(entities, cancellationToken, true);
@@ -191,7 +204,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
                         }
                     }
                 }
-                if (entities.Any())
+                if (entities.Count != 0)
                 {
                     await SaveOrUpdateEntitiesAsync(entities, cancellationToken, true);
                 }
@@ -224,7 +237,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
             csv.Context.TypeConverterCache.AddConverter<DateTime?>(new OptionalDateConverter());
         }
 
-        protected async Task SaveOrUpdateEntitiesAsync(IEnumerable<T> entities, CancellationToken cancellationToken, bool isSupplementaryData = false)
+        private async Task SaveOrUpdateEntitiesAsync(IEnumerable<T> entities, CancellationToken cancellationToken, bool isSupplementaryData = false)
         {
             const int batchSize = 100;
             var entitiesList = entities.ToList();
