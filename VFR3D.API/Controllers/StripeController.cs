@@ -29,7 +29,7 @@ public class StripeController : ControllerBase
     [ProducesResponseType(typeof(StripeSessionResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<StripeSessionResponseDto>> CreateSubscriptionCheckoutSession(
-        [FromBody] CreateSubscriptionSessionRequestDto request)
+        [FromBody] SubscriptionSessionRequestDto request)
     {
         try
         {
@@ -100,7 +100,7 @@ public class StripeController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> CancelSubscription(
-        [FromBody] CreateSubscriptionSessionRequestDto request)
+        [FromBody] SubscriptionSessionRequestDto request)
     {
         try
         {
@@ -119,15 +119,24 @@ public class StripeController : ControllerBase
     /// Reactivates a subscription
     /// </summary>
     [HttpPost("[action]")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(StripeReactivateSubscriptionResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> ReactivateSubscription(
-        [FromBody] CreateSubscriptionSessionRequestDto request)
+    public async Task<ActionResult<StripeReactivateSubscriptionResponseDto>> ReactivateSubscription(
+        [FromBody] SubscriptionSessionRequestDto request)
     {
         try
         {
-            await _stripeService.ReactivateSubscription(request.Auth0UserId, request.Email);
-            return Ok();
+            var response = await _stripeService.ReactivateSubscription(request.Auth0UserId, request.Email);
+            return Ok(response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ex.Message);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {

@@ -8,6 +8,7 @@ public static class AirsigmetMapper
     {
         return new AirsigmetDto
         {
+            Id = airsigmet.Id,
             RawText = airsigmet.RawText,
             ValidTimeFrom = airsigmet.ValidTimeFrom,
             ValidTimeTo = airsigmet.ValidTimeTo,

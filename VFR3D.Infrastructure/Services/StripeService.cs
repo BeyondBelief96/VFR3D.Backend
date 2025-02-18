@@ -132,10 +132,10 @@ public class StripeService : IStripeService
             return new StripeSubscriptionDto
             {
                 Id = subscription.Id,
-                Status = subscription.Status,
-                CurrentPeriodEnd = subscription.CurrentPeriodEnd,
+                Status = ParseSubscriptionStatus(subscription.Status),
+                CurrentPeriodEnd = subscription.CurrentPeriodEnd.ToUniversalTime(),
                 CancelAtPeriodEnd = subscription.CancelAtPeriodEnd,
-                TrialEnd = subscription.TrialEnd.HasValue
+                TrialEnd = subscription.TrialEnd?.ToUniversalTime(),
             };
         }
         catch (Exception ex)
@@ -177,7 +177,7 @@ public class StripeService : IStripeService
         }
     }
 
-    public async Task ReactivateSubscription(string auth0UserId, string email)
+    public async Task<StripeReactivateSubscriptionResponseDto> ReactivateSubscription(string auth0UserId, string email)
     {
         try
         {
@@ -194,20 +194,29 @@ public class StripeService : IStripeService
             if (subscription == null)
             {
                 _logger.LogWarning("No subscription found for user {Auth0UserId}", auth0UserId);
-                return;
+                throw new KeyNotFoundException("Subscription not found");
             }
 
-            if (subscription.Status is StripeConstants.Active or StripeConstants.Trialing && 
+            var status = ParseSubscriptionStatus(subscription.Status);
+            if ((status is StripeSubscriptionStatus.Active or StripeSubscriptionStatus.Trialing) && 
                 subscription.CancelAtPeriodEnd)
             {
-                await service.UpdateAsync(subscription.Id, new SubscriptionUpdateOptions
+                var updatedSubscription = await service.UpdateAsync(subscription.Id, 
+                    new SubscriptionUpdateOptions
+                    {
+                        CancelAtPeriodEnd = false
+                    });
+
+                return new StripeReactivateSubscriptionResponseDto
                 {
-                    CancelAtPeriodEnd = false
-                });
+                    Status = ParseSubscriptionStatus(updatedSubscription.Status),
+                    CurrentPeriodEnd = updatedSubscription.CurrentPeriodEnd.ToUniversalTime(),
+                    RequiresPayment = false
+                };
             }
-            else if (subscription.Status == "canceled")
+            else if (status == StripeSubscriptionStatus.Canceled)
             {
-                await service.CreateAsync(new SubscriptionCreateOptions
+                var newSubscription = await service.CreateAsync(new SubscriptionCreateOptions
                 {
                     Customer = customer.Id,
                     Items = subscription.Items.Data.Select(item => new SubscriptionItemOptions
@@ -216,7 +225,16 @@ public class StripeService : IStripeService
                     }).ToList(),
                     TrialEnd = subscription.TrialEnd
                 });
+
+                return new StripeReactivateSubscriptionResponseDto
+                {
+                    Status = ParseSubscriptionStatus(newSubscription.Status),
+                    CurrentPeriodEnd = newSubscription.CurrentPeriodEnd.ToUniversalTime(),
+                    RequiresPayment = true
+                };
             }
+
+            throw new InvalidOperationException("Subscription cannot be reactivated");
         }
         catch (Exception ex)
         {
@@ -271,5 +289,21 @@ public class StripeService : IStripeService
         });
 
         return subscriptions.Any(s => s.TrialEnd.HasValue);
+    }
+    
+    private static StripeSubscriptionStatus ParseSubscriptionStatus(string status)
+    {
+        return status.ToLower() switch
+        {
+            "active" => StripeSubscriptionStatus.Active,
+            "trialing" => StripeSubscriptionStatus.Trialing,
+            "canceled" => StripeSubscriptionStatus.Canceled,
+            "past_due" => StripeSubscriptionStatus.PastDue,
+            "unpaid" => StripeSubscriptionStatus.Unpaid,
+            "paused" => StripeSubscriptionStatus.Paused,
+            "incomplete" => StripeSubscriptionStatus.Incomplete,
+            "incomplete_expired" => StripeSubscriptionStatus.IncompleteExpired,
+            _ => throw new ArgumentException($"Unknown subscription status: {status}")
+        };
     }
 }

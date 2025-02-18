@@ -8,5 +8,5 @@ public interface IStripeService
     Task<StripeUrlResponseDto> CreatePortalSession(string auth0UserId, string email);
     Task<StripeSubscriptionDto?> GetSubscriptionDetails(string auth0UserId, string email);
     Task CancelSubscription(string auth0UserId, string email);
-    Task ReactivateSubscription(string auth0UserId, string email);
+    Task<StripeReactivateSubscriptionResponseDto> ReactivateSubscription(string auth0UserId, string email);
 }

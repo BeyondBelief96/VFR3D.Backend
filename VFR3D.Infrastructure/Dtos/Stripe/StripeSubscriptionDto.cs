@@ -2,9 +2,9 @@
 
 public record StripeSubscriptionDto
 {
-    public string Id { get; set; } = string.Empty;
-    public string Status { get; set; } = string.Empty;
-    public DateTime CurrentPeriodEnd { get; set; }
-    public bool CancelAtPeriodEnd { get; set; }
-    public bool TrialEnd { get; set; }
+    public string Id { get; init; } = string.Empty;
+    public StripeSubscriptionStatus Status { get; init; }
+    public DateTime CurrentPeriodEnd { get; init; }
+    public bool CancelAtPeriodEnd { get; init; }
+    public DateTime? TrialEnd { get; init; }
 }
