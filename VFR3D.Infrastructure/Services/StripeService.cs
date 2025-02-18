@@ -12,8 +12,8 @@ namespace VFR3D.Infrastructure.Services;
 public class StripeService : IStripeService
 {
     private readonly ILogger<StripeService> _logger;
-    private readonly string _stripeMonthlySubscriptionPriceId;
-    private readonly string _domain;
+    private readonly string? _stripeMonthlySubscriptionPriceId;
+    private readonly string? _domain;
 
     public StripeService(
         IOptions<StripeSettings> stripeSettings,
@@ -21,9 +21,8 @@ public class StripeService : IStripeService
     {
         _logger = logger;
         _stripeMonthlySubscriptionPriceId = stripeSettings.Value.StripeMonthlySubscriptionPriceId;
-        
-        StripeConfiguration.ApiKey = stripeSettings.Value.StripeSecretKey;
         _domain = stripeSettings.Value.Domain;
+        StripeConfiguration.ApiKey = stripeSettings.Value.StripeSecretKey;
     }
 
     public async Task<StripeSessionResponseDto> CreateSubscriptionCheckoutSession(string auth0UserId, string email)
@@ -37,7 +36,7 @@ public class StripeService : IStripeService
             {
                 UiMode = "embedded",
                 Customer = customer.Id,
-                PaymentMethodTypes = new List<string> { "card" },
+                PaymentMethodTypes = ["card"],
                 LineItems = new List<SessionLineItemOptions>
                 {
                     new()
