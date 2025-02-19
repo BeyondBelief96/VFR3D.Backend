@@ -84,7 +84,6 @@ builder.Services.AddOpenApiDocument(options =>
     options.Title = "VFR3D API";
     options.Version = "v1";
     
-    // Add security definition
     options.AddSecurity("JWT", [],
         new OpenApiSecurityScheme
         {
