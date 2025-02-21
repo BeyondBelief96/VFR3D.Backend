@@ -96,7 +96,7 @@ public class FlightController : ControllerBase
     /// <summary>
     /// Updates an existing flight
     /// </summary>
-    [HttpPatch("{flightId}")]
+    [HttpPatch("{userId}/{flightId}")]
     [ProducesResponseType(typeof(FlightDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
@@ -124,7 +124,7 @@ public class FlightController : ControllerBase
     /// <summary>
     /// Deletes a flight
     /// </summary>
-    [HttpDelete("{flightId}")]
+    [HttpDelete("{userId}/{flightId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
