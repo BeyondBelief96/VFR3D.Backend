@@ -24,7 +24,7 @@ public class FlightController : ControllerBase
     /// <summary>
     /// Gets all flights for a user
     /// </summary>
-    [HttpGet]
+    [HttpGet("{userId}")]
     [ProducesResponseType(typeof(List<FlightDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<List<FlightDto>>> GetFlights(string userId)
@@ -44,7 +44,7 @@ public class FlightController : ControllerBase
     /// <summary>
     /// Gets a specific flight by ID
     /// </summary>
-    [HttpGet("{flightId}")]
+    [HttpGet("{userId}/{flightId}")]
     [ProducesResponseType(typeof(FlightDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]

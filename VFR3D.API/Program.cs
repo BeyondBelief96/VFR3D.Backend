@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.AzureAppServices;
 using Microsoft.Extensions.Options;
+using Npgsql;
 using NSwag;
 using NSwag.Generation.Processors.Security;
 using VFR3D.API.Authentication;
@@ -109,8 +110,10 @@ builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("D
 builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 {
     var dbSettings = serviceProvider.GetRequiredService<IOptions<DatabaseSettings>>().Value;
+    var dataSourceBuilder = new NpgsqlDataSourceBuilder(dbSettings.GetConnectionString());
+    dataSourceBuilder.EnableDynamicJson();
 
-    options.UseNpgsql(dbSettings.GetConnectionString(),
+    options.UseNpgsql(dataSourceBuilder.Build(), 
         npgsqlOptions =>
         {
             npgsqlOptions.EnableRetryOnFailure(3);
