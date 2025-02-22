@@ -75,6 +75,16 @@ builder.Services.AddAuthentication(options =>
     {
         var auth0Settings = builder.Configuration.GetSection("Auth0Settings").Get<Auth0Settings>();
         Auth0Handler.ConfigureJwtBearer(options, auth0Settings);
+    
+        // Only disable HTTPS requirement in development
+        if (builder.Environment.IsDevelopment())
+        {
+            options.RequireHttpsMetadata = false;
+        }
+        else 
+        {
+            options.RequireHttpsMetadata = true; // Explicitly require HTTPS in production
+        }
     })
     .AddScheme<AuthenticationSchemeOptions, ConditionalAuthHandler>("Conditional", null);
 

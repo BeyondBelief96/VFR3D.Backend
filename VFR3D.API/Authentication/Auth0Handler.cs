@@ -13,6 +13,7 @@ public class Auth0Handler
             options.Authority = auth0Settings.Auth0Domain;
             options.Audience = auth0Settings.Auth0ApiIdentifier;
         }
+        
         options.TokenValidationParameters = new TokenValidationParameters
         {
             NameClaimType = "name",
