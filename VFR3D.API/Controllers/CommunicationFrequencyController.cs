@@ -8,19 +8,11 @@ namespace VFR3D.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [ConditionalAuth]
-    public class CommunicationFrequencyController : ControllerBase
+    public class CommunicationFrequencyController(
+        ICommunicationFrequencyService frequencyService,
+        ILogger<CommunicationFrequencyController> logger)
+        : ControllerBase
     {
-        private readonly ICommunicationFrequencyService _frequencyService;
-        private readonly ILogger<CommunicationFrequencyController> _logger;
-
-        public CommunicationFrequencyController(
-            ICommunicationFrequencyService frequencyService,
-            ILogger<CommunicationFrequencyController> logger)
-        {
-            _frequencyService = frequencyService;
-            _logger = logger;
-        }
-
         /// <summary>
         /// Gets all communication frequencies for a specific serviced facility
         /// </summary>
@@ -36,12 +28,12 @@ namespace VFR3D.API.Controllers
         {
             try
             {
-                var frequencies = await _frequencyService.GetFrequenciesByServicedFacility(servicedFacility);
+                var frequencies = await frequencyService.GetFrequenciesByServicedFacility(servicedFacility);
                 return Ok(frequencies);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving frequencies for facility: {ServicedFacility}", 
+                logger.LogError(ex, "Error retrieving frequencies for facility: {ServicedFacility}", 
                     servicedFacility);
                 return StatusCode(500, "An error occurred while retrieving communication frequencies");
             }

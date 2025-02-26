@@ -9,17 +9,9 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class MetarController : ControllerBase
+public class MetarController(IMetarService metarService, ILogger<MetarController> logger)
+    : ControllerBase
 {
-    private readonly IMetarService _metarService;
-    private readonly ILogger<MetarController> _logger;
-
-    public MetarController(IMetarService metarService, ILogger<MetarController> logger)
-    {
-        _metarService = metarService;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Gets METAR information for a specific airport
     /// </summary>
@@ -36,7 +28,7 @@ public class MetarController : ControllerBase
     {
         try
         {
-            var metar = await _metarService.GetMetarForAirport(icaoCodeOrIdent.ToUpperInvariant());
+            var metar = await metarService.GetMetarForAirport(icaoCodeOrIdent.ToUpperInvariant());
             return Ok(metar);
         }
         catch (ResourceNotFoundException ex)
@@ -45,7 +37,7 @@ public class MetarController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving METAR for airport {IcaoCodeOrIdent}", icaoCodeOrIdent);
+            logger.LogError(ex, "Error retrieving METAR for airport {IcaoCodeOrIdent}", icaoCodeOrIdent);
             return StatusCode(500, "An error occurred while retrieving the METAR information");
         }
     }
@@ -64,12 +56,12 @@ public class MetarController : ControllerBase
     {
         try
         {
-            var metars = await _metarService.GetMetarsByState(stateCode.ToUpperInvariant());
+            var metars = await metarService.GetMetarsByState(stateCode.ToUpperInvariant());
             return Ok(metars);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving METARs for state {StateCode}", stateCode);
+            logger.LogError(ex, "Error retrieving METARs for state {StateCode}", stateCode);
             return StatusCode(500, "An error occurred while retrieving the METAR information");
         }
     }
@@ -92,12 +84,12 @@ public class MetarController : ControllerBase
                 .Select(s => s.Trim().ToUpperInvariant())
                 .ToArray();
 
-            var metars = await _metarService.GetMetarsByStates(stateCodeArray);
+            var metars = await metarService.GetMetarsByStates(stateCodeArray);
             return Ok(metars);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving METARs for states {StateCodes}", stateCodes);
+            logger.LogError(ex, "Error retrieving METARs for states {StateCodes}", stateCodes);
             return StatusCode(500, "An error occurred while retrieving the METAR information");
         }
     }

@@ -9,19 +9,11 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class ChartSupplementController : ControllerBase
+public class ChartSupplementController(
+    IChartSupplementService chartSupplementService,
+    ILogger<ChartSupplementController> logger)
+    : ControllerBase
 {
-    private readonly IChartSupplementService _chartSupplementService;
-    private readonly ILogger<ChartSupplementController> _logger;
-
-    public ChartSupplementController(
-        IChartSupplementService chartSupplementService,
-        ILogger<ChartSupplementController> logger)
-    {
-        _chartSupplementService = chartSupplementService;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Gets a pre-signed URL for a chart supplement by ICAO code or identifier
     /// </summary>
@@ -38,7 +30,7 @@ public class ChartSupplementController : ControllerBase
     {
         try
         {
-            var supplementUrl = await _chartSupplementService.GetChartSupplementUrlByAirportCode(icaoCodeOrIdent);
+            var supplementUrl = await chartSupplementService.GetChartSupplementUrlByAirportCode(icaoCodeOrIdent);
             return Ok(supplementUrl);
         }
         catch (ResourceNotFoundException ex)
@@ -47,7 +39,7 @@ public class ChartSupplementController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving chart supplement for {IcaoCodeOrIdent}", icaoCodeOrIdent);
+            logger.LogError(ex, "Error retrieving chart supplement for {IcaoCodeOrIdent}", icaoCodeOrIdent);
             return StatusCode(500, "An error occurred while retrieving the chart supplement");
         }
     }

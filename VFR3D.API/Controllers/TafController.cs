@@ -9,17 +9,8 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class TafController : ControllerBase
+public class TafController(ITafService tafService, ILogger<TafController> logger) : ControllerBase
 {
-    private readonly ITafService _tafService;
-    private readonly ILogger<TafController> _logger;
-
-    public TafController(ITafService tafService, ILogger<TafController> logger)
-    {
-        _tafService = tafService;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Gets TAF information for a specific airport
     /// </summary>
@@ -36,7 +27,7 @@ public class TafController : ControllerBase
     {
         try
         {
-            var taf = await _tafService.GetTafByIcaoCode(icaoCodeOrIdent.ToUpperInvariant());
+            var taf = await tafService.GetTafByIcaoCode(icaoCodeOrIdent.ToUpperInvariant());
             return Ok(taf);
         }
         catch (ResourceNotFoundException ex)
@@ -45,7 +36,7 @@ public class TafController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving TAF for airport {IcaoCodeOrIdent}", icaoCodeOrIdent);
+            logger.LogError(ex, "Error retrieving TAF for airport {IcaoCodeOrIdent}", icaoCodeOrIdent);
             return StatusCode(500, "An error occurred while retrieving the TAF information");
         }
     }

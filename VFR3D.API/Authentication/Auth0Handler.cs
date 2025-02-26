@@ -4,7 +4,7 @@ using VFR3D.Infrastructure.Settings;
 
 namespace VFR3D.API.Authentication;
 
-public class Auth0Handler
+public static class Auth0Handler
 {
     public static void ConfigureJwtBearer(JwtBearerOptions options, Auth0Settings? auth0Settings)
     {

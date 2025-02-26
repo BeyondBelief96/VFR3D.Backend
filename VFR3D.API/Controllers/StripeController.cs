@@ -9,19 +9,11 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class StripeController : ControllerBase
+public class StripeController(
+    IStripeService stripeService,
+    ILogger<StripeController> logger)
+    : ControllerBase
 {
-    private readonly IStripeService _stripeService;
-    private readonly ILogger<StripeController> _logger;
-
-    public StripeController(
-        IStripeService stripeService,
-        ILogger<StripeController> logger)
-    {
-        _stripeService = stripeService;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Creates a subscription checkout session
     /// </summary>
@@ -33,14 +25,14 @@ public class StripeController : ControllerBase
     {
         try
         {
-            var response = await _stripeService.CreateSubscriptionCheckoutSession(
+            var response = await stripeService.CreateSubscriptionCheckoutSession(
                 request.Auth0UserId, 
                 request.Email);
             return Ok(response);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating subscription checkout session for user {Auth0UserId}", 
+            logger.LogError(ex, "Error creating subscription checkout session for user {Auth0UserId}", 
                 request.Auth0UserId);
             return StatusCode(500, "An error occurred while creating the checkout session");
         }
@@ -57,14 +49,14 @@ public class StripeController : ControllerBase
     {
         try
         {
-            var response = await _stripeService.CreatePortalSession(
+            var response = await stripeService.CreatePortalSession(
                 request.Auth0UserId, 
                 request.Email);
             return Ok(response);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating portal session for user {Auth0UserId}", 
+            logger.LogError(ex, "Error creating portal session for user {Auth0UserId}", 
                 request.Auth0UserId);
             return StatusCode(500, "An error occurred while creating the portal session");
         }
@@ -82,12 +74,12 @@ public class StripeController : ControllerBase
     {
         try
         {
-            var subscription = await _stripeService.GetSubscriptionDetails(auth0UserId, email);
+            var subscription = await stripeService.GetSubscriptionDetails(auth0UserId, email);
             return Ok(subscription);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting subscription details for user {Auth0UserId}", 
+            logger.LogError(ex, "Error getting subscription details for user {Auth0UserId}", 
                 auth0UserId);
             return StatusCode(500, "An error occurred while getting subscription details");
         }
@@ -104,12 +96,12 @@ public class StripeController : ControllerBase
     {
         try
         {
-            await _stripeService.CancelSubscription(request.Auth0UserId, request.Email);
+            await stripeService.CancelSubscription(request.Auth0UserId, request.Email);
             return Ok();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error canceling subscription for user {Auth0UserId}", 
+            logger.LogError(ex, "Error canceling subscription for user {Auth0UserId}", 
                 request.Auth0UserId);
             return StatusCode(500, "An error occurred while canceling the subscription");
         }
@@ -127,7 +119,7 @@ public class StripeController : ControllerBase
     {
         try
         {
-            var response = await _stripeService.ReactivateSubscription(request.Auth0UserId, request.Email);
+            var response = await stripeService.ReactivateSubscription(request.Auth0UserId, request.Email);
             return Ok(response);
         }
         catch (KeyNotFoundException ex)
@@ -140,7 +132,7 @@ public class StripeController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error reactivating subscription for user {Auth0UserId}", 
+            logger.LogError(ex, "Error reactivating subscription for user {Auth0UserId}", 
                 request.Auth0UserId);
             return StatusCode(500, "An error occurred while reactivating the subscription");
         }

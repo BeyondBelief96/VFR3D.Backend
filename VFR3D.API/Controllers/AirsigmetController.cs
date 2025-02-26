@@ -8,17 +8,9 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class AirsigmetController : ControllerBase
+public class AirsigmetController(IAirsigmetService airsigmetService, ILogger<AirsigmetController> logger)
+    : ControllerBase
 {
-    private readonly IAirsigmetService _airsigmetService;
-    private readonly ILogger<AirsigmetController> _logger;
-
-    public AirsigmetController(IAirsigmetService airsigmetService, ILogger<AirsigmetController> logger)
-    {
-        _airsigmetService = airsigmetService;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Gets all AIRSIGMETs
     /// </summary>
@@ -32,12 +24,12 @@ public class AirsigmetController : ControllerBase
     {
         try
         {
-            var airsigmets = await _airsigmetService.GetAllAirsigmets();
+            var airsigmets = await airsigmetService.GetAllAirsigmets();
             return Ok(airsigmets);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving all AIRSIGMETs");
+            logger.LogError(ex, "Error retrieving all AIRSIGMETs");
             return StatusCode(500, "An error occurred while retrieving AIRSIGMETs");
         }
     }

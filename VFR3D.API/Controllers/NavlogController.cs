@@ -8,19 +8,11 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class NavlogController : ControllerBase
+public class NavlogController(
+    INavlogService navlogService,
+    ILogger<NavlogController> logger)
+    : ControllerBase
 {
-    private readonly INavlogService _navlogService;
-    private readonly ILogger<NavlogController> _logger;
-
-    public NavlogController(
-        INavlogService navlogService,
-        ILogger<NavlogController> logger)
-    {
-        _navlogService = navlogService;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Calculates a complete navigation log for a flight
     /// </summary>
@@ -39,23 +31,23 @@ public class NavlogController : ControllerBase
     {
         try
         {
-            _logger.LogInformation("Calculating navlog for {WaypointCount} waypoints", request.Waypoints.Count);
-            var response = await _navlogService.CalculateNavlog(request);
+            logger.LogInformation("Calculating navlog for {WaypointCount} waypoints", request.Waypoints.Count);
+            var response = await navlogService.CalculateNavlog(request);
             return Ok(response);
         }
         catch (ArgumentException ex)
         {
-            _logger.LogWarning(ex, "Invalid navlog request data");
+            logger.LogWarning(ex, "Invalid navlog request data");
             return BadRequest(ex.Message);
         }
         catch (KeyNotFoundException ex)
         {
-            _logger.LogWarning(ex, "Aircraft performance profile not found");
+            logger.LogWarning(ex, "Aircraft performance profile not found");
             return NotFound(ex.Message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calculating navlog");
+            logger.LogError(ex, "Error calculating navlog");
             return StatusCode(500, "An error occurred while calculating the navigation log");
         }
     }
@@ -77,18 +69,18 @@ public class NavlogController : ControllerBase
     {
         try
         {
-            _logger.LogInformation("Calculating bearing and distance between points");
-            var response = await _navlogService.CalculateBearingAndDistance(request);
+            logger.LogInformation("Calculating bearing and distance between points");
+            var response = await navlogService.CalculateBearingAndDistance(request);
             return Ok(response);
         }
         catch (ArgumentException ex)
         {
-            _logger.LogWarning(ex, "Invalid bearing and distance request data");
+            logger.LogWarning(ex, "Invalid bearing and distance request data");
             return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calculating bearing and distance");
+            logger.LogError(ex, "Error calculating bearing and distance");
             return StatusCode(500, "An error occurred while calculating bearing and distance");
         }
     }
@@ -114,13 +106,13 @@ public class NavlogController : ControllerBase
                 return BadRequest("Forecast period must be 6, 12, or 24 hours");
             }
 
-            _logger.LogInformation("Getting winds aloft data for {Forecast} hour forecast", forecast);
-            var response = await _navlogService.GetWindsAloftData(forecast);
+            logger.LogInformation("Getting winds aloft data for {Forecast} hour forecast", forecast);
+            var response = await navlogService.GetWindsAloftData(forecast);
             return Ok(response);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting winds aloft data");
+            logger.LogError(ex, "Error getting winds aloft data");
             return StatusCode(500, "An error occurred while retrieving winds aloft data");
         }
     }

@@ -9,19 +9,11 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class AirportDiagramController : ControllerBase
+public class AirportDiagramController(
+    IAirportDiagramService airportDiagramService,
+    ILogger<AirportDiagramController> logger)
+    : ControllerBase
 {
-    private readonly IAirportDiagramService _airportDiagramService;
-    private readonly ILogger<AirportDiagramController> _logger;
-
-    public AirportDiagramController(
-        IAirportDiagramService airportDiagramService,
-        ILogger<AirportDiagramController> logger)
-    {
-        _airportDiagramService = airportDiagramService;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Gets a pre-signed URL for an airport diagram by ICAO code or identifier
     /// </summary>
@@ -38,7 +30,7 @@ public class AirportDiagramController : ControllerBase
     {
         try
         {
-            var diagramUrl = await _airportDiagramService.GetAirportDiagramUrlByAirportCode(icaoCodeOrIdent);
+            var diagramUrl = await airportDiagramService.GetAirportDiagramUrlByAirportCode(icaoCodeOrIdent);
             return Ok(diagramUrl);
         }
         catch (ResourceNotFoundException ex)
@@ -47,7 +39,7 @@ public class AirportDiagramController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving airport diagram for {IcaoCodeOrIdent}", icaoCodeOrIdent);
+            logger.LogError(ex, "Error retrieving airport diagram for {IcaoCodeOrIdent}", icaoCodeOrIdent);
             return StatusCode(500, "An error occurred while retrieving the airport diagram");
         }
     }

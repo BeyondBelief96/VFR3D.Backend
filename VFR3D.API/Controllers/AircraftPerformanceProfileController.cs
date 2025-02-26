@@ -9,19 +9,11 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class AircraftPerformanceProfileController : ControllerBase
+public class AircraftPerformanceProfileController(
+    IAircraftPerformanceProfileService performanceProfileService,
+    ILogger<AircraftPerformanceProfileController> logger)
+    : ControllerBase
 {
-    private readonly IAircraftPerformanceProfileService _performanceProfileService;
-    private readonly ILogger<AircraftPerformanceProfileController> _logger;
-
-    public AircraftPerformanceProfileController(
-        IAircraftPerformanceProfileService performanceProfileService,
-        ILogger<AircraftPerformanceProfileController> logger)
-    {
-        _performanceProfileService = performanceProfileService;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Creates a new aircraft performance profile
     /// </summary>
@@ -36,12 +28,12 @@ public class AircraftPerformanceProfileController : ControllerBase
     {
         try
         {
-            var profile = await _performanceProfileService.SaveProfile(request);
+            var profile = await performanceProfileService.SaveProfile(request);
             return Ok(profile);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error saving aircraft performance profile");
+            logger.LogError(ex, "Error saving aircraft performance profile");
             return StatusCode(500, "An error occurred while saving the performance profile");
         }
     }
@@ -62,7 +54,7 @@ public class AircraftPerformanceProfileController : ControllerBase
     {
         try
         {
-            var profile = await _performanceProfileService.UpdateProfile(id, request);
+            var profile = await performanceProfileService.UpdateProfile(id, request);
             return Ok(profile);
         }
         catch (KeyNotFoundException ex)
@@ -71,7 +63,7 @@ public class AircraftPerformanceProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating aircraft performance profile {ProfileId}", id);
+            logger.LogError(ex, "Error updating aircraft performance profile {ProfileId}", id);
             return StatusCode(500, "An error occurred while updating the performance profile");
         }
     }
@@ -88,12 +80,12 @@ public class AircraftPerformanceProfileController : ControllerBase
     {
         try
         {
-            var profiles = await _performanceProfileService.GetProfilesByUserId(userId);
+            var profiles = await performanceProfileService.GetProfilesByUserId(userId);
             return Ok(profiles);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting aircraft performance profiles for user {UserId}", userId);
+            logger.LogError(ex, "Error getting aircraft performance profiles for user {UserId}", userId);
             return StatusCode(500, "An error occurred while retrieving the performance profiles");
         }
     }
@@ -112,7 +104,7 @@ public class AircraftPerformanceProfileController : ControllerBase
     {
         try
         {
-            await _performanceProfileService.DeleteProfile(userId, id);
+            await performanceProfileService.DeleteProfile(userId, id);
             return Ok();
         }
         catch (KeyNotFoundException ex)
@@ -125,7 +117,7 @@ public class AircraftPerformanceProfileController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting aircraft performance profile {ProfileId} for user {UserId}", 
+            logger.LogError(ex, "Error deleting aircraft performance profile {ProfileId} for user {UserId}", 
                 id, userId);
             return StatusCode(500, "An error occurred while deleting the performance profile");
         }

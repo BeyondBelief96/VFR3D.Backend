@@ -8,17 +8,9 @@ namespace VFR3D.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [ConditionalAuth]
-    public class PirepController : ControllerBase
+    public class PirepController(IPirepService pirepService, ILogger<PirepController> logger)
+        : ControllerBase
     {
-        private readonly IPirepService _pirepService;
-        private readonly ILogger<PirepController> _logger;
-
-        public PirepController(IPirepService pirepService, ILogger<PirepController> logger)
-        {
-            _pirepService = pirepService;
-            _logger = logger;
-        }
-
         /// <summary>
         /// Gets all PIREPs
         /// </summary>
@@ -32,12 +24,12 @@ namespace VFR3D.API.Controllers
         {
             try
             {
-                var pireps = await _pirepService.GetAllPireps();
+                var pireps = await pirepService.GetAllPireps();
                 return Ok(pireps);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving all PIREPs");
+                logger.LogError(ex, "Error retrieving all PIREPs");
                 return StatusCode(500, "An error occurred while retrieving PIREPs");
             }
         }

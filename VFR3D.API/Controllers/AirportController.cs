@@ -9,19 +9,11 @@ namespace VFR3D.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [ConditionalAuth]
-    public class AirportController : ControllerBase
+    public class AirportController(
+        IAirportService airportService,
+        ILogger<AirportController> logger)
+        : ControllerBase
     {
-        private readonly IAirportService _airportService;
-        private readonly ILogger<AirportController> _logger;
-
-        public AirportController(
-            IAirportService airportService,
-            ILogger<AirportController> logger)
-        {
-            _airportService = airportService;
-            _logger = logger;
-        }
-
         /// <summary>
         /// Gets all airports, optionally filtered by search term
         /// </summary>
@@ -36,12 +28,12 @@ namespace VFR3D.API.Controllers
         {
             try
             {
-                var airports = await _airportService.GetAllAirports(search);
+                var airports = await airportService.GetAllAirports(search);
                 return Ok(airports);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving airports with search: {Search}", search);
+                logger.LogError(ex, "Error retrieving airports with search: {Search}", search);
                 return StatusCode(500, "An error occurred while retrieving airports");
             }
         }
@@ -62,7 +54,7 @@ namespace VFR3D.API.Controllers
         {
             try
             {
-                var airport = await _airportService.GetAirportByIcaoCodeOrIdent(icaoCodeOrIdent);
+                var airport = await airportService.GetAirportByIcaoCodeOrIdent(icaoCodeOrIdent);
                 return Ok(airport);
             }
             catch (ResourceNotFoundException ex)
@@ -71,7 +63,7 @@ namespace VFR3D.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving airport: {IcaoCodeOrIdent}", icaoCodeOrIdent);
+                logger.LogError(ex, "Error retrieving airport: {IcaoCodeOrIdent}", icaoCodeOrIdent);
                 return StatusCode(500, "An error occurred while retrieving the airport");
             }
         }
@@ -90,12 +82,12 @@ namespace VFR3D.API.Controllers
         {
             try
             {
-                var airports = await _airportService.GetAirportsByState(stateCode);
+                var airports = await airportService.GetAirportsByState(stateCode);
                 return Ok(airports);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving airports for state: {StateCode}", stateCode);
+                logger.LogError(ex, "Error retrieving airports for state: {StateCode}", stateCode);
                 return StatusCode(500, "An error occurred while retrieving airports");
             }
         }
@@ -118,12 +110,12 @@ namespace VFR3D.API.Controllers
                     .Select(s => s.Trim())
                     .ToArray();
 
-                var airports = await _airportService.GetAirportsByStates(stateCodeArray);
+                var airports = await airportService.GetAirportsByStates(stateCodeArray);
                 return Ok(airports);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving airports for states: {StateCodes}", stateCodes);
+                logger.LogError(ex, "Error retrieving airports for states: {StateCodes}", stateCodes);
                 return StatusCode(500, "An error occurred while retrieving airports");
             }
         }
@@ -146,12 +138,12 @@ namespace VFR3D.API.Controllers
                     .Select(s => s.Trim())
                     .ToArray();
 
-                var airports = await _airportService.GetAirportsByIcaoCodesOrIdents(codesArray);
+                var airports = await airportService.GetAirportsByIcaoCodesOrIdents(codesArray);
                 return Ok(airports);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving airports for codes: {IcaoCodesOrIdents}", icaoCodesOrIdents);
+                logger.LogError(ex, "Error retrieving airports for codes: {IcaoCodesOrIdents}", icaoCodesOrIdents);
                 return StatusCode(500, "An error occurred while retrieving airports");
             }
         }

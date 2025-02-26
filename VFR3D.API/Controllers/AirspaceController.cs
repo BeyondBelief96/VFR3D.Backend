@@ -8,19 +8,11 @@ namespace VFR3D.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [ConditionalAuth]
-    public class AirspaceController : ControllerBase
+    public class AirspaceController(
+        IAirspaceService airspaceService,
+        ILogger<AirspaceController> logger)
+        : ControllerBase
     {
-        private readonly IAirspaceService _airspaceService;
-        private readonly ILogger<AirspaceController> _logger;
-
-        public AirspaceController(
-            IAirspaceService airspaceService,
-            ILogger<AirspaceController> logger)
-        {
-            _airspaceService = airspaceService;
-            _logger = logger;
-        }
-
         /// <summary>
         /// Gets airspaces by their classes
         /// </summary>
@@ -46,12 +38,12 @@ namespace VFR3D.API.Controllers
                     .Select(c => c.Trim())
                     .ToArray();
 
-                var airspaces = await _airspaceService.GetByClasses(classArray);
+                var airspaces = await airspaceService.GetByClasses(classArray);
                 return Ok(airspaces);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving airspaces by classes: {Classes}", classes);
+                logger.LogError(ex, "Error retrieving airspaces by classes: {Classes}", classes);
                 return StatusCode(500, "An error occurred while retrieving airspaces");
             }
         }
@@ -81,12 +73,12 @@ namespace VFR3D.API.Controllers
                     .Select(c => c.Trim())
                     .ToArray();
 
-                var airspaces = await _airspaceService.GetByCities(cityArray);
+                var airspaces = await airspaceService.GetByCities(cityArray);
                 return Ok(airspaces);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving airspaces by cities: {Cities}", cities);
+                logger.LogError(ex, "Error retrieving airspaces by cities: {Cities}", cities);
                 return StatusCode(500, "An error occurred while retrieving airspaces");
             }
         }
@@ -116,12 +108,12 @@ namespace VFR3D.API.Controllers
                     .Select(s => s.Trim())
                     .ToArray();
 
-                var airspaces = await _airspaceService.GetByStates(stateArray);
+                var airspaces = await airspaceService.GetByStates(stateArray);
                 return Ok(airspaces);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving airspaces by states: {States}", states);
+                logger.LogError(ex, "Error retrieving airspaces by states: {States}", states);
                 return StatusCode(500, "An error occurred while retrieving airspaces");
             }
         }
@@ -151,12 +143,12 @@ namespace VFR3D.API.Controllers
                     .Select(tc => tc.Trim())
                     .ToArray();
 
-                var airspaces = await _airspaceService.GetByTypeCodes(typeCodeArray);
+                var airspaces = await airspaceService.GetByTypeCodes(typeCodeArray);
                 return Ok(airspaces);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving special use airspaces by type codes: {TypeCodes}", typeCodes);
+                logger.LogError(ex, "Error retrieving special use airspaces by type codes: {TypeCodes}", typeCodes);
                 return StatusCode(500, "An error occurred while retrieving special use airspaces");
             }
         }
@@ -186,12 +178,12 @@ namespace VFR3D.API.Controllers
                     .Select(id => id.Trim())
                     .ToArray();
 
-                var airspaces = await _airspaceService.GetByIcaoOrIdents(idArray);
+                var airspaces = await airspaceService.GetByIcaoOrIdents(idArray);
                 return Ok(airspaces);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error retrieving airspaces by ICAO codes or identifiers: {IcaoOrIdents}", 
+                logger.LogError(ex, "Error retrieving airspaces by ICAO codes or identifiers: {IcaoOrIdents}", 
                     icaoOrIdents);
                 return StatusCode(500, "An error occurred while retrieving airspaces");
             }

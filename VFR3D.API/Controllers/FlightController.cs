@@ -8,19 +8,11 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class FlightController : ControllerBase
+public class FlightController(
+    IFlightService flightService,
+    ILogger<FlightController> logger)
+    : ControllerBase
 {
-    private readonly IFlightService _flightService;
-    private readonly ILogger<FlightController> _logger;
-
-    public FlightController(
-        IFlightService flightService,
-        ILogger<FlightController> logger)
-    {
-        _flightService = flightService;
-        _logger = logger;
-    }
-
     /// <summary>
     /// Gets all flights for a user
     /// </summary>
@@ -31,12 +23,12 @@ public class FlightController : ControllerBase
     {
         try
         {
-            var flights = await _flightService.GetFlights(userId);
+            var flights = await flightService.GetFlights(userId);
             return Ok(flights);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting flights for user {UserId}", userId);
+            logger.LogError(ex, "Error getting flights for user {UserId}", userId);
             return StatusCode(500, "An error occurred while retrieving flights");
         }
     }
@@ -52,7 +44,7 @@ public class FlightController : ControllerBase
     {
         try
         {
-            var flight = await _flightService.GetFlight(userId, flightId);
+            var flight = await flightService.GetFlight(userId, flightId);
             return Ok(flight);
         }
         catch (KeyNotFoundException ex)
@@ -61,7 +53,7 @@ public class FlightController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting flight {FlightId} for user {UserId}", flightId, userId);
+            logger.LogError(ex, "Error getting flight {FlightId} for user {UserId}", flightId, userId);
             return StatusCode(500, "An error occurred while retrieving the flight");
         }
     }
@@ -79,7 +71,7 @@ public class FlightController : ControllerBase
     {
         try
         {
-            var flight = await _flightService.CreateFlight(userId, request);
+            var flight = await flightService.CreateFlight(userId, request);
             return Ok(flight);
         }
         catch (ArgumentException ex)
@@ -88,7 +80,7 @@ public class FlightController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating flight for user {UserId}", userId);
+            logger.LogError(ex, "Error creating flight for user {UserId}", userId);
             return StatusCode(500, "An error occurred while creating the flight");
         }
     }
@@ -107,7 +99,7 @@ public class FlightController : ControllerBase
     {
         try
         {
-            var flight = await _flightService.UpdateFlight(userId, flightId, request);
+            var flight = await flightService.UpdateFlight(userId, flightId, request);
             return Ok(flight);
         }
         catch (KeyNotFoundException ex)
@@ -116,7 +108,7 @@ public class FlightController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating flight {FlightId} for user {UserId}", flightId, userId);
+            logger.LogError(ex, "Error updating flight {FlightId} for user {UserId}", flightId, userId);
             return StatusCode(500, "An error occurred while updating the flight");
         }
     }
@@ -132,7 +124,7 @@ public class FlightController : ControllerBase
     {
         try
         {
-            await _flightService.DeleteFlight(userId, flightId);
+            await flightService.DeleteFlight(userId, flightId);
             return Ok();
         }
         catch (KeyNotFoundException ex)
@@ -141,7 +133,7 @@ public class FlightController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting flight {FlightId} for user {UserId}", flightId, userId);
+            logger.LogError(ex, "Error deleting flight {FlightId} for user {UserId}", flightId, userId);
             return StatusCode(500, "An error occurred while deleting the flight");
         }
     }
@@ -157,7 +149,7 @@ public class FlightController : ControllerBase
     {
         try
         {
-            var flight = await _flightService.RegenerateNavlog(userId, flightId);
+            var flight = await flightService.RegenerateNavlog(userId, flightId);
             return Ok(flight);
         }
         catch (KeyNotFoundException ex)
@@ -166,7 +158,7 @@ public class FlightController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error regenerating navlog for flight {FlightId} for user {UserId}", 
+            logger.LogError(ex, "Error regenerating navlog for flight {FlightId} for user {UserId}", 
                 flightId, userId);
             return StatusCode(500, "An error occurred while regenerating the navlog");
         }
