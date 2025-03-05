@@ -475,10 +475,6 @@ public class NavlogService : INavlogService
             if (nearestAirport == null) return null;
 
             var altitude = (int)waypoint.Altitude;
-            if (nearestAirport.WindTemp.ContainsKey(altitude.ToString()))
-            {
-                return nearestAirport.WindTemp[altitude.ToString()];
-            }
 
             return InterpolateWindTempData(altitude, nearestAirport);
         }
@@ -517,63 +513,223 @@ public class NavlogService : INavlogService
             return airports.MinBy(a => a.Distance)?.Airport;
         }
 
-        private WindTempDto? InterpolateWindTempData(int altitude, WindsAloftSiteDto airport)
+    private WindTempDto? InterpolateWindTempData(int altitude, WindsAloftSiteDto airport)
+    {
+        var altitudeLevels = new[] { 3000, 6000, 9000, 12000, 18000, 24000, 30000, 34000, 39000 };
+
+        // Special handling for exact altitude matches (except 3000 ft)
+        if (Array.IndexOf(altitudeLevels, altitude) >= 0 && altitude != 3000)
         {
-            var altitudeLevels = new[] { 3000, 6000, 9000, 12000, 18000, 24000, 30000, 34000, 39000 };
-
-            // Find the closest lower and upper altitudes
-            var lowerAltIndex = Array.FindIndex(altitudeLevels, a => a > altitude) - 1;
-            var upperAltIndex = lowerAltIndex + 1;
-
-            // Handle edge cases
-            if (lowerAltIndex < 0)
+            // For standard altitudes (except 3000 ft), use exact data if available
+            if (airport.WindTemp.TryGetValue(altitude.ToString(), out var exactData))
             {
-                return airport.WindTemp.GetValueOrDefault(altitudeLevels[0].ToString());
+                return exactData;
             }
-            if (upperAltIndex >= altitudeLevels.Length)
+        }
+
+        // Find the closest lower and upper altitudes
+        var lowerAltIndex = Array.FindIndex(altitudeLevels, a => a > altitude) - 1;
+        var upperAltIndex = lowerAltIndex + 1;
+
+        // Handle altitude below 3000 ft
+        if (lowerAltIndex  < 0)
+        {
+            // For altitudes below 3000 ft, we'll need to:
+            // 1. Get wind/direction from 3000 ft level if available
+            // 2. Calculate temperature by extrapolating from higher altitudes with temp data
+
+            // Get default wind data from 3000 ft level or 6000 ft as fallback
+            int? lowAltDirection = null;
+            int lowAltSpeed = 0;
+            float? lowAltTemperature = null;
+
+            // Try to get wind data from 3000 ft level
+            if (airport.WindTemp.TryGetValue("3000", out var data3000))
             {
-                return airport.WindTemp.GetValueOrDefault(altitudeLevels[^1].ToString());
+                lowAltDirection = data3000.Direction;
+                lowAltSpeed = data3000.Speed;
+            }
+            else if (airport.WindTemp.TryGetValue("6000", out var data6000))
+            {
+                // Fallback to 6000 ft level for wind data
+                lowAltDirection = data6000.Direction;
+                lowAltSpeed = data6000.Speed;
             }
 
-            var lowerAlt = altitudeLevels[lowerAltIndex];
-            var upperAlt = altitudeLevels[upperAltIndex];
+            // Find the first altitude level with temperature data
+            WindTempDto? tempDataSource = null;
+            int tempSourceAltitude = 0;
 
-            if (!airport.WindTemp.TryGetValue(lowerAlt.ToString(), out var lowerData) ||
-                !airport.WindTemp.TryGetValue(upperAlt.ToString(), out var upperData))
+            for (int i = 0; i < altitudeLevels.Length; i++)
             {
-                return null;
-            }
-
-            var ratio = (altitude - lowerAlt) / (double)(upperAlt - lowerAlt);
-
-            // Interpolate direction
-            int? direction = null;
-            if (lowerData.Direction.HasValue && upperData.Direction.HasValue)
-            {
-                var dirDiff = upperData.Direction.Value - lowerData.Direction.Value;
-                if (Math.Abs(dirDiff) > 180)
+                if (airport.WindTemp.TryGetValue(altitudeLevels[i].ToString(), out var altData) &&
+                    altData.Temperature.HasValue)
                 {
-                    dirDiff = dirDiff > 0 ? dirDiff - 360 : dirDiff + 360;
+                    tempDataSource = altData;
+                    tempSourceAltitude = altitudeLevels[i];
+                    break;
                 }
-                direction = (int)((lowerData.Direction.Value + dirDiff * ratio + 360) % 360);
             }
 
-            // Interpolate speed
-            var speed = (int)(lowerData.Speed + (upperData.Speed - lowerData.Speed) * ratio);
-
-            // Interpolate temperature
-            float? temperature = null;
-            if (lowerData.Temperature.HasValue && upperData.Temperature.HasValue)
+            if (tempDataSource?.Temperature.HasValue == true)
             {
-                temperature = (float)(lowerData.Temperature.Value + 
-                    (upperData.Temperature.Value - lowerData.Temperature.Value) * ratio);
+                // Calculate temperature by applying standard lapse rate
+                // When moving from higher to lower altitude, ADD 2°C per 1000 ft
+                float tempDiff = (tempSourceAltitude - altitude) / 1000f * 2f;
+                lowAltTemperature = tempDataSource.Temperature.Value + tempDiff;
             }
 
-            return new WindTempDto()
+            return new WindTempDto
             {
-                Direction = direction,
-                Speed = speed,
-                Temperature = temperature
+                Direction = lowAltDirection,
+                Speed = lowAltSpeed,
+                Temperature = lowAltTemperature
             };
         }
+
+
+        // Handle altitude higher than our highest available level
+        if (upperAltIndex >= altitudeLevels.Length)
+        {
+            // Get the highest available altitude data
+            var highestAlt = altitudeLevels[^1]; // Last element in the array
+            if (airport.WindTemp.TryGetValue(highestAlt.ToString(), out var highestData))
+            {
+                int? highAltDirection = highestData.Direction;
+                int highAltSpeed = highestData.Speed;
+                float? highAltTemperature = highestData.Temperature;
+
+                // Only adjust temperature for higher altitudes using lapse rate
+                // For very high altitudes, temperature typically decreases at about 2°C per 1000 ft
+                if (highAltTemperature.HasValue)
+                {
+                    // When going higher, SUBTRACT 2°C per 1000 ft
+                    float tempDiff = (altitude - highestAlt) / 1000f * 2f;
+                    highAltTemperature = highAltTemperature.Value - tempDiff;
+                }
+
+                return new WindTempDto
+                {
+                    Direction = highAltDirection,
+                    Speed = highAltSpeed,
+                    Temperature = highAltTemperature
+                };
+            }
+
+            // If we couldn't find data for the highest altitude, return null
+            return null;
+        }
+
+        var lowerAlt = altitudeLevels[lowerAltIndex];
+        var upperAlt = altitudeLevels[upperAltIndex];
+
+        if (!airport.WindTemp.TryGetValue(lowerAlt.ToString(), out var lowerData) ||
+            !airport.WindTemp.TryGetValue(upperAlt.ToString(), out var upperData))
+        {
+            return null;
+        }
+
+        var ratio = (altitude - lowerAlt) / (double)(upperAlt - lowerAlt);
+
+        // Interpolate direction
+        int? direction = null;
+        if (lowerData.Direction.HasValue && upperData.Direction.HasValue)
+        {
+            var dirDiff = upperData.Direction.Value - lowerData.Direction.Value;
+            if (Math.Abs(dirDiff) > 180)
+            {
+                dirDiff = dirDiff > 0 ? dirDiff - 360 : dirDiff + 360;
+            }
+            direction = (int)((lowerData.Direction.Value + dirDiff * ratio + 360) % 360);
+        }
+        else if (lowerData.Direction.HasValue)
+        {
+            direction = lowerData.Direction;
+        }
+        else if (upperData.Direction.HasValue)
+        {
+            direction = upperData.Direction;
+        }
+
+        // Interpolate speed
+        var speed = (int)(lowerData.Speed + (upperData.Speed - lowerData.Speed) * ratio);
+
+        // Interpolate temperature - applying proper temperature lapse rate
+        float? temperature = null;
+
+        // Case 1: Special handling for 3000 ft or when lower altitude is 3000 ft
+        if (lowerAlt == 3000)
+        {
+            // Find the next altitude level with temperature data
+            WindTempDto? tempDataSource = null;
+            int tempSourceAltitude = 0;
+
+            for (int i = 1; i < altitudeLevels.Length; i++) // Start from 6000 ft
+            {
+                if (airport.WindTemp.TryGetValue(altitudeLevels[i].ToString(), out var altData) &&
+                    altData.Temperature.HasValue)
+                {
+                    tempDataSource = altData;
+                    tempSourceAltitude = altitudeLevels[i];
+                    break;
+                }
+            }
+
+            if (tempDataSource?.Temperature.HasValue == true)
+            {
+                // Calculate estimated temperature at 3000 ft using lapse rate
+                // When moving from higher to lower altitude, ADD 2°C per 1000 ft
+                float tempDiffTo3000 = (tempSourceAltitude - 3000) / 1000f * 2f;
+                float estimatedTemp3000 = tempDataSource.Temperature.Value + tempDiffTo3000;
+
+                if (altitude == 3000)
+                {
+                    // If exactly at 3000 ft, use the estimated value
+                    temperature = estimatedTemp3000;
+                }
+                else
+                {
+                    // For altitudes between 3000 ft and the next standard level,
+                    // calculate based on lapse rate from the estimated 3000 ft temp
+                    float tempDiffFromEstimated = (altitude - 3000) / 1000f * 2f;
+                    temperature = estimatedTemp3000 - tempDiffFromEstimated; // Subtract when going up
+                }
+            }
+            else if (upperData.Temperature.HasValue)
+            {
+                // Fallback: if we can't estimate 3000 ft temp but have upper altitude temp,
+                // apply lapse rate directly from upper
+                float tempDiff = (upperAlt - altitude) / 1000f * 2f;
+                temperature = upperData.Temperature.Value + tempDiff;
+            }
+        }
+        // Case 2: When both bounds have temperature data
+        else if (lowerData.Temperature.HasValue && upperData.Temperature.HasValue)
+        {
+            // Linear interpolation between two known temperatures
+            temperature = (float)(lowerData.Temperature.Value +
+                (upperData.Temperature.Value - lowerData.Temperature.Value) * ratio);
+        }
+        // Case 3: When only lower altitude has temperature
+        else if (lowerData.Temperature.HasValue)
+        {
+            // Apply lapse rate (-2°C per 1000 ft) when going up
+            float tempDiff = (altitude - lowerAlt) / 1000f * 2f;
+            temperature = lowerData.Temperature.Value - tempDiff;
+        }
+        // Case 4: When only upper altitude has temperature
+        else if (upperData.Temperature.HasValue)
+        {
+            // Apply lapse rate (+2°C per 1000 ft) when going down
+            float tempDiff = (upperAlt - altitude) / 1000f * 2f;
+            temperature = upperData.Temperature.Value + tempDiff;
+        }
+
+        return new WindTempDto
+        {
+            Direction = direction,
+            Speed = speed,
+            Temperature = temperature
+        };
     }
+}
