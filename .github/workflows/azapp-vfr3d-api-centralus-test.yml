@@ -31,14 +31,16 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
-      - name: Restore
+      - name: Restore API project
         run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
-      - name: Build
+      - name: Restore Test project
+        run: dotnet restore "${{ env.TEST_PROJECT }}"
+      - name: Build Test project
         run: dotnet build "${{ env.TEST_PROJECT }}" --configuration ${{ env.CONFIGURATION }} --no-restore
-      - name: Test
-        run: dotnet test "${{ env.WORKING_DIRECTORY }}" --no-build
-      - name: Publish
-        run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-build --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
+      - name: Run Tests
+        run: dotnet test "${{ env.TEST_PROJECT }}" --configuration ${{ env.CONFIGURATION }} --no-build
+      - name: Build and Publish API
+        run: dotnet publish "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --output "${{ env.AZURE_WEBAPP_PACKAGE_PATH }}"
       - name: Publish Artifacts
         uses: actions/upload-artifact@v4
         with:
