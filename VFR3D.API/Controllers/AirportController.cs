@@ -147,5 +147,29 @@ namespace VFR3D.API.Controllers
                 return StatusCode(500, "An error occurred while retrieving airports");
             }
         }
+
+        /// <summary>
+        /// Gets airports where ICAO code or identifier starts with the provided prefix
+        /// </summary>
+        /// <param name="prefix">The prefix to search for in ICAO codes or airport identifiers</param>
+        /// <returns>List of airports with ICAO codes or identifiers starting with the provided prefix</returns>
+        /// <response code="200">Returns the list of airports</response>
+        /// <response code="500">If there was an internal server error</response>
+        [HttpGet("prefix/{prefix}")]
+        [ProducesResponseType(typeof(IEnumerable<AirportDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IEnumerable<AirportDto>>> GetAirportsByPrefix(string prefix)
+        {
+            try
+            {
+                var airports = await airportService.GetAirportsByPrefix(prefix);
+                return Ok(airports);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error retrieving airports with prefix: {Prefix}", prefix);
+                return StatusCode(500, "An error occurred while retrieving airports");
+            }
+        }
     }
 }
