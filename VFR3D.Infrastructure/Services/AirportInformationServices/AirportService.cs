@@ -136,5 +136,32 @@ namespace VFR3D.Infrastructure.Services
                 throw;
             }
         }
+
+        public async Task<IEnumerable<AirportDto>> GetAirportsByPrefix(string prefix)
+        {
+            try
+            {
+                _logger.LogInformation("Getting airports by prefix: {Prefix}", prefix);
+
+                if (string.IsNullOrWhiteSpace(prefix))
+                {
+                    return Enumerable.Empty<AirportDto>();
+                }
+
+                var upperPrefix = prefix.ToUpper();
+                var airports = await _context.Airports
+                    .Where(a => 
+                        (a.IcaoId != null && a.IcaoId.ToUpper().StartsWith(upperPrefix)) || 
+                        (a.ArptId != null && a.ArptId.ToUpper().StartsWith(upperPrefix)))
+                    .ToListAsync();
+
+                return airports.Select(AirportMapper.ToDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting airports by prefix: {Prefix}", prefix);
+                throw;
+            }
+        }
     }
 }
