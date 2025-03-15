@@ -11,6 +11,7 @@ using VFR3D.API.Authentication;
 using VFR3D.Cron.API.Extensions;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Interfaces;
+using VFR3D.Infrastructure.Repositories;
 using VFR3D.Infrastructure.Services;
 using VFR3D.Infrastructure.Services.AirportInformationServices;
 using VFR3D.Infrastructure.Services.DocumentServices;
@@ -141,6 +142,7 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 // Configure Services
 builder.Services.AddMemoryCache();
 builder.Services.AddAwsServices(builder.Configuration);
+builder.Services.AddScoped<IAircraftPerformanceProfileRepository, AircraftPerformanceProfileRepository>();
 builder.Services.AddScoped<IMetarService, MetarService>();
 builder.Services.AddScoped<IPirepService, PirepService>();
 builder.Services.AddScoped<ITafService, TafService>();

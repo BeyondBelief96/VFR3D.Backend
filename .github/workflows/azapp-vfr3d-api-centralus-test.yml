@@ -18,6 +18,12 @@ env:
 jobs:
   build:
     runs-on: windows-latest
+    services:
+      docker:
+        image: docker:20.10.7
+        options: --privileged
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v4
       - name: Setup .NET SDK

@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
 using VFR3D.Domain.Enums;
-using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.Navlog;
 using VFR3D.Infrastructure.Interfaces;
 
@@ -11,18 +10,18 @@ namespace VFR3D.Infrastructure.Services;
 
 public class NavlogService : INavlogService
 {
-    private readonly VFR3DDbContext _context;
+    private readonly IAircraftPerformanceProfileRepository _aircraftPerformanceProfileRepository;
     private readonly IWindsAloftService _windsAloftService;
     private readonly IMagneticVariationService _magneticVariationService;
     private readonly ILogger<NavlogService> _logger;
 
     public NavlogService(
-        VFR3DDbContext context,
+        IAircraftPerformanceProfileRepository aircraftPerformanceProfileRepository,
         IWindsAloftService windsAloftService,
         IMagneticVariationService magneticVariationService,
         ILogger<NavlogService> logger)
     {
-        _context = context;
+        _aircraftPerformanceProfileRepository = aircraftPerformanceProfileRepository;
         _windsAloftService = windsAloftService;
         _magneticVariationService = magneticVariationService;
         _logger = logger;
@@ -40,8 +39,7 @@ public class NavlogService : INavlogService
                 throw new ArgumentException("At least two waypoints are required for navigation");
             }
 
-            var performanceProfile = await _context.AircraftPerformanceProfiles
-                                         .FirstOrDefaultAsync(p => p.Id == request.AircraftPerformanceProfileId)
+            var performanceProfile = await _aircraftPerformanceProfileRepository.GetByIdAsync(request.AircraftPerformanceProfileId)
                                      ?? throw new KeyNotFoundException(
                                          $"Aircraft performance profile not found: {request.AircraftPerformanceProfileId}");
 
@@ -105,16 +103,23 @@ public class NavlogService : INavlogService
 
     public async Task<BearingAndDistanceResponseDto> CalculateBearingAndDistance(BearingAndDistanceRequestDto request)
     {
-        var inverseGeodesicResult = CalculateInverseGeodesic(request.StartLatitude, request.StartLongitude, request.EndLatitude,
-            request.EndLongitude);
-        
-        if(inverseGeodesicResult == null) return new BearingAndDistanceResponseDto();
-        var magneticCourse = await CalculateMagneticCourse(request.StartLatitude, request.StartLongitude, inverseGeodesicResult.Azimuth2);
+        var inverseGeodesicResult = CalculateInverseGeodesic(
+            request.StartLatitude, request.StartLongitude,
+            request.EndLatitude, request.EndLongitude);
+
+        if (inverseGeodesicResult == null)
+            return new BearingAndDistanceResponseDto();
+
+        // Use azi1 (forward azimuth at start point) and normalize to 0-360
+        var trueCourse = NormalizeAzimuth(inverseGeodesicResult.Azimuth1);
+
+        var magneticCourse = await CalculateMagneticCourse(
+            request.StartLatitude, request.StartLongitude, trueCourse);
 
         return new BearingAndDistanceResponseDto
         {
             Distance = inverseGeodesicResult.Distance / Constants.NauticalMile,
-            TrueCourse = inverseGeodesicResult.Azimuth2,
+            TrueCourse = trueCourse,
             MagneticCourse = magneticCourse
         };
     }
@@ -201,13 +206,13 @@ public class NavlogService : INavlogService
         };
 
         if (inverseGeodesicResult == null) return leg;
-        var magneticCourse = await CalculateMagneticCourse(startPoint.Latitude, startPoint.Longitude, inverseGeodesicResult.Azimuth2);
+        var magneticCourse = await CalculateMagneticCourse(startPoint.Latitude, startPoint.Longitude, inverseGeodesicResult.Azimuth1);
 
         leg = new NavigationLegDto()
         {
             LegStartPoint = startPoint,
             LegEndPoint = endPoint,
-            TrueCourse = inverseGeodesicResult.Azimuth2,
+            TrueCourse = NormalizeAzimuth(inverseGeodesicResult.Azimuth1),
             MagneticCourse = magneticCourse,
             LegDistance = inverseGeodesicResult.Distance / Constants.NauticalMile,
             StartLegTime = previousLegEndTime
@@ -248,8 +253,7 @@ public class NavlogService : INavlogService
         var magneticCourse = trueCourse - magneticVariation;
 
         // Normalize to 0-360
-        while (magneticCourse < 0) magneticCourse += 360;
-        while (magneticCourse >= 360) magneticCourse -= 360;
+        magneticCourse = NormalizeAzimuth(magneticCourse);
 
         return magneticCourse;
     }
@@ -269,6 +273,15 @@ public class NavlogService : INavlogService
 
         return result;
     }
+
+    private double NormalizeAzimuth(double azimuth)
+    {
+        // Normalize to 0-360 range
+        while (azimuth < 0) azimuth += 360;
+        while (azimuth >= 360) azimuth -= 360;
+        return azimuth;
+    }
+
 
     private int GetLegTas(bool isClimbLeg, bool isDescentLeg, AircraftPerformanceProfile performance)
     {

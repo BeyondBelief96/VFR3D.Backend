@@ -150,7 +150,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
             
             // Get the mapped properties from the class map
             var mapInstance = Activator.CreateInstance(classMap) as ClassMap;
-            var mappedProperties = mapInstance?.MemberMaps.Select(m => m.Data.Member?.Name).ToHashSet() ?? new HashSet<string>();
+            var mappedProperties = mapInstance?.MemberMaps.Select(m => m.Data.Member?.Name).ToHashSet() ?? new HashSet<string?>();
 
             csv.Context.RegisterClassMap(classMap);
 

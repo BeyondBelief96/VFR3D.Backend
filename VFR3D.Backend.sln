@@ -22,8 +22,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VFR3D.API", "VFR3D.API\VFR3
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Github Actions", "Github Actions", "{6345C756-6060-477B-80D1-E10500184627}"
 	ProjectSection(SolutionItems) = preProject
-		.github\workflows\azapp-vfr3d-cron-service-centralus-test.yml = .github\workflows\azapp-vfr3d-cron-service-centralus-test.yml
 		.github\workflows\azapp-vfr3d-api-centralus-test.yml = .github\workflows\azapp-vfr3d-api-centralus-test.yml
+		.github\workflows\azapp-vfr3d-cron-service-centralus-test.yml = .github\workflows\azapp-vfr3d-cron-service-centralus-test.yml
 	EndProjectSection
 EndProject
 Global
@@ -35,40 +35,40 @@ Global
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Debug|Any CPU.Build.0 = Debug|x64
 		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Debug|x64.ActiveCfg = Debug|x64
 		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Debug|x64.Build.0 = Debug|x64
 		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Release|Any CPU.ActiveCfg = Release|x64
 		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Release|x64.ActiveCfg = Release|x64
 		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Release|x64.Build.0 = Release|x64
-		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Debug|Any CPU.Build.0 = Debug|x64
 		{60B628E0-BE78-4C85-8085-82E28356C942}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{60B628E0-BE78-4C85-8085-82E28356C942}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{60B628E0-BE78-4C85-8085-82E28356C942}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{60B628E0-BE78-4C85-8085-82E28356C942}.Debug|x64.Build.0 = Debug|Any CPU
+		{60B628E0-BE78-4C85-8085-82E28356C942}.Debug|x64.ActiveCfg = Debug|x64
+		{60B628E0-BE78-4C85-8085-82E28356C942}.Debug|x64.Build.0 = Debug|x64
 		{60B628E0-BE78-4C85-8085-82E28356C942}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{60B628E0-BE78-4C85-8085-82E28356C942}.Release|Any CPU.Build.0 = Release|Any CPU
 		{60B628E0-BE78-4C85-8085-82E28356C942}.Release|x64.ActiveCfg = Release|Any CPU
 		{60B628E0-BE78-4C85-8085-82E28356C942}.Release|x64.Build.0 = Release|Any CPU
 		{8C29E8CF-2B38-4A77-A68C-2A6B23D129E5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{8C29E8CF-2B38-4A77-A68C-2A6B23D129E5}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8C29E8CF-2B38-4A77-A68C-2A6B23D129E5}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{8C29E8CF-2B38-4A77-A68C-2A6B23D129E5}.Debug|x64.Build.0 = Debug|Any CPU
+		{8C29E8CF-2B38-4A77-A68C-2A6B23D129E5}.Debug|x64.ActiveCfg = Debug|x64
+		{8C29E8CF-2B38-4A77-A68C-2A6B23D129E5}.Debug|x64.Build.0 = Debug|x64
 		{8C29E8CF-2B38-4A77-A68C-2A6B23D129E5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8C29E8CF-2B38-4A77-A68C-2A6B23D129E5}.Release|Any CPU.Build.0 = Release|Any CPU
 		{8C29E8CF-2B38-4A77-A68C-2A6B23D129E5}.Release|x64.ActiveCfg = Release|Any CPU
 		{8C29E8CF-2B38-4A77-A68C-2A6B23D129E5}.Release|x64.Build.0 = Release|Any CPU
 		{35475761-0C85-4F54-AA17-E5920551E48D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{35475761-0C85-4F54-AA17-E5920551E48D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{35475761-0C85-4F54-AA17-E5920551E48D}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{35475761-0C85-4F54-AA17-E5920551E48D}.Debug|x64.Build.0 = Debug|Any CPU
+		{35475761-0C85-4F54-AA17-E5920551E48D}.Debug|x64.ActiveCfg = Debug|x64
+		{35475761-0C85-4F54-AA17-E5920551E48D}.Debug|x64.Build.0 = Debug|x64
 		{35475761-0C85-4F54-AA17-E5920551E48D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{35475761-0C85-4F54-AA17-E5920551E48D}.Release|Any CPU.Build.0 = Release|Any CPU
 		{35475761-0C85-4F54-AA17-E5920551E48D}.Release|x64.ActiveCfg = Release|Any CPU
 		{35475761-0C85-4F54-AA17-E5920551E48D}.Release|x64.Build.0 = Release|Any CPU
 		{4C4F65F6-78A6-4924-B619-B58D4C2E1BA6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4C4F65F6-78A6-4924-B619-B58D4C2E1BA6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4C4F65F6-78A6-4924-B619-B58D4C2E1BA6}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{4C4F65F6-78A6-4924-B619-B58D4C2E1BA6}.Debug|x64.Build.0 = Debug|Any CPU
+		{4C4F65F6-78A6-4924-B619-B58D4C2E1BA6}.Debug|x64.ActiveCfg = Debug|x64
+		{4C4F65F6-78A6-4924-B619-B58D4C2E1BA6}.Debug|x64.Build.0 = Debug|x64
 		{4C4F65F6-78A6-4924-B619-B58D4C2E1BA6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4C4F65F6-78A6-4924-B619-B58D4C2E1BA6}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4C4F65F6-78A6-4924-B619-B58D4C2E1BA6}.Release|x64.ActiveCfg = Release|Any CPU

@@ -11,31 +11,31 @@ namespace VFR3D.Infrastructure.Data
             
         }
 
-        public DbSet<Metar> Metars => Set<Metar>();
+        public virtual DbSet<Metar> Metars => Set<Metar>();
 
-        public DbSet<Taf> Tafs => Set<Taf>();
+        public virtual DbSet<Taf> Tafs => Set<Taf>();
 
-        public DbSet<Pirep> Pireps => Set<Pirep>();
+        public virtual DbSet<Pirep> Pireps => Set<Pirep>();
 
-        public DbSet<Airsigmet> Airsigmets => Set<Airsigmet>();
+        public virtual DbSet<Airsigmet> Airsigmets => Set<Airsigmet>();
 
-        public DbSet<ChartSupplement> ChartSupplements => Set<ChartSupplement>();
+        public virtual DbSet<ChartSupplement> ChartSupplements => Set<ChartSupplement>();
 
-        public DbSet<AirportDiagram> AirportDiagrams => Set<AirportDiagram>();
+        public virtual DbSet<AirportDiagram> AirportDiagrams => Set<AirportDiagram>();
 
-        public DbSet<Airport> Airports => Set<Airport>();
+        public virtual DbSet<Airport> Airports => Set<Airport>();
 
-        public DbSet<CommunicationFrequency> CommunicationFrequencies => Set<CommunicationFrequency>();
+        public virtual DbSet<CommunicationFrequency> CommunicationFrequencies => Set<CommunicationFrequency>();
 
-        public DbSet<Airspace> Airspaces => Set<Airspace>();
+        public virtual DbSet<Airspace> Airspaces => Set<Airspace>();
 
-        public DbSet<SpecialUseAirspace> SpecialUseAirspaces => Set<SpecialUseAirspace>();
+        public virtual DbSet<SpecialUseAirspace> SpecialUseAirspaces => Set<SpecialUseAirspace>();
 
-        public DbSet<FaaPublicationCycle> FaaPublicationCycles => Set<FaaPublicationCycle>();   
+        public virtual DbSet<FaaPublicationCycle> FaaPublicationCycles => Set<FaaPublicationCycle>();   
         
-        public DbSet<Flight> Flights => Set<Flight>();
+        public virtual DbSet<Flight> Flights => Set<Flight>();
         
-        public DbSet<AircraftPerformanceProfile> AircraftPerformanceProfiles => Set<AircraftPerformanceProfile>();
+        public virtual DbSet<AircraftPerformanceProfile> AircraftPerformanceProfiles => Set<AircraftPerformanceProfile>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

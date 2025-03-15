@@ -5,7 +5,6 @@ using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.Flights;
 using VFR3D.Infrastructure.Dtos.Mappers;
 using VFR3D.Infrastructure.Dtos.Navlog;
-using VFR3D.Infrastructure.Enums;
 using VFR3D.Infrastructure.Interfaces;
 
 namespace VFR3D.Infrastructure.Services;

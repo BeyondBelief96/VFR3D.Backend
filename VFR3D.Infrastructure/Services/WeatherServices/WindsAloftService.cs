@@ -7,16 +7,16 @@ namespace VFR3D.Infrastructure.Services.WeatherServices
 {
     public class WindsAloftService : IWindsAloftService
     {
-        private readonly HttpClient _httpClient;
+        private readonly IHttpClientFactory _httpClientFactory;
         private readonly ILogger<WindsAloftService> _logger;
         private readonly JsonSerializerOptions _jsonOptions;
         private static readonly int[] AltitudeLevels = { 30, 60, 90, 120, 180, 240, 300, 340, 390 };
 
         public WindsAloftService(
-            HttpClient httpClient,
+            IHttpClientFactory httpClientFactory,
             ILogger<WindsAloftService> logger)
         {
-            _httpClient = httpClient;
+            _httpClientFactory = httpClientFactory;
             _logger = logger;
             _jsonOptions = new JsonSerializerOptions
             {
@@ -33,17 +33,18 @@ namespace VFR3D.Infrastructure.Services.WeatherServices
                     throw new ArgumentException("Forecast hours must be 6, 12, or 24", nameof(fcstHours));
                 }
 
+                var httpClient = _httpClientFactory.CreateClient(nameof(WindsAloftService));
                 const string baseUrl = "https://aviationweather.gov/api/data/windtemp";
                 var formattedFcst = fcstHours.ToString("D2");
 
-                var textResponse = await _httpClient.GetStringAsync(
+                var textResponse = await httpClient.GetStringAsync(
                     $"{baseUrl}?region=us&level=low&fcst={formattedFcst}");
 
                 var validTime = ExtractValidTime(textResponse);
                 var (forUseStartTime, forUseEndTime) = ExtractForUseTimes(textResponse);
 
                 var tasks = AltitudeLevels.Select(level => 
-                    _httpClient.GetStringAsync($"{baseUrl}?region=us&level={level}&fcst={formattedFcst}&format=json"));
+                    httpClient.GetStringAsync($"{baseUrl}?region=us&level={level}&fcst={formattedFcst}&format=json"));
                 
                 var responses = await Task.WhenAll(tasks);
                 var airportDataMap = new Dictionary<string, WindsAloftSiteDto>();
@@ -168,7 +169,7 @@ namespace VFR3D.Infrastructure.Services.WeatherServices
         private class WindsAloftLevelData
         {
             public List<WindsAloftSite>? Sites { get; init; }
-            public string Level { get; init; }
+            public string Level { get; init; } = string.Empty;
         }
 
         private record WindsAloftSite
