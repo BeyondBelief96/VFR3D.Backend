@@ -1,5 +1,4 @@
 ﻿using VFR3D.Domain.Entities;
-using VFR3D.Infrastructure.Dtos.AircraftPerformanceProfiles;
 using VFR3D.Infrastructure.Dtos.Flights;
 
 namespace VFR3D.Infrastructure.Dtos.Mappers;
@@ -13,7 +12,7 @@ public static class FlightMapper
             Id = flight.Id,
             Auth0UserId = flight.Auth0UserId,
             Name = flight.Name,
-            DepartureTime = flight.DepartureTime,
+            DepartureTime = flight.DepartureTime.ToString("o"),
             PlannedCruisingAltitude = flight.PlannedCruisingAltitude,
             Waypoints = flight.Waypoints.Select(WaypointMapper.MapToDto).ToList(),
             AircraftPerformanceId = flight.AircraftPerformanceId,
@@ -36,7 +35,7 @@ public static class FlightMapper
             Id = dto.Id,
             Auth0UserId = dto.Auth0UserId,
             Name = dto.Name,
-            DepartureTime = dto.DepartureTime,
+            DepartureTime = DateTime.Parse(dto.DepartureTime),
             PlannedCruisingAltitude = dto.PlannedCruisingAltitude,
             Waypoints = dto.Waypoints.Select(WaypointMapper.MapToEntity).ToList(),
             AircraftPerformanceId = dto.AircraftPerformanceId,
