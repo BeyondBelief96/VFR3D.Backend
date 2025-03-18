@@ -38,9 +38,11 @@ builder.Services.AddCors(options =>
                     "https://www.vfr3d.com",
                     "https://vfr3d.netlify.app")
                 .AllowAnyMethod()
-                .AllowAnyHeader();
+                .AllowAnyHeader()
+                .AllowCredentials();
         });
 });
+
 
 // Setup Logging
 builder.Logging.ClearProviders();
@@ -122,7 +124,9 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 {
     var dbSettings = serviceProvider.GetRequiredService<IOptions<DatabaseSettings>>().Value;
     var dataSourceBuilder = new NpgsqlDataSourceBuilder(dbSettings.GetConnectionString());
+    dataSourceBuilder.UseNetTopologySuite();
     dataSourceBuilder.EnableDynamicJson();
+
 
     options.UseNpgsql(dataSourceBuilder.Build(), 
         npgsqlOptions =>
@@ -130,6 +134,7 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
             npgsqlOptions.EnableRetryOnFailure(3);
             npgsqlOptions.CommandTimeout(30);
             npgsqlOptions.UseNetTopologySuite();
+
         });
 
     if (builder.Environment.IsDevelopment())

@@ -119,7 +119,7 @@ services:
       - Auth0Settings__Auth0Domain=testAuth0Domain
       - Auth0Settings__RequireAuthenticationInDevelopment=false
     ports:
-      - "5000:80"  # Map container port 80 to host port 5000
+      - "7014:80"
     volumes:
       - .:/app
       - /app/VFR3D.Domain/bin
