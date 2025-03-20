@@ -124,7 +124,7 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 {
     var dbSettings = serviceProvider.GetRequiredService<IOptions<DatabaseSettings>>().Value;
     var dataSourceBuilder = new NpgsqlDataSourceBuilder(dbSettings.GetConnectionString());
-    dataSourceBuilder.UseNetTopologySuite();
+        dataSourceBuilder.UseNetTopologySuite();
     dataSourceBuilder.EnableDynamicJson();
 
 
