@@ -44,6 +44,7 @@ internal class Program
         builder.Services.AddScoped<IChartSupplementCronService, ChartSupplementCronCronService>();
         builder.Services.AddScoped<IAirportDiagramCronService, AirportDiagramCronCronService>();
         builder.Services.AddScoped<AirportService>();
+        builder.Services.AddScoped<AirportCronService>();
         builder.Services.AddScoped<CommunicationFrequencyCronService>();
         builder.Services.AddScoped<IAirspaceCronService<Airspace>, AirspaceCronService>();
         builder.Services.AddScoped<IAirspaceCronService<SpecialUseAirspace>, SpecialUseAirspaceCronService>();

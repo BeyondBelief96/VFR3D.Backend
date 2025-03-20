@@ -20,8 +20,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
 
         public virtual async Task StartAsync(CancellationToken cancellationToken)
         {
-            await ExecuteJob(cancellationToken);
-            //await ScheduleJob(cancellationToken);
+            await ScheduleJob(cancellationToken);
         }
 
         protected virtual async Task ScheduleJob(CancellationToken cancellationToken)
