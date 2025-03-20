@@ -48,6 +48,10 @@ public class NavlogService : INavlogService
                 request.PlannedCruisingAltitude,
                 performanceProfile);
 
+            var waypointsAdjustedForCruisingAltitude = AdjustWaypointsForCruisingAltitude(
+                waypointsWithClimbAndDescent,
+                request.PlannedCruisingAltitude);
+
             var response = new NavlogResponseDto
             {
                 TotalRouteDistance = 0,
@@ -66,16 +70,16 @@ public class NavlogService : INavlogService
 
             var previousLegEndTime = request.TimeOfDeparture;
 
-            for (var i = 0; i < waypointsWithClimbAndDescent.Count - 1; i++)
+            for (var i = 0; i < waypointsAdjustedForCruisingAltitude.Count - 1; i++)
             {
                 var isClimbLeg = i == 0;
-                var isDescentLeg = i == waypointsWithClimbAndDescent.Count - 2;
+                var isDescentLeg = i == waypointsAdjustedForCruisingAltitude.Count - 2;
 
                 var leg = await ProcessLeg(
                     isClimbLeg,
                     isDescentLeg,
-                    waypointsWithClimbAndDescent[i],
-                    waypointsWithClimbAndDescent[i + 1],
+                    waypointsAdjustedForCruisingAltitude[i],
+                    waypointsAdjustedForCruisingAltitude[i + 1],
                     performanceProfile,
                     previousLegEndTime,
                     windsAloftData);
@@ -128,6 +132,29 @@ public class NavlogService : INavlogService
     public async Task<WindsAloftDto> GetWindsAloftData(int forecast)
     {
         return await _windsAloftService.FetchWindsAloftData(forecast);
+    }
+
+    private List<WaypointDto> AdjustWaypointsForCruisingAltitude(
+        List<WaypointDto> waypoints,
+        int plannedCruisingAltitude)
+    {
+        return waypoints.Select((waypoint, index) =>
+        {
+            if (index == 0 || index == waypoints.Count - 1)
+            {
+                return waypoint;
+            }
+
+            return new WaypointDto
+            {
+                Id = waypoint.Id,
+                Name = waypoint.Name,
+                Latitude = waypoint.Latitude,
+                Longitude = waypoint.Longitude,
+                Altitude = plannedCruisingAltitude,
+                WaypointType = waypoint.WaypointType
+            };
+        }).ToList();
     }
 
     private List<WaypointDto> AddClimbAndDescentWaypoints(
@@ -486,6 +513,7 @@ public class NavlogService : INavlogService
 
             var nearestAirport = FindNearestWindsAloftAirport(waypoint, windsAloftData);
             if (nearestAirport == null) return null;
+            
 
             var altitude = (int)waypoint.Altitude;
 
