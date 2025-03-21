@@ -12,12 +12,15 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
 {
     private readonly VFR3DDbContext _context;
     private readonly ILogger<AircraftPerformanceProfileService> _logger;
+    private readonly IFlightService _flightService;
 
     public AircraftPerformanceProfileService(
         VFR3DDbContext context,
+        IFlightService flightService,
         ILogger<AircraftPerformanceProfileService> logger)
     {
         _context = context;
+        _flightService = flightService;
         _logger = logger;
     }
 
@@ -62,9 +65,7 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
         }
     }
 
-    public async Task<AircraftPerformanceProfileDto> UpdateProfile(
-        string id,
-        UpdateAircraftPerformanceProfileRequestDto request)
+    public async Task<AircraftPerformanceProfileDto> UpdateProfile(string id, UpdateAircraftPerformanceProfileRequestDto request)
     {
         try
         {
@@ -76,6 +77,7 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
                 throw new KeyNotFoundException($"Profile not found with ID {id}");
             }
 
+            // Update profile properties
             profile.ProfileName = request.ProfileName;
             profile.ClimbTrueAirspeed = request.ClimbTrueAirspeed;
             profile.CruiseTrueAirspeed = request.CruiseTrueAirspeed;
@@ -88,13 +90,31 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
             profile.SttFuelGals = request.SttFuelGals;
             profile.FuelOnBoardGals = request.FuelOnBoardGals;
 
+            // Save profile changes
+            await _context.SaveChangesAsync();
+
+            // Retrieve all flights using the updated profile
+            var flights = await _context.Flights
+                .Where(f => f.AircraftPerformanceId == id)
+                .ToListAsync();
+
+            // Update flights with the new profile data and recalculate navigation logs
+            foreach (var flight in flights)
+            {
+                // Update flight with new profile data
+                flight.AircraftPerformanceProfile = profile;
+                await _context.SaveChangesAsync();
+                await _flightService.RegenerateNavlog(request.UserId, flight.Id);
+            }
+
+            // Save flight changes
             await _context.SaveChangesAsync();
 
             return MapToDto(profile);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating aircraft performance profile {ProfileId} for user {UserId}", 
+            _logger.LogError(ex, "Error updating aircraft performance profile {ProfileId} for user {UserId}",
                 id, request.UserId);
             throw;
         }
