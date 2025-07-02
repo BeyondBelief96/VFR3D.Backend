@@ -20,10 +20,14 @@ namespace VFR3D.Cron.API.Extensions
                 ForcePathStyle = true
             };
 
-            // Configure for local development with LocalStack
-            if (environment?.Equals("Development", StringComparison.OrdinalIgnoreCase) == true)
+            // Check if running in Docker with localstack by looking at the ServiceUrl
+            bool isDockerWithLocalstack = !string.IsNullOrEmpty(awsSettings?.ServiceUrl) && 
+                                         awsSettings.ServiceUrl.Contains("localstack");
+
+            // Configure for Docker development with LocalStack
+            if (isDockerWithLocalstack && environment?.Equals("Development", StringComparison.OrdinalIgnoreCase) == true)
             {
-                s3Config.ServiceURL = "http://localstack:4566";
+                s3Config.ServiceURL = awsSettings?.ServiceUrl;
                 s3Config.ForcePathStyle = true;
                 s3Config.UseHttp = true;
                 s3Config.DisableHostPrefixInjection = true;
