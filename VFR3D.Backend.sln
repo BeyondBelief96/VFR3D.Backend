@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.12.35527.113
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VFR3D.Cron.API", "VFR3D.Cron.API\VFR3D.Cron.API.csproj", "{35A978EE-C561-4C53-BD72-0F7ADE77D930}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VFR3D.Infrastructure", "VFR3D.Infrastructure\VFR3D.Infrastructure.csproj", "{60B628E0-BE78-4C85-8085-82E28356C942}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VFR3D.Domain", "VFR3D.Domain\VFR3D.Domain.csproj", "{8C29E8CF-2B38-4A77-A68C-2A6B23D129E5}"
@@ -26,6 +24,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Github Actions", "Github Ac
 		.github\workflows\azapp-vfr3d-cron-service-centralus-test.yml = .github\workflows\azapp-vfr3d-cron-service-centralus-test.yml
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VFR3D.Azure.Functions", "VFR3D.Azure.Functions\VFR3D.Azure.Functions.csproj", "{BC682116-D837-42B6-821D-D887982B638D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,13 +34,6 @@ Global
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Debug|Any CPU.Build.0 = Debug|x64
-		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Debug|x64.ActiveCfg = Debug|x64
-		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Debug|x64.Build.0 = Debug|x64
-		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Release|Any CPU.ActiveCfg = Release|x64
-		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Release|x64.ActiveCfg = Release|x64
-		{35A978EE-C561-4C53-BD72-0F7ADE77D930}.Release|x64.Build.0 = Release|x64
 		{60B628E0-BE78-4C85-8085-82E28356C942}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{60B628E0-BE78-4C85-8085-82E28356C942}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{60B628E0-BE78-4C85-8085-82E28356C942}.Debug|x64.ActiveCfg = Debug|x64
@@ -73,11 +66,22 @@ Global
 		{4C4F65F6-78A6-4924-B619-B58D4C2E1BA6}.Release|Any CPU.Build.0 = Release|Any CPU
 		{4C4F65F6-78A6-4924-B619-B58D4C2E1BA6}.Release|x64.ActiveCfg = Release|Any CPU
 		{4C4F65F6-78A6-4924-B619-B58D4C2E1BA6}.Release|x64.Build.0 = Release|Any CPU
+		{BC682116-D837-42B6-821D-D887982B638D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BC682116-D837-42B6-821D-D887982B638D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BC682116-D837-42B6-821D-D887982B638D}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BC682116-D837-42B6-821D-D887982B638D}.Debug|x64.Build.0 = Debug|Any CPU
+		{BC682116-D837-42B6-821D-D887982B638D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BC682116-D837-42B6-821D-D887982B638D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BC682116-D837-42B6-821D-D887982B638D}.Release|x64.ActiveCfg = Release|Any CPU
+		{BC682116-D837-42B6-821D-D887982B638D}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{6345C756-6060-477B-80D1-E10500184627} = {C381B140-85CE-46A5-BEF7-D9B6760FD686}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4E778AF9-90E9-4492-934B-23D115DAE3FB}
 	EndGlobalSection
 EndGlobal

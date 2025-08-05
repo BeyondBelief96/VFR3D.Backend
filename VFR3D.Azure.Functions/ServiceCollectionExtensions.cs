@@ -1,6 +1,8 @@
 ﻿using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using VFR3D.Infrastructure.Settings;
 
 namespace VFR3D.Cron.API.Extensions

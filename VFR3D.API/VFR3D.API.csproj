@@ -31,7 +31,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\VFR3D.Cron.API\VFR3D.Cron.API.csproj" />
     <ProjectReference Include="..\VFR3D.Domain\VFR3D.Domain.csproj" />
     <ProjectReference Include="..\VFR3D.Infrastructure\VFR3D.Infrastructure.csproj" />
   </ItemGroup>
