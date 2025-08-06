@@ -572,7 +572,7 @@ namespace VFR3D.Infrastructure.Migrations
 
                     b.HasIndex("ValidTimeTo");
 
-                    b.ToTable("airsigmet");
+                    b.ToTable("airsigmet", (string)null);
                 });
 
             modelBuilder.Entity("VFR3D.Domain.Entities.Airspace", b =>
@@ -828,7 +828,7 @@ namespace VFR3D.Infrastructure.Migrations
 
                     b.HasIndex("NavigationalAidName");
 
-                    b.ToTable("chart_supplement");
+                    b.ToTable("chart_supplement", (string)null);
                 });
 
             modelBuilder.Entity("VFR3D.Domain.Entities.CommunicationFrequency", b =>
@@ -986,7 +986,7 @@ namespace VFR3D.Infrastructure.Migrations
                     b.HasIndex("PublicationType")
                         .IsUnique();
 
-                    b.ToTable("faa_publication_cycle");
+                    b.ToTable("faa_publication_cycle", (string)null);
 
                     b.HasData(
                         new
@@ -1179,7 +1179,7 @@ namespace VFR3D.Infrastructure.Migrations
 
                     b.HasIndex("Latitude", "Longitude");
 
-                    b.ToTable("pirep");
+                    b.ToTable("pirep", (string)null);
                 });
 
             modelBuilder.Entity("VFR3D.Domain.Entities.SpecialUseAirspace", b =>
@@ -1426,7 +1426,7 @@ namespace VFR3D.Infrastructure.Migrations
 
                     b.HasIndex("StationId", "ValidTimeFrom");
 
-                    b.ToTable("taf");
+                    b.ToTable("taf", (string)null);
                 });
 
             modelBuilder.Entity("Vfr3d.Domain.Entities.Metar", b =>
@@ -1569,7 +1569,7 @@ namespace VFR3D.Infrastructure.Migrations
 
                     b.HasIndex("StationId", "ObservationTime");
 
-                    b.ToTable("metar");
+                    b.ToTable("metar", (string)null);
                 });
 
             modelBuilder.Entity("VFR3D.Domain.Entities.Flight", b =>
