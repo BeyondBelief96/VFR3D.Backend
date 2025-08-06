@@ -8,7 +8,6 @@ using Npgsql;
 using NSwag;
 using NSwag.Generation.Processors.Security;
 using VFR3D.API.Authentication;
-using VFR3D.Cron.API.Extensions;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Repositories;

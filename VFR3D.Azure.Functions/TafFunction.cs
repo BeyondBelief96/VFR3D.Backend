@@ -18,7 +18,7 @@ public class TafFunction
     }
 
     [Function("TafFunction")]
-    public async Task Run([TimerTrigger("0 */30 * * * *")] TimerInfo myTimer, FunctionContext context)
+    public async Task Run([TimerTrigger("0 */30 * * * *", RunOnStartup = true)] TimerInfo myTimer, FunctionContext context)
     {
         _logger.LogInformation("TAF Function executed at: {time}", DateTime.UtcNow);
         var cancellationToken = context.CancellationToken;

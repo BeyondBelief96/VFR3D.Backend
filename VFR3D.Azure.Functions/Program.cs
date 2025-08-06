@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Vfr3d.Domain.Entities;
-using VFR3D.Cron.API.Extensions;
+using VFR3D.Infrastructure.Utilities;
 using VFR3D.Domain.Entities;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Interfaces;
@@ -55,7 +55,6 @@ builder.Services.Configure<DatabaseSettings>(options =>
 });
 
 // Register settings
-builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
 builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"));
 
 // Register services
@@ -79,7 +78,9 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 {
     var dbSettings = serviceProvider.GetRequiredService<IOptions<DatabaseSettings>>().Value;
 
-    options.UseNpgsql(dbSettings.GetConnectionString(),
+    var connectionString = dbSettings.GetConnectionString();
+
+    options.UseNpgsql(connectionString,
         npgsqlOptions =>
         {
             npgsqlOptions.EnableRetryOnFailure(3);

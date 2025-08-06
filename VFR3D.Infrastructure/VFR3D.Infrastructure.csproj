@@ -8,6 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Jobs\**" />
+    <EmbeddedResource Remove="Jobs\**" />
+    <None Remove="Jobs\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="3.7.411.3" />
     <PackageReference Include="AWSSDK.SecretsManager" Version="3.7.400.75" />
     <PackageReference Include="Cronos" Version="0.9.0" />
@@ -30,10 +36,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\VFR3D.Domain\VFR3D.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Jobs\" />
   </ItemGroup>
 
 </Project>

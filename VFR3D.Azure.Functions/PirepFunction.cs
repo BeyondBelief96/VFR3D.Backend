@@ -18,7 +18,7 @@ public class PirepFunction
     }
 
     [Function("PirepFunction")]
-    public async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer, FunctionContext context)
+    public async Task Run([TimerTrigger("0 */5 * * * *", RunOnStartup = true)] TimerInfo myTimer, FunctionContext context)
     {
         _logger.LogInformation($"PirepFunction executed at: {DateTime.Now}");
         try

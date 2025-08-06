@@ -23,7 +23,7 @@ namespace VFR3D.Azure.Functions
         }
 
         [Function("FrequencyFunction")]
-        public async Task Run([TimerTrigger("0 0 * * *")] TimerInfo myTimer, FunctionContext context)
+        public async Task Run([TimerTrigger("0 0 * * *", RunOnStartup = true), ] TimerInfo myTimer, FunctionContext context)
         {
             _logger.LogInformation($"Frequency Function executed at: {DateTime.UtcNow}");
             var cancellationToken = context.CancellationToken;

@@ -18,7 +18,7 @@ public class AirsigmetFunction
     }
 
     [Function("AirsigmetFunction")]
-    public async Task Run([TimerTrigger("0 */30 * * * *")] TimerInfo myTimer, FunctionContext context)
+    public async Task Run([TimerTrigger("0 */30 * * * *", RunOnStartup = true)] TimerInfo myTimer, FunctionContext context)
     {
         _logger.LogInformation("AIRSIGMET Function executed at: {time}", DateTime.UtcNow);
         try

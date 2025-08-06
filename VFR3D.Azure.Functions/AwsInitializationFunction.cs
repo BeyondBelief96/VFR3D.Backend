@@ -21,7 +21,7 @@ namespace VFR3D.Azure.Functions
         }
 
         [Function("AwsInitializationFunction")]
-        public async Task Run([TimerTrigger("0 */6 * * *")] TimerInfo myTimer, FunctionContext context)
+        public async Task Run([TimerTrigger("0 */6 * * *", RunOnStartup = true), ] TimerInfo myTimer, FunctionContext context)
         {
             _logger.LogInformation($"AWS Initialization Function executed at: {DateTime.UtcNow}");
             var cancellationToken = context.CancellationToken;

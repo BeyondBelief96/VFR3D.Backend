@@ -106,8 +106,13 @@ namespace VFR3D.Tests.Services.WeatherServicesTests
             // Assert
             await act.Should().ThrowAsync<HttpRequestException>().WithMessage("Network error");
 
-            // Fix: Use Received() with Any<HttpRequestException>() instead of specific message check
-            _logger.Received(1).AnyLogOfType(LogLevel.Error);
+            _logger.Received(1).Log(
+                LogLevel.Error,
+                Arg.Any<EventId>(),
+                Arg.Any<object>(),
+                Arg.Any<Exception>(),
+                Arg.Any<Func<object, Exception?, string>>()
+            );
         }
     }
 }
