@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
+using VFR3D.Domain.ValueObjects.FaaPublications;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Enums;
 using VFR3D.Infrastructure.Interfaces;
@@ -11,6 +12,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
     {
         protected override NasrDataType DataType => NasrDataType.APT;
         protected override string[] UniqueIdentifiers => new[] { "SiteNo" };
+        protected override PublicationType PublicationType => PublicationType.NasrSubscription_Airport;
         protected override IEnumerable<(string FileName, Type ClassMap, bool IsBaseData)> CsvMappings =>
         new[]
         {

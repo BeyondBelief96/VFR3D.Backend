@@ -112,15 +112,28 @@ var awsInitService = serviceProvider.GetRequiredService<IAwsInitializationServic
 logger.LogInformation("Initializing AWS resources during startup...");
 try
 {
-    // Run synchronously to ensure completion before functions start
     awsInitService.InitializeAsync(CancellationToken.None).GetAwaiter().GetResult();
     logger.LogInformation("AWS resources initialized successfully");
 }
 catch (Exception ex)
 {
     logger.LogError(ex, "Failed to initialize AWS resources");
-    // Consider whether to throw and prevent startup or just log the error
 }
 
+// Database seeding
+logger.LogInformation("Initializing database data...");
+try
+{
+    using (var scope = serviceProvider.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<VFR3DDbContext>();
+        DbInitializer.InitializeAsync(dbContext, logger).GetAwaiter().GetResult();
+    }
+    logger.LogInformation("Database initialization completed successfully");
+}
+catch (Exception ex)
+{
+    logger.LogError(ex, "Failed to initialize database data");
+}
 
 builder.Build().Run();

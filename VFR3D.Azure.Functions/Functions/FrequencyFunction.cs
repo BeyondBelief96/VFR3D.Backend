@@ -4,7 +4,7 @@ using VFR3D.Domain.ValueObjects.FaaPublications;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Services.CronJobServices.NasrServices;
 
-namespace VFR3D.Azure.Functions
+namespace VFR3D.Azure.Functions.Functions
 {
     public class FrequencyFunction
     {
@@ -32,11 +32,11 @@ namespace VFR3D.Azure.Functions
             {
                 var currentDate = DateTime.UtcNow;
 
-                if (await _publicationService.ShouldRunUpdateAsync(PublicationType.NasrSubscription, currentDate))
+                if (await _publicationService.ShouldRunUpdateAsync(PublicationType.NasrSubscription_Frequencies, currentDate))
                 {
                     _logger.LogInformation("Starting frequency data update process");
                     await _frequencyService.DownloadAndProcessDataAsync(cancellationToken);
-                    await _publicationService.UpdateLastSuccessfulRunAsync(PublicationType.NasrSubscription, currentDate);
+                    await _publicationService.UpdateLastSuccessfulRunAsync(PublicationType.NasrSubscription_Frequencies, currentDate);
                     _logger.LogInformation("Frequency data update completed successfully");
                 }
                 else

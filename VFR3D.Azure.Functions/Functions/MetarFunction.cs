@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using Vfr3d.Domain.Entities;
 using VFR3D.Infrastructure.Interfaces;
 
-namespace VFR3D.Azure.Functions;
+namespace VFR3D.Azure.Functions.Functions;
 
 public class MetarFunction
 {

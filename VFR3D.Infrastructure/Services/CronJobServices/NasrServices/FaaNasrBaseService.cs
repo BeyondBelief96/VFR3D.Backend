@@ -37,6 +37,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
         protected abstract string[] UniqueIdentifiers { get; }
         protected abstract IEnumerable<(string FileName, Type ClassMap, bool IsBaseData)> CsvMappings { get; }
         protected virtual bool UsesLegacySiteNoDeduplication => true;
+        protected abstract PublicationType PublicationType { get; }
 
         protected FaaNasrBaseService(
             ILogger logger,
@@ -57,7 +58,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
 
         public async Task DownloadAndProcessDataAsync(CancellationToken cancellationToken = default)
         {
-            var publicationCycle = await _faaPublicationCycleService.GetPublicationCycleAsync(PublicationType.NasrSubscription);
+            var publicationCycle = await _faaPublicationCycleService.GetPublicationCycleAsync(PublicationType);
             if (publicationCycle == null)
             {
                 _logger.LogWarning($"No publication cycle found for {DataType}");
