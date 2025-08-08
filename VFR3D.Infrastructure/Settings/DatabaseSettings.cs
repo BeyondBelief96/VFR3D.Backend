@@ -13,8 +13,6 @@
         {
             if (Host.StartsWith("postgresql://"))
             {
-                try
-                {
                     var uri = new Uri(Host);
                     var userInfo = uri.UserInfo.Split(':');
                     var database = uri.AbsolutePath.TrimStart('/');
@@ -26,11 +24,6 @@
                            $"Port={Port};" +
                            "SSL Mode=Require;" +
                            "Trust Server Certificate=true";
-                }
-                catch
-                {
-                    // Fall back to standard format
-                }
             }
 
             // Local development

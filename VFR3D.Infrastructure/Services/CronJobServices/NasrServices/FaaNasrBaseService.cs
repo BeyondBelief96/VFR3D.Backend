@@ -25,6 +25,10 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
         protected abstract string[] UniqueIdentifiers { get; }
         protected abstract IEnumerable<(string FileName, Type ClassMap, bool IsBaseData)> CsvMappings { get; }
 
+        // Property to determine if this is a legacy SiteNo-based dataset (like APT)
+        // or a standalone dataset with composite keys (like FRQ)
+        protected virtual bool UsesLegacySiteNoDeduplication => true;
+
         protected FaaNasrBaseService(
             ILogger logger,
             IHttpClientFactory httpClientFactory,
@@ -54,29 +58,14 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
                     await using var response = await client.GetStreamAsync(zipUrl, cancellationToken);
                     using var archive = new ZipArchive(response);
 
-                    // Process base data first
-                    var baseMapping = CsvMappings.FirstOrDefault(m => m.IsBaseData);
-                    var baseEntry = archive.Entries.FirstOrDefault(e =>
-                        e.Name.Equals(baseMapping.FileName, StringComparison.OrdinalIgnoreCase));
-
-                    if (baseEntry != null)
+                    // Check if this is a legacy multi-file dataset (like APT) or standalone (like FRQ)
+                    if (UsesLegacySiteNoDeduplication)
                     {
-                        await ProcessBaseCsvFileAsync(baseEntry, baseMapping.ClassMap, cancellationToken);
+                        await ProcessLegacyMultiFileDataset(archive, cancellationToken);
                     }
-
-                    foreach (var mapping in CsvMappings.Where(m => !m.IsBaseData))
+                    else
                     {
-                        var entry = archive.Entries.FirstOrDefault(e =>
-                            e.Name.Equals(mapping.FileName, StringComparison.OrdinalIgnoreCase));
-
-                        if (entry != null)
-                        {
-                            await ProcessSupplementaryCsvFileAsync(entry, mapping.ClassMap, cancellationToken);
-                        }
-                        else
-                        {
-                            _logger.LogWarning($"File {mapping.FileName} not found in archive");
-                        }
+                        await ProcessStandaloneDataset(archive, cancellationToken);
                     }
 
                     _logger.LogInformation($"{DataType} data update completed successfully");
@@ -85,6 +74,58 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
                 {
                     _logger.LogError(ex, $"Error processing {DataType} data");
                     throw;
+                }
+            }
+        }
+
+        private async Task ProcessLegacyMultiFileDataset(ZipArchive archive, CancellationToken cancellationToken)
+        {
+            // Process base data first
+            var baseMapping = CsvMappings.FirstOrDefault(m => m.IsBaseData);
+            if (baseMapping != default)
+            {
+                var baseEntry = archive.Entries.FirstOrDefault(e =>
+                    e.Name.Equals(baseMapping.FileName, StringComparison.OrdinalIgnoreCase));
+
+                if (baseEntry != null)
+                {
+                    await ProcessBaseCsvFileAsync(baseEntry, baseMapping.ClassMap, cancellationToken);
+                }
+            }
+
+            // Process supplementary files
+            foreach (var mapping in CsvMappings.Where(m => !m.IsBaseData))
+            {
+                var entry = archive.Entries.FirstOrDefault(e =>
+                    e.Name.Equals(mapping.FileName, StringComparison.OrdinalIgnoreCase));
+
+                if (entry != null)
+                {
+                    await ProcessSupplementaryCsvFileAsync(entry, mapping.ClassMap, cancellationToken);
+                }
+                else
+                {
+                    _logger.LogWarning($"File {mapping.FileName} not found in archive");
+                }
+            }
+        }
+
+        private async Task ProcessStandaloneDataset(ZipArchive archive, CancellationToken cancellationToken)
+        {
+            // For standalone datasets, there should be only one CSV mapping
+            var mapping = CsvMappings.FirstOrDefault();
+            if (mapping != default)
+            {
+                var entry = archive.Entries.FirstOrDefault(e =>
+                    e.Name.Equals(mapping.FileName, StringComparison.OrdinalIgnoreCase));
+
+                if (entry != null)
+                {
+                    await ProcessStandaloneCsvFileAsync(entry, mapping.ClassMap, cancellationToken);
+                }
+                else
+                {
+                    _logger.LogWarning($"File {mapping.FileName} not found in archive");
                 }
             }
         }
@@ -106,7 +147,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
 
                 await foreach (var record in csv.GetRecordsAsync<T>(cancellationToken))
                 {
-                    // Get the SiteNo property value
+                    // Get the SiteNo property value for legacy deduplication
                     var siteNoProperty = typeof(T).GetProperty("SiteNo");
                     if (siteNoProperty != null)
                     {
@@ -139,6 +180,52 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
             }
         }
 
+        private async Task ProcessStandaloneCsvFileAsync(ZipArchiveEntry entry, Type classMap, CancellationToken cancellationToken)
+        {
+            await using var entryStream = entry.Open();
+            using var reader = new StreamReader(entryStream);
+            var config = GetCsvConfiguration();
+            using var csv = new CsvReader(reader, config);
+
+            ConfigureCsvReader(csv);
+            csv.Context.RegisterClassMap(classMap);
+
+            try
+            {
+                var entities = new List<T>();
+                var processedRecords = new HashSet<string>();
+
+                await foreach (var record in csv.GetRecordsAsync<T>(cancellationToken))
+                {
+                    // Create a unique key based on the composite key fields
+                    var uniqueKey = CreateUniqueKey(record);
+
+                    // Skip if we've already seen this record
+                    if (!processedRecords.Add(uniqueKey))
+                    {
+                        _logger.LogWarning($"Skipping duplicate record: {uniqueKey}");
+                        continue;
+                    }
+
+                    entities.Add(record);
+                    if (entities.Count >= 1000)
+                    {
+                        await SaveOrUpdateEntitiesAsync(entities, cancellationToken);
+                        entities.Clear();
+                    }
+                }
+                if (entities.Count != 0)
+                {
+                    await SaveOrUpdateEntitiesAsync(entities, cancellationToken);
+                }
+            }
+            catch (ReaderException ex)
+            {
+                _logger.LogError($"CSV parsing error at row {ex.Context?.Parser?.Row}, field {ex.Context?.Parser?.RawRecord}");
+                throw;
+            }
+        }
+
         private async Task ProcessSupplementaryCsvFileAsync(ZipArchiveEntry entry, Type classMap, CancellationToken cancellationToken)
         {
             await using var entryStream = entry.Open();
@@ -147,7 +234,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
             using var csv = new CsvReader(reader, config);
 
             ConfigureCsvReader(csv);
-            
+
             // Get the mapped properties from the class map
             var mapInstance = Activator.CreateInstance(classMap) as ClassMap;
             var mappedProperties = mapInstance?.MemberMaps.Select(m => m.Data.Member?.Name).ToHashSet() ?? new HashSet<string?>();
@@ -216,6 +303,23 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
             }
         }
 
+        private string CreateUniqueKey(T entity)
+        {
+            var keyParts = new List<string>();
+
+            foreach (var identifier in UniqueIdentifiers)
+            {
+                var propertyInfo = typeof(T).GetProperty(identifier);
+                if (propertyInfo != null)
+                {
+                    var value = propertyInfo.GetValue(entity)?.ToString() ?? string.Empty;
+                    keyParts.Add(value);
+                }
+            }
+
+            return string.Join("|", keyParts);
+        }
+
         private CsvConfiguration GetCsvConfiguration()
         {
             return new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -251,9 +355,9 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
                     var existingEntity = await FindExistingEntityAsync(entity, cancellationToken);
                     if (existingEntity != null)
                     {
-                        if (isSupplementaryData)
+                        if (isSupplementaryData && UsesLegacySiteNoDeduplication)
                         {
-                            // For supplementary data, only update non-null values
+                            // For supplementary data in legacy datasets, only update non-null values
                             foreach (var property in typeof(T).GetProperties())
                             {
                                 var value = property.GetValue(entity);
@@ -266,7 +370,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
                         }
                         else
                         {
-                            // For base data, update all values
+                            // For base data or standalone datasets, update all values
                             _dbContext.Entry(existingEntity).CurrentValues.SetValues(entity);
                         }
                     }

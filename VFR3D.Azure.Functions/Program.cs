@@ -4,9 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vfr3d.Domain.Entities;
-using VFR3D.Infrastructure.Utilities;
 using VFR3D.Domain.Entities;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Interfaces;
@@ -15,14 +15,15 @@ using VFR3D.Infrastructure.Services.ArcgisServices;
 using VFR3D.Infrastructure.Services.CronJobServices;
 using VFR3D.Infrastructure.Services.CronJobServices.NasrServices;
 using VFR3D.Infrastructure.Settings;
+using VFR3D.Infrastructure.Utilities;
 
 var builder = FunctionsApplication.CreateBuilder(args);
 
 builder.ConfigureFunctionsWebApplication();
 
-// Load configuration - explicitly add local.settings.json for local development
 builder.Configuration
     .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
+    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
 
 // Register settings with explicit binding
@@ -60,7 +61,7 @@ builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"))
 // Register services
 builder.Services.AddScoped<IAwsInitializationService, AwsInitializationService>();
 builder.Services.AddScoped<IFaaPublicationCycleService, FaaPublicationCycleService>();
-builder.Services.AddScoped<IChartSupplementCronService, ChartSupplementCronCronService>();
+builder.Services.AddScoped<IChartSupplementCronService, ChartSupplementCronService>();
 builder.Services.AddScoped<IAirportDiagramCronService, AirportDiagramCronCronService>();
 builder.Services.AddScoped<IAviationWeatherService<Metar>, MetarCronService>();
 builder.Services.AddScoped<IAviationWeatherService<Taf>, TafCronService>();
@@ -99,5 +100,25 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 builder.Services
     .AddApplicationInsightsTelemetryWorkerService()
     .ConfigureFunctionsApplicationInsights();
+
+// Get required services for initialization
+var serviceProvider = builder.Services.BuildServiceProvider();
+var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
+var awsInitService = serviceProvider.GetRequiredService<IAwsInitializationService>();
+
+// Initialize AWS resources on startup
+logger.LogInformation("Initializing AWS resources during startup...");
+try
+{
+    // Run synchronously to ensure completion before functions start
+    awsInitService.InitializeAsync(CancellationToken.None).GetAwaiter().GetResult();
+    logger.LogInformation("AWS resources initialized successfully");
+}
+catch (Exception ex)
+{
+    logger.LogError(ex, "Failed to initialize AWS resources");
+    // Consider whether to throw and prevent startup or just log the error
+}
+
 
 builder.Build().Run();

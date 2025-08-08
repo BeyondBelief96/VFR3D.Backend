@@ -20,7 +20,7 @@ namespace VFR3D.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.1")
+                .HasAnnotation("ProductVersion", "9.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
@@ -572,7 +572,7 @@ namespace VFR3D.Infrastructure.Migrations
 
                     b.HasIndex("ValidTimeTo");
 
-                    b.ToTable("airsigmet", (string)null);
+                    b.ToTable("airsigmet");
                 });
 
             modelBuilder.Entity("VFR3D.Domain.Entities.Airspace", b =>
@@ -828,7 +828,7 @@ namespace VFR3D.Infrastructure.Migrations
 
                     b.HasIndex("NavigationalAidName");
 
-                    b.ToTable("chart_supplement", (string)null);
+                    b.ToTable("chart_supplement");
                 });
 
             modelBuilder.Entity("VFR3D.Domain.Entities.CommunicationFrequency", b =>
@@ -986,7 +986,7 @@ namespace VFR3D.Infrastructure.Migrations
                     b.HasIndex("PublicationType")
                         .IsUnique();
 
-                    b.ToTable("faa_publication_cycle", (string)null);
+                    b.ToTable("faa_publication_cycle");
 
                     b.HasData(
                         new
@@ -1179,7 +1179,7 @@ namespace VFR3D.Infrastructure.Migrations
 
                     b.HasIndex("Latitude", "Longitude");
 
-                    b.ToTable("pirep", (string)null);
+                    b.ToTable("pirep");
                 });
 
             modelBuilder.Entity("VFR3D.Domain.Entities.SpecialUseAirspace", b =>
@@ -1426,7 +1426,7 @@ namespace VFR3D.Infrastructure.Migrations
 
                     b.HasIndex("StationId", "ValidTimeFrom");
 
-                    b.ToTable("taf", (string)null);
+                    b.ToTable("taf");
                 });
 
             modelBuilder.Entity("Vfr3d.Domain.Entities.Metar", b =>
@@ -1569,7 +1569,7 @@ namespace VFR3D.Infrastructure.Migrations
 
                     b.HasIndex("StationId", "ObservationTime");
 
-                    b.ToTable("metar", (string)null);
+                    b.ToTable("metar");
                 });
 
             modelBuilder.Entity("VFR3D.Domain.Entities.Flight", b =>

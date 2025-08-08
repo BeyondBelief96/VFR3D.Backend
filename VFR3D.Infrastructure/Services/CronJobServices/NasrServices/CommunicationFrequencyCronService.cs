@@ -25,6 +25,8 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
             ("FRQ.csv", typeof(FrequencyMap), true),
         };
 
+        protected override bool UsesLegacySiteNoDeduplication => false;
+
         public CommunicationFrequencyCronService(
             ILogger<CommunicationFrequencyCronService> logger,
             IHttpClientFactory httpClientFactory,

@@ -14,16 +14,16 @@ using VFR3D.Infrastructure.Utilities;
 
 namespace VFR3D.Infrastructure.Services.CronJobServices
 {
-    public class ChartSupplementCronCronService : IChartSupplementCronService
+    public class ChartSupplementCronService : IChartSupplementCronService
     {
-        private readonly ILogger<ChartSupplementCronCronService> _logger;
+        private readonly ILogger<ChartSupplementCronService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly VFR3DDbContext _dbContext;
         private readonly IAmazonS3 _s3Client;
         private readonly AwsSettings _awsSettings;
 
-        public ChartSupplementCronCronService(
-        ILogger<ChartSupplementCronCronService> logger,
+        public ChartSupplementCronService(
+        ILogger<ChartSupplementCronService> logger,
         IHttpClientFactory httpClientFactory,
         VFR3DDbContext dbContext,
         IAmazonS3 s3Client,
