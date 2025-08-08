@@ -61,8 +61,12 @@ jobs:
       
       - name: Create Functions zip
         run: |
-          # Create the zip from the root directory, specifying the functions directory
-          zip -r functionapp.zip "${{ env.FUNCTIONS_PUBLISH_DIR }}/"
+          # Change to the functions publish directory to zip files at root level
+          cd "${{ env.FUNCTIONS_PUBLISH_DIR }}"
+          # Create zip with files at root level
+          zip -r ../../functionapp.zip *
+          # Return to the original directory
+          cd ../..
           # Verify the zip was created
           ls -la functionapp.zip
       
