@@ -9,7 +9,7 @@ on:
       - 'VFR3D.Infrastructure/**'
       - 'VFR3D.Common/**'
       - 'VFR3D.Azure.Functions/**'
-      - '.github/workflows/vfr3d-main-ci-cd.yml'
+      - '.github/workflows/main-ci-cd.yml'
 
 env:
   DOTNET_CORE_VERSION: 8.0.x
