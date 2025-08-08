@@ -4,9 +4,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace VFR3D.Domain.Entities;
 
 [Table("airports")]
-public class Airport
+public class Airport : INasrEntity<Airport>
 {
-
     [Key]
     [Column("site_no", TypeName = "varchar(9)")]
     public string SiteNo { get; set; } = string.Empty;
@@ -245,6 +244,7 @@ public class Airport
     [Column("cta", TypeName = "varchar(4)")]
     public string? Cta { get; set; }
 
+    // Supplementary data from APT_ATT.csv
     [Column("sked_seq_no")]
     public int? SkedSeqNo { get; set; }
 
@@ -257,6 +257,7 @@ public class Airport
     [Column("attendance_hours", TypeName = "varchar(40)")]
     public string? AttendanceHours { get; set; }
 
+    // Supplementary data from APT_CON.csv
     [Column("contact_title", TypeName = "varchar(10)")]
     public string? ContactTitle { get; set; }
 
@@ -283,4 +284,189 @@ public class Airport
 
     [Column("contact_phone_number", TypeName = "varchar(16)")]
     public string? ContactPhoneNumber { get; set; }
+
+    // INasrEntity<Airport> implementation
+    public string CreateUniqueKey()
+    {
+        return SiteNo ?? string.Empty;
+    }
+
+    public void UpdateFrom(Airport source, HashSet<string>? limitToProperties = null)
+    {
+        if (limitToProperties == null)
+        {
+            // Update all properties (for base data)
+            UpdateAllProperties(source);
+        }
+        else
+        {
+            // Update only specified properties (for supplementary data)
+            UpdateSelectiveProperties(source, limitToProperties);
+        }
+    }
+
+    public Airport CreateSelectiveEntity(HashSet<string> properties)
+    {
+        var selective = new Airport();
+
+        // Always include the key
+        if (properties.Contains(nameof(SiteNo)))
+            selective.SiteNo = SiteNo;
+
+        // Base data properties
+        if (properties.Contains(nameof(EffDate)))
+            selective.EffDate = EffDate;
+        if (properties.Contains(nameof(SiteTypeCode)))
+            selective.SiteTypeCode = SiteTypeCode;
+        if (properties.Contains(nameof(StateCode)))
+            selective.StateCode = StateCode;
+        if (properties.Contains(nameof(ArptId)))
+            selective.ArptId = ArptId;
+
+        // Supplementary data properties (APT_ATT)
+        if (properties.Contains(nameof(SkedSeqNo)))
+            selective.SkedSeqNo = SkedSeqNo;
+        if (properties.Contains(nameof(AttendanceMonth)))
+            selective.AttendanceMonth = AttendanceMonth;
+        if (properties.Contains(nameof(AttendanceDay)))
+            selective.AttendanceDay = AttendanceDay;
+        if (properties.Contains(nameof(AttendanceHours)))
+            selective.AttendanceHours = AttendanceHours;
+
+        // Supplementary data properties (APT_CON)
+        if (properties.Contains(nameof(ContactTitle)))
+            selective.ContactTitle = ContactTitle;
+        if (properties.Contains(nameof(ContactName)))
+            selective.ContactName = ContactName;
+        if (properties.Contains(nameof(ContactAddress1)))
+            selective.ContactAddress1 = ContactAddress1;
+        if (properties.Contains(nameof(ContactAddress2)))
+            selective.ContactAddress2 = ContactAddress2;
+        if (properties.Contains(nameof(ContactCity)))
+            selective.ContactCity = ContactCity;
+        if (properties.Contains(nameof(ContactState)))
+            selective.ContactState = ContactState;
+        if (properties.Contains(nameof(ContactZipCode)))
+            selective.ContactZipCode = ContactZipCode;
+        if (properties.Contains(nameof(ContactZipPlusFour)))
+            selective.ContactZipPlusFour = ContactZipPlusFour;
+        if (properties.Contains(nameof(ContactPhoneNumber)))
+            selective.ContactPhoneNumber = ContactPhoneNumber;
+
+        return selective;
+    }
+
+    private void UpdateAllProperties(Airport source)
+    {
+        EffDate = source.EffDate;
+        SiteTypeCode = source.SiteTypeCode;
+        StateCode = source.StateCode;
+        ArptId = source.ArptId;
+        City = source.City;
+        CountryCode = source.CountryCode;
+        RegionCode = source.RegionCode;
+        AdoCode = source.AdoCode;
+        StateName = source.StateName;
+        CountyName = source.CountyName;
+        CountyAssocState = source.CountyAssocState;
+        ArptName = source.ArptName;
+        OwnershipTypeCode = source.OwnershipTypeCode;
+        FacilityUseCode = source.FacilityUseCode;
+        LatDecimal = source.LatDecimal;
+        LongDecimal = source.LongDecimal;
+        LatDeg = source.LatDeg;
+        LatMin = source.LatMin;
+        LatSec = source.LatSec;
+        LatHemis = source.LatHemis;
+        LongDeg = source.LongDeg;
+        LongMin = source.LongMin;
+        LongSec = source.LongSec;
+        LongHemis = source.LongHemis;
+        SurveyMethodCode = source.SurveyMethodCode;
+        Elev = source.Elev;
+        ElevMethodCode = source.ElevMethodCode;
+        MagVarn = source.MagVarn;
+        MagHemis = source.MagHemis;
+        MagVarnYear = source.MagVarnYear;
+        Tpa = source.Tpa;
+        ChartName = source.ChartName;
+        DistCityToAirport = source.DistCityToAirport;
+        DirectionCode = source.DirectionCode;
+        Acreage = source.Acreage;
+        RespArtccId = source.RespArtccId;
+        FssOnArptFlag = source.FssOnArptFlag;
+        FssId = source.FssId;
+        FssName = source.FssName;
+        NotamId = source.NotamId;
+        NotamFlag = source.NotamFlag;
+        ActivationDate = source.ActivationDate;
+        ArptStatus = source.ArptStatus;
+        NaspCode = source.NaspCode;
+        CustomsFlag = source.CustomsFlag;
+        LndgRightsFlag = source.LndgRightsFlag;
+        JointUseFlag = source.JointUseFlag;
+        MilLndgFlag = source.MilLndgFlag;
+        InspectMethodCode = source.InspectMethodCode;
+        InspectorCode = source.InspectorCode;
+        LastInspection = source.LastInspection;
+        LastInfoResponse = source.LastInfoResponse;
+        FuelTypes = source.FuelTypes;
+        AirframeRepairSerCode = source.AirframeRepairSerCode;
+        PwrPlantRepairSer = source.PwrPlantRepairSer;
+        BottledOxyType = source.BottledOxyType;
+        BulkOxyType = source.BulkOxyType;
+        LgtSked = source.LgtSked;
+        BcnLgtSked = source.BcnLgtSked;
+        TwrTypeCode = source.TwrTypeCode;
+        SegCircleMkrFlag = source.SegCircleMkrFlag;
+        BcnLensColor = source.BcnLensColor;
+        LndgFeeFlag = source.LndgFeeFlag;
+        MedicalUseFlag = source.MedicalUseFlag;
+        ArptPsnSource = source.ArptPsnSource;
+        PositionSrcDate = source.PositionSrcDate;
+        ArptElevSource = source.ArptElevSource;
+        ElevationSrcDate = source.ElevationSrcDate;
+        ContrFuelAvbl = source.ContrFuelAvbl;
+        TrnsStrgBuoyFlag = source.TrnsStrgBuoyFlag;
+        TrnsStrgHgrFlag = source.TrnsStrgHgrFlag;
+        TrnsStrgTieFlag = source.TrnsStrgTieFlag;
+        OtherServices = source.OtherServices;
+        WindIndcrFlag = source.WindIndcrFlag;
+        IcaoId = source.IcaoId;
+        MinOpNetwork = source.MinOpNetwork;
+        UserFeeFlag = source.UserFeeFlag;
+        Cta = source.Cta;
+    }
+
+    private void UpdateSelectiveProperties(Airport source, HashSet<string> limitToProperties)
+    {
+        // Only update non-null values for properties in the limit set
+        if (limitToProperties.Contains(nameof(SkedSeqNo)) && source.SkedSeqNo != null)
+            SkedSeqNo = source.SkedSeqNo;
+        if (limitToProperties.Contains(nameof(AttendanceMonth)) && source.AttendanceMonth != null)
+            AttendanceMonth = source.AttendanceMonth;
+        if (limitToProperties.Contains(nameof(AttendanceDay)) && source.AttendanceDay != null)
+            AttendanceDay = source.AttendanceDay;
+        if (limitToProperties.Contains(nameof(AttendanceHours)) && source.AttendanceHours != null)
+            AttendanceHours = source.AttendanceHours;
+
+        if (limitToProperties.Contains(nameof(ContactTitle)) && source.ContactTitle != null)
+            ContactTitle = source.ContactTitle;
+        if (limitToProperties.Contains(nameof(ContactName)) && source.ContactName != null)
+            ContactName = source.ContactName;
+        if (limitToProperties.Contains(nameof(ContactAddress1)) && source.ContactAddress1 != null)
+            ContactAddress1 = source.ContactAddress1;
+        if (limitToProperties.Contains(nameof(ContactAddress2)) && source.ContactAddress2 != null)
+            ContactAddress2 = source.ContactAddress2;
+        if (limitToProperties.Contains(nameof(ContactCity)) && source.ContactCity != null)
+            ContactCity = source.ContactCity;
+        if (limitToProperties.Contains(nameof(ContactState)) && source.ContactState != null)
+            ContactState = source.ContactState;
+        if (limitToProperties.Contains(nameof(ContactZipCode)) && source.ContactZipCode != null)
+            ContactZipCode = source.ContactZipCode;
+        if (limitToProperties.Contains(nameof(ContactZipPlusFour)) && source.ContactZipPlusFour != null)
+            ContactZipPlusFour = source.ContactZipPlusFour;
+        if (limitToProperties.Contains(nameof(ContactPhoneNumber)) && source.ContactPhoneNumber != null)
+            ContactPhoneNumber = source.ContactPhoneNumber;
+    }
 }

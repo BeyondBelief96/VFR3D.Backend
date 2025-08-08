@@ -22,6 +22,8 @@ var builder = FunctionsApplication.CreateBuilder(args);
 builder.ConfigureFunctionsWebApplication();
 
 builder.Configuration
+    .SetBasePath(builder.Environment.ContentRootPath)
+    .AddUserSecrets<Program>(optional: true, reloadOnChange: true)
     .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables();
@@ -33,7 +35,7 @@ builder.Services.Configure<DatabaseSettings>(options =>
                   builder.Configuration["Database__Host"] ??
                   "localhost";
 
-    options.DatabaseName = builder.Configuration["Database:Database"] ??
+    options.Database = builder.Configuration["Database:Database"] ??
                           builder.Configuration["Database__Database"] ??
                           "postgres";
 

@@ -20,11 +20,22 @@ using VFR3D.Infrastructure.Utilities;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Determine if running in Docker
+bool isRunningInDocker = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+
 builder.Configuration
     .SetBasePath(builder.Environment.ContentRootPath)
     .AddJsonFile("api.appsettings.json", optional: false)
     .AddJsonFile($"api.appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
     .AddEnvironmentVariables();
+
+// Add Docker-specific configuration if running in Docker
+if (isRunningInDocker)
+{
+    builder.Configuration.AddJsonFile("appsettings.Docker.json", optional: true);
+}
+
+builder.Configuration.AddEnvironmentVariables();
 
 // Setup CORS
 builder.Services.AddCors(options =>
@@ -122,18 +133,18 @@ builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("D
 builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 {
     var dbSettings = serviceProvider.GetRequiredService<IOptions<DatabaseSettings>>().Value;
-    var dataSourceBuilder = new NpgsqlDataSourceBuilder(dbSettings.GetConnectionString());
-        dataSourceBuilder.UseNetTopologySuite();
+    var connectionString = dbSettings.GetConnectionString();
+
+    var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+    dataSourceBuilder.UseNetTopologySuite();
     dataSourceBuilder.EnableDynamicJson();
 
-
-    options.UseNpgsql(dataSourceBuilder.Build(), 
+    options.UseNpgsql(dataSourceBuilder.Build(),
         npgsqlOptions =>
         {
             npgsqlOptions.EnableRetryOnFailure(3);
             npgsqlOptions.CommandTimeout(30);
             npgsqlOptions.UseNetTopologySuite();
-
         });
 
     if (builder.Environment.IsDevelopment())

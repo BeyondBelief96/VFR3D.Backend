@@ -1,32 +1,41 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using System.IO.Compression;
-using VFR3D.Infrastructure.Data;
-using CsvHelper;
-using System.Globalization;
-using VFR3D.Infrastructure.Utilities;
-using VFR3D.Domain.ValueObjects.FaaPublications;
+﻿using CsvHelper;
 using CsvHelper.Configuration;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System.Globalization;
+using System.IO.Compression;
+using System.Linq.Expressions;
+using VFR3D.Domain.Entities;
+using VFR3D.Domain.ValueObjects.FaaPublications;
+using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Enums;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Services.CronJobServices.NasrServices.Utils;
+using VFR3D.Infrastructure.Utilities;
 
 namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
 {
-    public abstract class FaaNasrBaseService<T> where T : class
+    // Delegate types for compiled expressions
+    public delegate string KeyExtractor<in T>(T entity);
+    public delegate IQueryable<T> KeyMatcher<T>(IQueryable<T> queryable, List<string> keys);
+
+    public abstract class FaaNasrBaseService<T> where T : class, INasrEntity<T>, new()
     {
+        private readonly int _csvBatchSize = 1000;
+        private readonly int _dbBatchSize = 100;
         private readonly ILogger _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly VFR3DDbContext _dbContext;
         private readonly IFaaPublicationCycleService _faaPublicationCycleService;
         private readonly string _baseUrl = "https://nfdc.faa.gov/webContent/28DaySub/extra/";
 
+        private readonly KeyExtractor<T> _keyExtractor;
+        private readonly KeyMatcher<T> _keyMatcher;
+        private readonly Lazy<HashSet<string>> _allPropertyNames;
+
         protected abstract NasrDataType DataType { get; }
         protected abstract string[] UniqueIdentifiers { get; }
         protected abstract IEnumerable<(string FileName, Type ClassMap, bool IsBaseData)> CsvMappings { get; }
-
-        // Property to determine if this is a legacy SiteNo-based dataset (like APT)
-        // or a standalone dataset with composite keys (like FRQ)
         protected virtual bool UsesLegacySiteNoDeduplication => true;
 
         protected FaaNasrBaseService(
@@ -39,46 +48,139 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
             _httpClientFactory = httpClientFactory;
             _faaPublicationCycleService = publicationCycleService;
             _dbContext = dbContext;
+
+            _keyExtractor = CreateKeyExtractor();
+            _keyMatcher = CreateKeyMatcher();
+            _allPropertyNames = new Lazy<HashSet<string>>(() =>
+                typeof(T).GetProperties().Select(p => p.Name).ToHashSet());
         }
 
         public async Task DownloadAndProcessDataAsync(CancellationToken cancellationToken = default)
         {
             var publicationCycle = await _faaPublicationCycleService.GetPublicationCycleAsync(PublicationType.NasrSubscription);
-            if (publicationCycle != null)
+            if (publicationCycle == null)
             {
-                var currentPublicationDate = FaaPublicationDateUtils.CalculateCurrentPublicationDate(publicationCycle.KnownValidDate, publicationCycle.CycleLengthDays);
-                var dateString = FaaPublicationDateUtils.FormatDateForNasr(currentPublicationDate);
-                var fileName = $"{dateString}_{DataType}_CSV.zip";
-                var zipUrl = $"{_baseUrl}{fileName}";
+                _logger.LogWarning($"No publication cycle found for {DataType}");
+                return;
+            }
 
-                try
+            var currentPublicationDate = FaaPublicationDateUtils.CalculateCurrentPublicationDate(
+                publicationCycle.KnownValidDate,
+                publicationCycle.CycleLengthDays);
+            var dateString = FaaPublicationDateUtils.FormatDateForNasr(currentPublicationDate);
+            var fileName = $"{dateString}_{DataType}_CSV.zip";
+            var zipUrl = $"{_baseUrl}{fileName}";
+
+            try
+            {
+                _logger.LogInformation($"Downloading {DataType} data from {zipUrl}");
+                using var client = _httpClientFactory.CreateClient();
+                await using var response = await client.GetStreamAsync(zipUrl, cancellationToken);
+                using var archive = new ZipArchive(response);
+
+                if (UsesLegacySiteNoDeduplication)
                 {
-                    _logger.LogInformation($"Downloading {DataType} data from {zipUrl}");
-                    using var client = _httpClientFactory.CreateClient();
-                    await using var response = await client.GetStreamAsync(zipUrl, cancellationToken);
-                    using var archive = new ZipArchive(response);
-
-                    // Check if this is a legacy multi-file dataset (like APT) or standalone (like FRQ)
-                    if (UsesLegacySiteNoDeduplication)
-                    {
-                        await ProcessLegacyMultiFileDataset(archive, cancellationToken);
-                    }
-                    else
-                    {
-                        await ProcessStandaloneDataset(archive, cancellationToken);
-                    }
-
-                    _logger.LogInformation($"{DataType} data update completed successfully");
+                    await ProcessLegacyMultiFileDatasetAsync(archive, cancellationToken);
                 }
-                catch (Exception ex)
+                else
                 {
-                    _logger.LogError(ex, $"Error processing {DataType} data");
-                    throw;
+                    await ProcessStandaloneDatasetAsync(archive, cancellationToken);
                 }
+
+                _logger.LogInformation($"{DataType} data update completed successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error processing {DataType} data");
+                throw;
             }
         }
 
-        private async Task ProcessLegacyMultiFileDataset(ZipArchive archive, CancellationToken cancellationToken)
+        private KeyExtractor<T> CreateKeyExtractor()
+        {
+            var parameter = Expression.Parameter(typeof(T), "entity");
+            Expression body;
+
+            if (UniqueIdentifiers.Length == 1)
+            {
+                // Single property: just return the property value as string
+                var property = Expression.Property(parameter, UniqueIdentifiers[0]);
+                var toString = typeof(object).GetMethod(nameof(ToString))!;
+                body = Expression.Call(property, toString);
+            }
+            else
+            {
+                // Multiple properties: concatenate with "|"
+                var stringConcat = typeof(string).GetMethod(nameof(string.Join), new[] { typeof(string), typeof(string[]) })!;
+                var properties = UniqueIdentifiers.Select(id =>
+                {
+                    var prop = Expression.Property(parameter, id);
+                    var toString = typeof(object).GetMethod(nameof(ToString))!;
+                    return Expression.Call(prop, toString);
+                }).ToArray();
+
+                var arrayInit = Expression.NewArrayInit(typeof(string), properties);
+                body = Expression.Call(stringConcat, Expression.Constant("|"), arrayInit);
+            }
+
+            var lambda = Expression.Lambda<KeyExtractor<T>>(body, parameter);
+            return lambda.Compile();
+        }
+
+        private KeyMatcher<T> CreateKeyMatcher()
+        {
+            if (UniqueIdentifiers.Length == 1)
+            {
+                // Single identifier: use Contains for efficiency
+                return (queryable, keys) =>
+                {
+                    var parameter = Expression.Parameter(typeof(T), "e");
+                    var property = Expression.Property(parameter, UniqueIdentifiers[0]);
+                    var containsMethod = typeof(List<string>).GetMethod("Contains", new[] { typeof(string) })!;
+                    var containsCall = Expression.Call(Expression.Constant(keys), containsMethod, property);
+                    var lambda = Expression.Lambda<Func<T, bool>>(containsCall, parameter);
+                    return queryable.Where(lambda);
+                };
+            }
+            else
+            {
+                // Composite keys: need to match each key individually (less efficient but necessary)
+                return (queryable, keys) =>
+                {
+                    var parameter = Expression.Parameter(typeof(T), "e");
+                    Expression? combinedCondition = null;
+
+                    foreach (var key in keys)
+                    {
+                        var keyParts = key.Split('|');
+                        if (keyParts.Length != UniqueIdentifiers.Length) continue;
+
+                        Expression? keyCondition = null;
+                        for (var i = 0; i < UniqueIdentifiers.Length; i++)
+                        {
+                            var property = Expression.Property(parameter, UniqueIdentifiers[i]);
+                            var equals = Expression.Equal(property, Expression.Constant(keyParts[i]));
+                            keyCondition = keyCondition == null ? equals : Expression.AndAlso(keyCondition, equals);
+                        }
+
+                        if (keyCondition != null)
+                        {
+                            combinedCondition = combinedCondition == null ? keyCondition : Expression.OrElse(combinedCondition, keyCondition);
+                        }
+                    }
+
+                    if (combinedCondition != null)
+                    {
+                        var lambda = Expression.Lambda<Func<T, bool>>(combinedCondition, parameter);
+                        return queryable.Where(lambda);
+                    }
+
+                    return queryable.Where(e => false); // No matches
+                };
+            }
+        }
+
+        private async Task ProcessLegacyMultiFileDatasetAsync(ZipArchive archive, CancellationToken cancellationToken)
         {
             // Process base data first
             var baseMapping = CsvMappings.FirstOrDefault(m => m.IsBaseData);
@@ -89,7 +191,11 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
 
                 if (baseEntry != null)
                 {
-                    await ProcessBaseCsvFileAsync(baseEntry, baseMapping.ClassMap, cancellationToken);
+                    await ProcessCsvFileAsync(baseEntry, baseMapping.ClassMap, ProcessingMode.BaseData, null, cancellationToken);
+                }
+                else
+                {
+                    _logger.LogWarning($"Base file {baseMapping.FileName} not found in archive");
                 }
             }
 
@@ -101,226 +207,167 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
 
                 if (entry != null)
                 {
-                    await ProcessSupplementaryCsvFileAsync(entry, mapping.ClassMap, cancellationToken);
+                    var mappedProperties = GetMappedProperties(mapping.ClassMap);
+                    await ProcessCsvFileAsync(entry, mapping.ClassMap, ProcessingMode.SupplementaryData, mappedProperties, cancellationToken);
                 }
                 else
                 {
-                    _logger.LogWarning($"File {mapping.FileName} not found in archive");
+                    _logger.LogWarning($"Supplementary file {mapping.FileName} not found in archive");
                 }
             }
         }
 
-        private async Task ProcessStandaloneDataset(ZipArchive archive, CancellationToken cancellationToken)
+        private async Task ProcessStandaloneDatasetAsync(ZipArchive archive, CancellationToken cancellationToken)
         {
-            // For standalone datasets, there should be only one CSV mapping
             var mapping = CsvMappings.FirstOrDefault();
-            if (mapping != default)
+            if (mapping == default)
             {
-                var entry = archive.Entries.FirstOrDefault(e =>
-                    e.Name.Equals(mapping.FileName, StringComparison.OrdinalIgnoreCase));
+                _logger.LogWarning($"No CSV mapping defined for {DataType}");
+                return;
+            }
 
-                if (entry != null)
-                {
-                    await ProcessStandaloneCsvFileAsync(entry, mapping.ClassMap, cancellationToken);
-                }
-                else
-                {
-                    _logger.LogWarning($"File {mapping.FileName} not found in archive");
-                }
+            var entry = archive.Entries.FirstOrDefault(e =>
+                e.Name.Equals(mapping.FileName, StringComparison.OrdinalIgnoreCase));
+
+            if (entry != null)
+            {
+                await ProcessCsvFileAsync(entry, mapping.ClassMap, ProcessingMode.Standalone, null, cancellationToken);
+            }
+            else
+            {
+                _logger.LogWarning($"File {mapping.FileName} not found in archive");
             }
         }
 
-        private async Task ProcessBaseCsvFileAsync(ZipArchiveEntry entry, Type classMap, CancellationToken cancellationToken)
+        private async Task ProcessCsvFileAsync(
+            ZipArchiveEntry entry,
+            Type classMap,
+            ProcessingMode mode,
+            HashSet<string>? mappedProperties,
+            CancellationToken cancellationToken)
         {
             await using var entryStream = entry.Open();
             using var reader = new StreamReader(entryStream);
-            var config = GetCsvConfiguration();
-            using var csv = new CsvReader(reader, config);
+            using var csv = new CsvReader(reader, GetCsvConfiguration());
 
             ConfigureCsvReader(csv);
             csv.Context.RegisterClassMap(classMap);
 
-            try
-            {
-                var entities = new List<T>();
-                var processedSiteNos = new HashSet<string>();
-
-                await foreach (var record in csv.GetRecordsAsync<T>(cancellationToken))
-                {
-                    // Get the SiteNo property value for legacy deduplication
-                    var siteNoProperty = typeof(T).GetProperty("SiteNo");
-                    if (siteNoProperty != null)
-                    {
-                        var siteNo = siteNoProperty.GetValue(record)?.ToString();
-
-                        // Skip if we've already seen this SiteNo
-                        if (!string.IsNullOrEmpty(siteNo) && !processedSiteNos.Add(siteNo))
-                        {
-                            _logger.LogWarning($"Skipping duplicate SiteNo {siteNo} in CSV file");
-                            continue;
-                        }
-                    }
-
-                    entities.Add(record);
-                    if (entities.Count >= 1000)
-                    {
-                        await SaveOrUpdateEntitiesAsync(entities, cancellationToken);
-                        entities.Clear();
-                    }
-                }
-                if (entities.Count != 0)
-                {
-                    await SaveOrUpdateEntitiesAsync(entities, cancellationToken);
-                }
-            }
-            catch (ReaderException ex)
-            {
-                _logger.LogError($"CSV parsing error at row {ex.Context?.Parser?.Row}, field {ex.Context?.Parser?.RawRecord}");
-                throw;
-            }
-        }
-
-        private async Task ProcessStandaloneCsvFileAsync(ZipArchiveEntry entry, Type classMap, CancellationToken cancellationToken)
-        {
-            await using var entryStream = entry.Open();
-            using var reader = new StreamReader(entryStream);
-            var config = GetCsvConfiguration();
-            using var csv = new CsvReader(reader, config);
-
-            ConfigureCsvReader(csv);
-            csv.Context.RegisterClassMap(classMap);
+            var processedKeys = new HashSet<string>();
+            var entities = new List<T>();
+            var totalProcessed = 0;
 
             try
             {
-                var entities = new List<T>();
-                var processedRecords = new HashSet<string>();
-
                 await foreach (var record in csv.GetRecordsAsync<T>(cancellationToken))
                 {
-                    // Create a unique key based on the composite key fields
-                    var uniqueKey = CreateUniqueKey(record);
+                    var uniqueKey = _keyExtractor(record);
 
-                    // Skip if we've already seen this record
-                    if (!processedRecords.Add(uniqueKey))
+                    // Skip duplicates within the CSV file
+                    if (!processedKeys.Add(uniqueKey))
                     {
-                        _logger.LogWarning($"Skipping duplicate record: {uniqueKey}");
+                        _logger.LogDebug($"Skipping duplicate record in CSV: {uniqueKey}");
                         continue;
                     }
 
-                    entities.Add(record);
-                    if (entities.Count >= 1000)
+                    var processedRecord = mode == ProcessingMode.SupplementaryData
+                        ? record.CreateSelectiveEntity(mappedProperties!)
+                        : record;
+
+                    entities.Add(processedRecord);
+                    totalProcessed++;
+
+                    if (entities.Count >= _csvBatchSize)
                     {
-                        await SaveOrUpdateEntitiesAsync(entities, cancellationToken);
+                        await ProcessEntitiesBatchAsync(entities, mode, mappedProperties, cancellationToken);
                         entities.Clear();
+
+                        _logger.LogInformation($"Processed {totalProcessed} {DataType} records from {entry.Name}");
                     }
                 }
-                if (entities.Count != 0)
+
+                // Process remaining entities
+                if (entities.Count > 0)
                 {
-                    await SaveOrUpdateEntitiesAsync(entities, cancellationToken);
+                    await ProcessEntitiesBatchAsync(entities, mode, mappedProperties, cancellationToken);
                 }
+
+                _logger.LogInformation($"Completed processing {totalProcessed} {DataType} records from {entry.Name}");
             }
             catch (ReaderException ex)
             {
-                _logger.LogError($"CSV parsing error at row {ex.Context?.Parser?.Row}, field {ex.Context?.Parser?.RawRecord}");
+                _logger.LogError(ex, $"CSV parsing error in {entry.Name} at row {ex.Context?.Parser?.Row}");
                 throw;
             }
         }
 
-        private async Task ProcessSupplementaryCsvFileAsync(ZipArchiveEntry entry, Type classMap, CancellationToken cancellationToken)
+        private async Task ProcessEntitiesBatchAsync(
+            List<T> entities,
+            ProcessingMode mode,
+            HashSet<string>? mappedProperties,
+            CancellationToken cancellationToken)
         {
-            await using var entryStream = entry.Open();
-            using var reader = new StreamReader(entryStream);
-            var config = GetCsvConfiguration();
-            using var csv = new CsvReader(reader, config);
+            // Split into smaller batches for database operations
+            for (var i = 0; i < entities.Count; i += _dbBatchSize)
+            {
+                var batch = entities.Skip(i).Take(_dbBatchSize).ToList();
+                await ProcessDatabaseBatchAsync(batch, mode, mappedProperties, cancellationToken);
+            }
+        }
 
-            ConfigureCsvReader(csv);
+        private async Task ProcessDatabaseBatchAsync(
+            List<T> batch,
+            ProcessingMode mode,
+            HashSet<string>? mappedProperties,
+            CancellationToken cancellationToken)
+        {
+            // Get all unique keys for this batch using compiled expression
+            var batchKeys = batch.Select(entity => _keyExtractor(entity)).ToList();
 
-            // Get the mapped properties from the class map
+            // Find existing entities in a single query using compiled expression
+            var existingEntities = await _keyMatcher(_dbContext.Set<T>(), batchKeys).ToListAsync(cancellationToken);
+            var existingLookup = existingEntities.ToDictionary(entity => _keyExtractor(entity));
+
+            foreach (var entity in batch)
+            {
+                var uniqueKey = _keyExtractor(entity);
+
+                if (existingLookup.TryGetValue(uniqueKey, out var existingEntity))
+                {
+                    // Use UpdateFrom for ALL update scenarios to avoid PK modification
+                    if (mode == ProcessingMode.SupplementaryData)
+                    {
+                        existingEntity.UpdateFrom(entity, mappedProperties);
+                    }
+                    else
+                    {
+                        existingEntity.UpdateFrom(entity); // Use the entity's own UpdateFrom method
+                    }
+                    
+                    _dbContext.Entry(existingEntity).State = EntityState.Modified;
+                }
+                else
+                {
+                    // Add new entity
+                    _dbContext.Set<T>().Add(entity);
+                }
+            }
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+
+        private HashSet<string> GetMappedProperties(Type classMap)
+        {
+            // This is the only remaining reflection, but it's done once per file, not per record
             var mapInstance = Activator.CreateInstance(classMap) as ClassMap;
-            var mappedProperties = mapInstance?.MemberMaps.Select(m => m.Data.Member?.Name).ToHashSet() ?? new HashSet<string?>();
-
-            csv.Context.RegisterClassMap(classMap);
-
-            try
-            {
-                var entities = new List<T>();
-                var processedSiteNos = new HashSet<string>();
-
-                await foreach (var record in csv.GetRecordsAsync<T>(cancellationToken))
-                {
-                    // Create a new instance with only mapped properties
-                    var selectiveRecord = Activator.CreateInstance<T>();
-                    foreach (var property in typeof(T).GetProperties())
-                    {
-                        if (mappedProperties.Contains(property.Name))
-                        {
-                            property.SetValue(selectiveRecord, property.GetValue(record));
-                        }
-                    }
-
-                    // Rest of your existing code, but use selectiveRecord instead of record
-                    var siteNoProperty = typeof(T).GetProperty("SiteNo");
-                    if (siteNoProperty != null)
-                    {
-                        var siteNo = siteNoProperty.GetValue(selectiveRecord)?.ToString();
-
-                        if (!string.IsNullOrEmpty(siteNo) && !processedSiteNos.Add(siteNo))
-                        {
-                            _logger.LogWarning($"Skipping duplicate SiteNo {siteNo} in CSV file");
-                            continue;
-                        }
-                    }
-
-                    var existingEntity = await FindExistingEntityAsync(selectiveRecord, cancellationToken);
-                    if (existingEntity != null)
-                    {
-                        foreach (var property in typeof(T).GetProperties())
-                        {
-                            if (mappedProperties.Contains(property.Name))
-                            {
-                                var value = property.GetValue(selectiveRecord);
-                                property.SetValue(existingEntity, value);
-                            }
-                        }
-
-                        entities.Add(existingEntity);
-                        if (entities.Count >= 1000)
-                        {
-                            await SaveOrUpdateEntitiesAsync(entities, cancellationToken, true);
-                            entities.Clear();
-                        }
-                    }
-                }
-                if (entities.Count != 0)
-                {
-                    await SaveOrUpdateEntitiesAsync(entities, cancellationToken, true);
-                }
-            }
-            catch (ReaderException ex)
-            {
-                _logger.LogError($"CSV parsing error at row {ex.Context?.Parser?.Row}, field {ex.Context?.Parser?.RawRecord}");
-                throw;
-            }
+            return mapInstance?.MemberMaps
+                .Select(m => m.Data.Member?.Name)
+                .Where(name => !string.IsNullOrEmpty(name))
+                .Cast<string>() // Cast to non-nullable string after filtering out nulls
+                .ToHashSet() ?? _allPropertyNames.Value;
         }
 
-        private string CreateUniqueKey(T entity)
-        {
-            var keyParts = new List<string>();
-
-            foreach (var identifier in UniqueIdentifiers)
-            {
-                var propertyInfo = typeof(T).GetProperty(identifier);
-                if (propertyInfo != null)
-                {
-                    var value = propertyInfo.GetValue(entity)?.ToString() ?? string.Empty;
-                    keyParts.Add(value);
-                }
-            }
-
-            return string.Join("|", keyParts);
-        }
-
-        private CsvConfiguration GetCsvConfiguration()
+        private static CsvConfiguration GetCsvConfiguration()
         {
             return new CsvConfiguration(CultureInfo.InvariantCulture)
             {
@@ -332,7 +379,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
             };
         }
 
-        private void ConfigureCsvReader(CsvReader csv)
+        private static void ConfigureCsvReader(CsvReader csv)
         {
             csv.Context.TypeConverterCache.RemoveConverter<decimal?>();
             csv.Context.TypeConverterCache.RemoveConverter<int?>();
@@ -341,64 +388,11 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices
             csv.Context.TypeConverterCache.AddConverter<DateTime?>(new OptionalDateConverter());
         }
 
-        private async Task SaveOrUpdateEntitiesAsync(IEnumerable<T> entities, CancellationToken cancellationToken, bool isSupplementaryData = false)
+        private enum ProcessingMode
         {
-            const int batchSize = 100;
-            var entitiesList = entities.ToList();
-
-            for (var i = 0; i < entitiesList.Count; i += batchSize)
-            {
-                var batch = entitiesList.Skip(i).Take(batchSize);
-
-                foreach (var entity in batch)
-                {
-                    var existingEntity = await FindExistingEntityAsync(entity, cancellationToken);
-                    if (existingEntity != null)
-                    {
-                        if (isSupplementaryData && UsesLegacySiteNoDeduplication)
-                        {
-                            // For supplementary data in legacy datasets, only update non-null values
-                            foreach (var property in typeof(T).GetProperties())
-                            {
-                                var value = property.GetValue(entity);
-                                if (value != null)
-                                {
-                                    property.SetValue(existingEntity, value);
-                                }
-                            }
-                            _dbContext.Update(existingEntity);
-                        }
-                        else
-                        {
-                            // For base data or standalone datasets, update all values
-                            _dbContext.Entry(existingEntity).CurrentValues.SetValues(entity);
-                        }
-                    }
-                    else
-                    {
-                        await _dbContext.Set<T>().AddAsync(entity, cancellationToken);
-                    }
-                }
-
-                await _dbContext.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation($"Processed batch {i + 1} to {Math.Min(i + batchSize, entitiesList.Count)} of {entitiesList.Count} {DataType} entities");
-            }
-        }
-
-        private async Task<T?> FindExistingEntityAsync(T entity, CancellationToken cancellationToken)
-        {
-            var queryable = _dbContext.Set<T>().AsQueryable();
-
-            foreach (var identifier in UniqueIdentifiers)
-            {
-                var propertyInfo = typeof(T).GetProperty(identifier);
-                if (propertyInfo == null) continue;
-
-                var value = propertyInfo.GetValue(entity);
-                queryable = queryable.Where(e => EF.Property<object>(e, identifier) == value);
-            }
-
-            return await queryable.FirstOrDefaultAsync(cancellationToken);
+            BaseData,
+            SupplementaryData,
+            Standalone
         }
     }
 }

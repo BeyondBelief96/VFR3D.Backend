@@ -29,23 +29,23 @@ namespace VFR3D.Infrastructure.Data.Configurations
 
             // JSON conversions
             builder.Property(x => x.QualityControlFlags)
-            .HasConversion(
-                v => JsonSerializer.Serialize(v, jsonOptions),
-                v => JsonSerializer.Deserialize<MetarQualityControlFlags>(v ?? "{}", jsonOptions),
-                new ValueComparer<MetarQualityControlFlags>(
-                    (l, r) => JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions),
-                    v => v == null ? 0 : JsonSerializer.Serialize(v, jsonOptions).GetHashCode(),
-                    v => JsonSerializer.Deserialize<MetarQualityControlFlags>(JsonSerializer.Serialize(v, jsonOptions), jsonOptions)
-                ));
+                .HasConversion(
+                    v => JsonSerializer.Serialize(v, jsonOptions),
+                    v => JsonSerializer.Deserialize<MetarQualityControlFlags>(v ?? "{}", jsonOptions) ?? new MetarQualityControlFlags(),
+                    new ValueComparer<MetarQualityControlFlags>(
+                        (l, r) => JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions),
+                        v => v == null ? 0 : JsonSerializer.Serialize(v, jsonOptions).GetHashCode(),
+                        v => JsonSerializer.Deserialize<MetarQualityControlFlags>(JsonSerializer.Serialize(v, jsonOptions), jsonOptions) ?? new MetarQualityControlFlags()
+                    ));
 
             builder.Property(x => x.SkyCondition)
                 .HasConversion(
                     v => JsonSerializer.Serialize(v, jsonOptions),
-                    v => JsonSerializer.Deserialize<List<MetarSkyCondition>>(v ?? "[]", jsonOptions),
+                    v => JsonSerializer.Deserialize<List<MetarSkyCondition>>(v ?? "[]", jsonOptions) ?? new List<MetarSkyCondition>(),
                     new ValueComparer<List<MetarSkyCondition>>(
                         (l, r) => JsonSerializer.Serialize(l, jsonOptions) == JsonSerializer.Serialize(r, jsonOptions),
                         v => v == null ? 0 : JsonSerializer.Serialize(v, jsonOptions).GetHashCode(),
-                        v => JsonSerializer.Deserialize<List<MetarSkyCondition>>(JsonSerializer.Serialize(v, jsonOptions), jsonOptions)
+                        v => JsonSerializer.Deserialize<List<MetarSkyCondition>>(JsonSerializer.Serialize(v, jsonOptions), jsonOptions) ?? new List<MetarSkyCondition>()
                     ));
         }
     }

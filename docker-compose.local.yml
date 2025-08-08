@@ -52,9 +52,10 @@ services:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - DOTNET_RUNNING_IN_CONTAINER=true
       # Database Settings
       - Database__Host=db
-      - Database__DatabaseName=vfr3d_development_database
+      - Database__Database=vfr3d_development_database
       - Database__Username=vfr3d_development_user
       - Database__Password=localdevpassword
       - Database__Port=5432
@@ -87,7 +88,7 @@ services:
       - /app/VFR3D.API/bin
       - /app/VFR3D.API/obj
     command: >
-      sh -c "dotnet ef database update --project VFR3D.Infrastructure --startup-project VFR3D.API &&
+      sh -c "dotnet ef database update --project VFR3D.Infrastructure --startup-project VFR3D.API --connection 'Host=db;Database=vfr3d_development_database;Username=vfr3d_development_user;Password=localdevpassword;Port=5432' &&
              dotnet watch --project VFR3D.API run --urls=http://0.0.0.0:80"
 volumes:
   postgres_data:

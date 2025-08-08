@@ -8,7 +8,7 @@ public record FlightDto
     public string Id { get; set; } = string.Empty;
     public string Auth0UserId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
-    public string DepartureTime { get; set; }
+    public string DepartureTime { get; set; } = string.Empty;
     public int PlannedCruisingAltitude { get; set; }
     public List<WaypointDto> Waypoints { get; set; } = [];
     public string AircraftPerformanceId { get; set; } = string.Empty;

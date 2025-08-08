@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 namespace VFR3D.Domain.Entities
 {
     [Table("communication_frequencies")]
-    public class CommunicationFrequency
+    public class CommunicationFrequency : INasrEntity<CommunicationFrequency>
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -74,5 +74,138 @@ namespace VFR3D.Domain.Entities
 
         [Column("remark", TypeName = "varchar(1500)")]
         public string? Remark { get; set; }
+
+        // INasrEntity<CommunicationFrequency> implementation
+        public string CreateUniqueKey()
+        {
+            return string.Join("|", new[]
+            {
+                FacilityCode ?? string.Empty,
+                ServicedFacility ?? string.Empty,
+                ServicedSiteType ?? string.Empty,
+                ServicedState ?? string.Empty,
+                Frequency ?? string.Empty,
+                FrequencyUse ?? string.Empty,
+                Sectorization ?? string.Empty
+            });
+        }
+
+        public void UpdateFrom(CommunicationFrequency source, HashSet<string>? limitToProperties = null)
+        {
+            // For standalone entities like CommunicationFrequency, we typically update all properties
+            // since there's no supplementary data concept
+            if (limitToProperties == null || !limitToProperties.Any())
+            {
+                UpdateAllProperties(source);
+            }
+            else
+            {
+                UpdateSelectiveProperties(source, limitToProperties);
+            }
+        }
+
+        public CommunicationFrequency CreateSelectiveEntity(HashSet<string> properties)
+        {
+            var selective = new CommunicationFrequency();
+
+            // Key properties
+            if (properties.Contains(nameof(FacilityCode)))
+                selective.FacilityCode = FacilityCode;
+            if (properties.Contains(nameof(ServicedFacility)))
+                selective.ServicedFacility = ServicedFacility;
+            if (properties.Contains(nameof(ServicedSiteType)))
+                selective.ServicedSiteType = ServicedSiteType;
+            if (properties.Contains(nameof(ServicedState)))
+                selective.ServicedState = ServicedState;
+            if (properties.Contains(nameof(Frequency)))
+                selective.Frequency = Frequency;
+            if (properties.Contains(nameof(FrequencyUse)))
+                selective.FrequencyUse = FrequencyUse;
+            if (properties.Contains(nameof(Sectorization)))
+                selective.Sectorization = Sectorization;
+
+            // Other properties
+            if (properties.Contains(nameof(EffectiveDate)))
+                selective.EffectiveDate = EffectiveDate;
+            if (properties.Contains(nameof(FacilityName)))
+                selective.FacilityName = FacilityName;
+            if (properties.Contains(nameof(FacilityType)))
+                selective.FacilityType = FacilityType;
+            if (properties.Contains(nameof(ArtccOrFssId)))
+                selective.ArtccOrFssId = ArtccOrFssId;
+            if (properties.Contains(nameof(Cpdlc)))
+                selective.Cpdlc = Cpdlc;
+            if (properties.Contains(nameof(TowerHours)))
+                selective.TowerHours = TowerHours;
+            if (properties.Contains(nameof(ServicedFacilityName)))
+                selective.ServicedFacilityName = ServicedFacilityName;
+            if (properties.Contains(nameof(Latitude)))
+                selective.Latitude = Latitude;
+            if (properties.Contains(nameof(Longitude)))
+                selective.Longitude = Longitude;
+            if (properties.Contains(nameof(ServicedCity)))
+                selective.ServicedCity = ServicedCity;
+            if (properties.Contains(nameof(ServicedCountry)))
+                selective.ServicedCountry = ServicedCountry;
+            if (properties.Contains(nameof(TowerOrCommCall)))
+                selective.TowerOrCommCall = TowerOrCommCall;
+            if (properties.Contains(nameof(PrimaryApproachRadioCall)))
+                selective.PrimaryApproachRadioCall = PrimaryApproachRadioCall;
+            if (properties.Contains(nameof(Remark)))
+                selective.Remark = Remark;
+
+            return selective;
+        }
+
+        private void UpdateAllProperties(CommunicationFrequency source)
+        {
+            EffectiveDate = source.EffectiveDate;
+            FacilityName = source.FacilityName;
+            FacilityType = source.FacilityType;
+            ArtccOrFssId = source.ArtccOrFssId;
+            Cpdlc = source.Cpdlc;
+            TowerHours = source.TowerHours;
+            ServicedFacilityName = source.ServicedFacilityName;
+            Latitude = source.Latitude;
+            Longitude = source.Longitude;
+            ServicedCity = source.ServicedCity;
+            ServicedCountry = source.ServicedCountry;
+            TowerOrCommCall = source.TowerOrCommCall;
+            PrimaryApproachRadioCall = source.PrimaryApproachRadioCall;
+            Remark = source.Remark;
+        }
+
+        private void UpdateSelectiveProperties(CommunicationFrequency source, HashSet<string> limitToProperties)
+        {
+            // Update only specified properties with non-null values
+            if (limitToProperties.Contains(nameof(EffectiveDate)))
+                EffectiveDate = source.EffectiveDate;
+            if (limitToProperties.Contains(nameof(FacilityName)) && source.FacilityName != null)
+                FacilityName = source.FacilityName;
+            if (limitToProperties.Contains(nameof(FacilityType)) && source.FacilityType != null)
+                FacilityType = source.FacilityType;
+            if (limitToProperties.Contains(nameof(ArtccOrFssId)) && source.ArtccOrFssId != null)
+                ArtccOrFssId = source.ArtccOrFssId;
+            if (limitToProperties.Contains(nameof(Cpdlc)) && source.Cpdlc != null)
+                Cpdlc = source.Cpdlc;
+            if (limitToProperties.Contains(nameof(TowerHours)) && source.TowerHours != null)
+                TowerHours = source.TowerHours;
+            if (limitToProperties.Contains(nameof(ServicedFacilityName)) && source.ServicedFacilityName != null)
+                ServicedFacilityName = source.ServicedFacilityName;
+            if (limitToProperties.Contains(nameof(Latitude)) && source.Latitude != null)
+                Latitude = source.Latitude;
+            if (limitToProperties.Contains(nameof(Longitude)) && source.Longitude != null)
+                Longitude = source.Longitude;
+            if (limitToProperties.Contains(nameof(ServicedCity)) && source.ServicedCity != null)
+                ServicedCity = source.ServicedCity;
+            if (limitToProperties.Contains(nameof(ServicedCountry)) && source.ServicedCountry != null)
+                ServicedCountry = source.ServicedCountry;
+            if (limitToProperties.Contains(nameof(TowerOrCommCall)) && source.TowerOrCommCall != null)
+                TowerOrCommCall = source.TowerOrCommCall;
+            if (limitToProperties.Contains(nameof(PrimaryApproachRadioCall)) && source.PrimaryApproachRadioCall != null)
+                PrimaryApproachRadioCall = source.PrimaryApproachRadioCall;
+            if (limitToProperties.Contains(nameof(Remark)) && source.Remark != null)
+                Remark = source.Remark;
+        }
     }
 }

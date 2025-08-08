@@ -5,5 +5,8 @@
       "Microsoft.AspNetCore": "Warning"
     }
   },
-  "AllowedHosts": "*"
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "DefaultConnection": "Host=localhost;Database=vfr3d_development_database;Username=vfr3d_development_user;Password=localdevpassword;Port=5432"
+  }
 }
