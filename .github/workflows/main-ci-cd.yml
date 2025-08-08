@@ -1,0 +1,142 @@
+name: VFR3D CI/CD Pipeline
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'VFR3D.API/**'
+      - 'VFR3D.Domain/**'
+      - 'VFR3D.Infrastructure/**'
+      - 'VFR3D.Common/**'
+      - 'VFR3D.Azure.Functions/**'
+      - '.github/workflows/vfr3d-main-ci-cd.yml'
+
+env:
+  DOTNET_CORE_VERSION: 8.0.x
+  CONFIGURATION: Release
+  API_PUBLISH_DIR: ./api-publish
+  FUNCTIONS_PUBLISH_DIR: ./functions-publish
+  API_APP_NAME: azapp-vfr3d-api-centralus-test
+  FUNCTION_APP_NAME: vfr3d-cron-functions-centralus-test
+  RESOURCE_GROUP: rg-vfr3d-centralus-test
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
+      
+      # Build and publish API
+      - name: Restore API project
+        run: dotnet restore "VFR3D.API"
+      
+      - name: Build and Publish API
+        run: |
+          dotnet publish "VFR3D.API" --configuration ${{ env.CONFIGURATION }} --output "${{ env.API_PUBLISH_DIR }}"
+      
+      - name: Publish API Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vfr3d-api
+          path: ${{ env.API_PUBLISH_DIR }}
+          if-no-files-found: error
+      
+      # Build and publish Functions
+      - name: Restore Functions project
+        run: dotnet restore "VFR3D.Azure.Functions"
+      
+      - name: Build and Publish Functions
+        run: |
+          dotnet publish "VFR3D.Azure.Functions" --configuration ${{ env.CONFIGURATION }} --output "${{ env.FUNCTIONS_PUBLISH_DIR }}"
+      
+      - name: Create Functions metadata
+        run: |
+          mkdir -p "${{ env.FUNCTIONS_PUBLISH_DIR }}/.azurefunctions"
+          echo "{}" > "${{ env.FUNCTIONS_PUBLISH_DIR }}/.azurefunctions/functionsmetadata"
+      
+      - name: Create Functions zip
+        run: |
+          cd "${{ env.FUNCTIONS_PUBLISH_DIR }}"
+          zip -r ../../functionapp.zip .
+          cd ../..
+      
+      - name: Upload Functions zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: functionapp-zip
+          path: functionapp.zip
+      
+      # Create EF migration bundle
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef
+      
+      - name: Create EF migrations bundle
+        run: dotnet ef migrations bundle --project VFR3D.Infrastructure/VFR3D.Infrastructure.csproj -o efbundle.exe
+      
+      - name: Upload EF bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ef-bundle
+          path: efbundle.exe
+
+  migrations:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download EF bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: ef-bundle
+          path: .
+      
+      - name: Make bundle executable
+        run: chmod +x efbundle.exe
+      
+      - name: Apply migrations
+        run: ./efbundle.exe --connection "${{ secrets.DB_CONNECTION_STRING }}"
+        env:
+          ASPNETCORE_ENVIRONMENT: Production
+
+  deploy:
+    needs: migrations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.azapp_service_principal_test }}
+      
+      # Deploy API
+      - name: Download API artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: vfr3d-api
+          path: ${{ env.API_PUBLISH_DIR }}
+      
+      - name: Deploy API to Azure
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ env.API_APP_NAME }}
+          package: ${{ env.API_PUBLISH_DIR }}
+      
+      - name: Restart API App
+        run: az webapp restart --name ${{ env.API_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
+      
+      # Deploy Functions
+      - name: Download Functions zip
+        uses: actions/download-artifact@v4
+        with:
+          name: functionapp-zip
+          path: .
+      
+      - name: Deploy Functions
+        run: |
+          az functionapp deployment source config-zip \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.FUNCTION_APP_NAME }} \
+            --src functionapp.zip

@@ -20,8 +20,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VFR3D.API", "VFR3D.API\VFR3
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Github Actions", "Github Actions", "{6345C756-6060-477B-80D1-E10500184627}"
 	ProjectSection(SolutionItems) = preProject
-		.github\workflows\azapp-vfr3d-api-centralus-test.yml = .github\workflows\azapp-vfr3d-api-centralus-test.yml
-		.github\workflows\azapp-vfr3d-cron-service-centralus-test.yml = .github\workflows\azapp-vfr3d-cron-service-centralus-test.yml
+		.github\workflows\main-ci-cd.yml = .github\workflows\main-ci-cd.yml
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VFR3D.Azure.Functions", "VFR3D.Azure.Functions\VFR3D.Azure.Functions.csproj", "{BC682116-D837-42B6-821D-D887982B638D}"
