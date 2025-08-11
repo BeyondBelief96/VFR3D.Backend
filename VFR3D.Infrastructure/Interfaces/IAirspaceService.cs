@@ -10,8 +10,6 @@ public interface IAirspaceService
     Task<IEnumerable<AirspaceDto>> GetByStates(string[] states);
     Task<IEnumerable<SpecialUseAirspaceDto>> GetByTypeCodes(string[] typeCodes);
     Task<IEnumerable<AirspaceDto>> GetByIcaoOrIdents(string[] icaoOrIdents);
-
-    // New: spatial queries along a route
     Task<IReadOnlyCollection<string>> GetAirspaceGlobalIdsForRouteAsync(IEnumerable<WaypointDto> waypoints, CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<string>> GetSpecialUseAirspaceGlobalIdsForRouteAsync(IEnumerable<WaypointDto> waypoints, CancellationToken cancellationToken = default);
 }

@@ -226,19 +226,52 @@ namespace VFR3D.Infrastructure.Services.AirportInformationServices
         {
             var codes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var w in waypoints)
+            foreach (var waypoint in waypoints)
             {
-                if (w.WaypointType?.ToString().Equals("Airport", StringComparison.OrdinalIgnoreCase) == true
-                    || (!string.IsNullOrWhiteSpace(w.Name) && w.Name.Length >= 3))
+                if (waypoint.WaypointType?.ToString().Equals("Airport", StringComparison.OrdinalIgnoreCase) != true)
                 {
-                    var code = w.Name?.Trim();
-                    if (string.IsNullOrEmpty(code)) continue;
+                    continue;
+                }
 
-                    codes.Add(code.ToUpperInvariant());
-                    if (code.Length == 4 && code.StartsWith("K", StringComparison.OrdinalIgnoreCase))
+                var raw = waypoint.Name?.Trim();
+                if (string.IsNullOrWhiteSpace(raw)) continue;
+
+                var code = raw.ToUpperInvariant();
+
+                // Case A: 4-letter ICAO provided
+                if (code.Length == 4)
+                {
+                    // Always include the ICAO as-is
+                    codes.Add(code);
+
+                    // Derive likely FAA 3-letter identifier
+                    if (code.StartsWith("K", StringComparison.Ordinal))
                     {
-                        codes.Add(code[1..].ToUpperInvariant());
+                        // Continental US: K + 3-letter FAA LID → strip K
+                        codes.Add(code[1..]);
                     }
+                    else if (code.StartsWith("PA", StringComparison.Ordinal) || code.StartsWith("PH", StringComparison.Ordinal))
+                    {
+                        // Alaska (PAxx) / Hawaii (PHxx): common FAA LID is last 3 letters
+                        codes.Add(code[^3..]);
+                    }
+                }
+                // Case B: 3-letter FAA LID provided
+                else if (code.Length == 3)
+                {
+                    // Include the FAA LID
+                    codes.Add(code);
+
+                    // Also include a likely ICAO for lower 48 by prefixing K
+                    codes.Add("K" + code);
+
+                    // We intentionally don't guess PA/PH for 3-letter codes,
+                    // as mapping isn't deterministic without a lookup.
+                }
+                else
+                {
+                    // Non-standard lengths: include as-is only
+                    codes.Add(code);
                 }
             }
 
