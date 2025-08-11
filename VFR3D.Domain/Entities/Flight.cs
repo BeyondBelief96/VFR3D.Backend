@@ -6,7 +6,6 @@ namespace VFR3D.Domain.Entities
 {
     /// <summary>
     /// A flight represents a single flight plan for a given user, represented by a set of waypoints, a departure time, and a cruising altitude. 
-    /// 
     /// </summary>
     [Table("flights")]
     public class Flight
@@ -59,12 +58,18 @@ namespace VFR3D.Domain.Entities
         public List<string> StateCodesAlongRoute { get; set; } = [];
 
         [Column("airspace_global_ids", TypeName = "jsonb")]
-        public List<string> AirspaceGlobalIds { get; set; } = [];
+        public List<string>? AirspaceGlobalIds { get; set; } = [];
 
         [Column("special_use_airspace_global_ids", TypeName = "jsonb")]
-        public List<string> SpecialUseAirspaceGlobalIds { get; set; } = [];
+        public List<string>? SpecialUseAirspaceGlobalIds { get; set; } = [];
 
         // Navigation Property
         public virtual AircraftPerformanceProfile? AircraftPerformanceProfile { get; set; }
+
+        // Many-to-many: Airspaces intersected by this flight
+        public virtual ICollection<Airspace> Airspaces { get; set; } = new HashSet<Airspace>();
+
+        // Many-to-many: Special Use Airspaces intersected by this flight
+        public virtual ICollection<SpecialUseAirspace> SpecialUseAirspaces { get; set; } = new HashSet<SpecialUseAirspace>();
     }
 }

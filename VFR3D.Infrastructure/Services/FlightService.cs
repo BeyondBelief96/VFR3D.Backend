@@ -51,6 +51,26 @@ public class FlightService : IFlightService
             flight.StateCodesAlongRoute = stateCodesAlongRoute;
             flight.Legs = navlogResponse.Legs.Select(NavlogLegMapper.MapToEntity).ToList();
 
+            // Persist airspace IDs and relations
+            flight.AirspaceGlobalIds = navlogResponse.AirspaceGlobalIds?.ToList() ?? new List<string>();
+            flight.SpecialUseAirspaceGlobalIds = navlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? new List<string>();
+
+            if (flight.AirspaceGlobalIds.Count > 0)
+            {
+                var relatedAirspaces = await _context.Airspaces
+                    .Where(a => flight.AirspaceGlobalIds.Contains(a.GlobalId))
+                    .ToListAsync();
+                flight.Airspaces = relatedAirspaces;
+            }
+
+            if (flight.SpecialUseAirspaceGlobalIds.Count > 0)
+            {
+                var relatedSuas = await _context.SpecialUseAirspaces
+                    .Where(s => flight.SpecialUseAirspaceGlobalIds.Contains(s.GlobalId))
+                    .ToListAsync();
+                flight.SpecialUseAirspaces = relatedSuas;
+            }
+
             _context.Flights.Add(flight);
             await _context.SaveChangesAsync();
 
@@ -95,6 +115,30 @@ public class FlightService : IFlightService
                 flight.TotalFuelUsed = navlogResponse.TotalFuelUsed;
                 flight.AverageWindComponent = navlogResponse.AverageWindComponent;
                 flight.Legs = navlogResponse.Legs.Select(NavlogLegMapper.MapToEntity).ToList();
+
+                // Update airspace IDs and relations
+                flight.AirspaceGlobalIds = navlogResponse.AirspaceGlobalIds?.ToList() ?? new List<string>();
+                flight.SpecialUseAirspaceGlobalIds = navlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? new List<string>();
+
+                // Clear existing relations before setting (EF will manage join table diffs)
+                flight.Airspaces.Clear();
+                flight.SpecialUseAirspaces.Clear();
+
+                if (flight.AirspaceGlobalIds.Count > 0)
+                {
+                    var relatedAirspaces = await _context.Airspaces
+                        .Where(a => flight.AirspaceGlobalIds.Contains(a.GlobalId))
+                        .ToListAsync();
+                    foreach (var a in relatedAirspaces) flight.Airspaces.Add(a);
+                }
+
+                if (flight.SpecialUseAirspaceGlobalIds.Count > 0)
+                {
+                    var relatedSuas = await _context.SpecialUseAirspaces
+                        .Where(s => flight.SpecialUseAirspaceGlobalIds.Contains(s.GlobalId))
+                        .ToListAsync();
+                    foreach (var s in relatedSuas) flight.SpecialUseAirspaces.Add(s);
+                }
 
                 if (request.Waypoints != null)
                 {
@@ -202,6 +246,29 @@ public class FlightService : IFlightService
             flight.TotalFuelUsed = updatedNavlogResponse.TotalFuelUsed;
             flight.AverageWindComponent = updatedNavlogResponse.AverageWindComponent;
             flight.Legs = updatedNavlogResponse.Legs.Select(NavlogLegMapper.MapToEntity).ToList();
+
+            // Update airspace IDs and relations
+            flight.AirspaceGlobalIds = updatedNavlogResponse.AirspaceGlobalIds?.ToList() ?? new List<string>();
+            flight.SpecialUseAirspaceGlobalIds = updatedNavlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? new List<string>();
+
+            flight.Airspaces.Clear();
+            flight.SpecialUseAirspaces.Clear();
+
+            if (flight.AirspaceGlobalIds.Count > 0)
+            {
+                var relatedAirspaces = await _context.Airspaces
+                    .Where(a => flight.AirspaceGlobalIds.Contains(a.GlobalId))
+                    .ToListAsync();
+                foreach (var a in relatedAirspaces) flight.Airspaces.Add(a);
+            }
+
+            if (flight.SpecialUseAirspaceGlobalIds.Count > 0)
+            {
+                var relatedSuas = await _context.SpecialUseAirspaces
+                    .Where(s => flight.SpecialUseAirspaceGlobalIds.Contains(s.GlobalId))
+                    .ToListAsync();
+                foreach (var s in relatedSuas) flight.SpecialUseAirspaces.Add(s);
+            }
 
             await _context.SaveChangesAsync();
 
