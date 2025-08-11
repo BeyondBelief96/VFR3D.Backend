@@ -8,15 +8,8 @@ namespace VFR3D.Domain.Entities
     public class Airspace
     {
         [Key]
-        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
-
-        [Column("object_id")]
-        [Required]
-        public int ObjectId { get; set; }
-
         [Column("global_id", TypeName = "varchar(50)")]
-        public string? GlobalId { get; set; }
+        public string GlobalId { get; set; } = string.Empty;
 
         [Column("ident", TypeName = "varchar(200)")]
         public string? Ident { get; set; }

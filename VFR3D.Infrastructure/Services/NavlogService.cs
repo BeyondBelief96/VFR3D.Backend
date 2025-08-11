@@ -12,17 +12,20 @@ public class NavlogService : INavlogService
 {
     private readonly IAircraftPerformanceProfileRepository _aircraftPerformanceProfileRepository;
     private readonly IWindsAloftService _windsAloftService;
+    private readonly IAirspaceService _airspaceService;
     private readonly IMagneticVariationService _magneticVariationService;
     private readonly ILogger<NavlogService> _logger;
 
     public NavlogService(
         IAircraftPerformanceProfileRepository aircraftPerformanceProfileRepository,
         IWindsAloftService windsAloftService,
+        IAirspaceService airspaceService,
         IMagneticVariationService magneticVariationService,
         ILogger<NavlogService> logger)
     {
         _aircraftPerformanceProfileRepository = aircraftPerformanceProfileRepository;
         _windsAloftService = windsAloftService;
+        _airspaceService = airspaceService;
         _magneticVariationService = magneticVariationService;
         _logger = logger;
     }
@@ -95,6 +98,19 @@ public class NavlogService : INavlogService
 
             CalculateDistanceRemaining(response.Legs, response.TotalRouteDistance);
             CalculateRemainingFuel(response.Legs, performanceProfile.FuelOnBoardGals);
+
+            try
+            {
+                var airspaceIds = await _airspaceService.GetAirspaceGlobalIdsForRouteAsync(waypointsAdjustedForCruisingAltitude);
+                var suaIds = await _airspaceService.GetSpecialUseAirspaceGlobalIdsForRouteAsync(waypointsAdjustedForCruisingAltitude);
+
+                response.AirspaceGlobalIds = airspaceIds;
+                response.SpecialUseAirspaceGlobalIds = suaIds;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to determine intersecting airspaces for route");
+            }
 
             return response;
         }

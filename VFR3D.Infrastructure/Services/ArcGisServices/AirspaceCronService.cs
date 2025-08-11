@@ -41,20 +41,13 @@ namespace VFR3D.Infrastructure.Services.ArcgisServices
 
             foreach (var feature in response.Features)
             {
-                var existingAirspace = await FindExistingEntity(feature.Attributes.ObjectId, cancellationToken)
-                    ?? CreateNewEntity(feature.Attributes.ObjectId);
+                var existingAirspace = await _dbContext.Airspaces.FirstOrDefaultAsync(a => a.GlobalId == feature.Attributes.GlobalId, cancellationToken)
+                    ?? new Airspace { GlobalId = feature.Attributes.GlobalId ?? string.Empty };
 
                 MapFieldsToEntity(existingAirspace, feature.Attributes);
                 existingAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
 
-                if (existingAirspace.Id == 0)
-                {
-                    await _dbContext.Airspaces.AddAsync(existingAirspace, cancellationToken);
-                }
-                else
-                {
-                    _dbContext.Airspaces.Update(existingAirspace);
-                }
+                _dbContext.Airspaces.Update(existingAirspace);
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
@@ -63,19 +56,19 @@ namespace VFR3D.Infrastructure.Services.ArcgisServices
 
         protected override async Task<Airspace?> FindExistingEntity(object id, CancellationToken cancellationToken)
         {
-            return await _dbContext.Airspaces.FirstOrDefaultAsync(a => a.ObjectId == (int)id, cancellationToken);
+            return await _dbContext.Airspaces.FirstOrDefaultAsync(a => a.GlobalId == (string)id, cancellationToken);
         }
 
         protected override Airspace CreateNewEntity(object id)
         {
-            return new Airspace { ObjectId = (int)id };
+            return new Airspace { GlobalId = (string)id };
         }
 
         protected override void MapFieldsToEntity(Airspace entity, object attributes)
         {
             if (attributes is not AirspaceModel attrs) return;
 
-            entity.GlobalId = attrs.GlobalId;
+            entity.GlobalId = attrs.GlobalId ?? entity.GlobalId;
             entity.Ident = attrs.Ident;
             entity.IcaoId = attrs.IcaoId;
             entity.Name = attrs.Name;

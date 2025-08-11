@@ -10,8 +10,6 @@ namespace VFR3D.Infrastructure.Dtos
 
     public class AirspaceDto
     {
-        public int Id { get; set; }
-        public int ObjectId { get; set; }
         public string? GlobalId { get; set; }
         public string? Ident { get; set; }
         public string? IcaoId { get; set; }
@@ -47,7 +45,6 @@ namespace VFR3D.Infrastructure.Dtos
 
     public class SpecialUseAirspaceDto
     {
-        public int ObjectId { get; set; }
         public string? GlobalId { get; set; }
         public string? Name { get; set; }
         public string? TypeCode { get; set; }

@@ -9,8 +9,6 @@ namespace VFR3D.Infrastructure.Dtos.Mappers
         {
             return new AirspaceDto
             {
-                Id = airspace.Id,
-                ObjectId = airspace.ObjectId,
                 GlobalId = airspace.GlobalId,
                 Ident = airspace.Ident,
                 IcaoId = airspace.IcaoId,
@@ -49,7 +47,6 @@ namespace VFR3D.Infrastructure.Dtos.Mappers
         {
             return new SpecialUseAirspaceDto
             {
-                ObjectId = airspace.ObjectId,
                 GlobalId = airspace.GlobalId,
                 Name = airspace.Name,
                 TypeCode = airspace.TypeCode,

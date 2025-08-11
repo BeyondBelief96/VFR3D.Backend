@@ -33,20 +33,13 @@ namespace VFR3D.Infrastructure.Services.ArcgisServices
 
             foreach (var feature in response.Features)
             {
-                var existingAirspace = await FindExistingEntity(feature.Attributes.ObjectId, cancellationToken)
-                    ?? CreateNewEntity(feature.Attributes.ObjectId);
+                var existingAirspace = await _dbContext.SpecialUseAirspaces.FirstOrDefaultAsync(a => a.GlobalId == feature.Attributes.GlobalId, cancellationToken)
+                    ?? new SpecialUseAirspace { GlobalId = feature.Attributes.GlobalId ?? string.Empty };
 
                 MapFieldsToEntity(existingAirspace, feature.Attributes);
                 existingAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
 
-                if (await _dbContext.SpecialUseAirspaces.FindAsync(new object[] { existingAirspace.ObjectId }, cancellationToken) == null)
-                {
-                    await _dbContext.SpecialUseAirspaces.AddAsync(existingAirspace, cancellationToken);
-                }
-                else
-                {
-                    _dbContext.SpecialUseAirspaces.Update(existingAirspace);
-                }
+                _dbContext.SpecialUseAirspaces.Update(existingAirspace);
             }
 
             await _dbContext.SaveChangesAsync(cancellationToken);
@@ -55,19 +48,19 @@ namespace VFR3D.Infrastructure.Services.ArcgisServices
 
         protected override async Task<SpecialUseAirspace?> FindExistingEntity(object id, CancellationToken cancellationToken)
         {
-            return await _dbContext.SpecialUseAirspaces.FirstOrDefaultAsync(a => a.ObjectId == (int)id, cancellationToken);
+            return await _dbContext.SpecialUseAirspaces.FirstOrDefaultAsync(a => a.GlobalId == (string)id, cancellationToken);
         }
 
         protected override SpecialUseAirspace CreateNewEntity(object id)
         {
-            return new SpecialUseAirspace { ObjectId = (int)id };
+            return new SpecialUseAirspace { GlobalId = (string)id };
         }
 
         protected override void MapFieldsToEntity(SpecialUseAirspace entity, object attributes)
         {
             if (attributes is not SpecialUseAirspaceModel attrs) return;
 
-            entity.GlobalId = attrs.GlobalId;
+            entity.GlobalId = attrs.GlobalId ?? entity.GlobalId;
             entity.Name = attrs.Name;
             entity.TypeCode = attrs.TypeCode;
             entity.Class = attrs.Class;

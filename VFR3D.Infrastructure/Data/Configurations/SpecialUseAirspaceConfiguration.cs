@@ -10,10 +10,11 @@ namespace VFR3D.Infrastructure.Data.Configurations
         {
             builder.ToTable("special_use_airspaces");
 
-            builder.HasKey(e => e.ObjectId);
+            builder.HasKey(e => e.GlobalId);
 
             builder.Property(e => e.GlobalId)
-                .HasMaxLength(50);
+                .HasMaxLength(50)
+                .IsRequired();
 
             builder.Property(e => e.Name)
                 .HasMaxLength(200);
@@ -91,7 +92,7 @@ namespace VFR3D.Infrastructure.Data.Configurations
                 .HasColumnType("geometry(Polygon, 4326)");
 
             // Indexes
-            builder.HasIndex(e => e.GlobalId);
+            builder.HasIndex(e => e.GlobalId).IsUnique();
             builder.HasIndex(e => e.Name);
             builder.HasIndex(e => e.State);
             builder.HasIndex(e => e.Class);
