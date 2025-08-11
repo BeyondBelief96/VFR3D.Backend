@@ -64,7 +64,7 @@ builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"))
 builder.Services.AddScoped<IAwsInitializationService, AwsInitializationService>();
 builder.Services.AddScoped<IFaaPublicationCycleService, FaaPublicationCycleService>();
 builder.Services.AddScoped<IChartSupplementCronService, ChartSupplementCronService>();
-builder.Services.AddScoped<IAirportDiagramCronService, AirportDiagramCronCronService>();
+builder.Services.AddScoped<IAirportDiagramCronService, AirportDiagramCronService>();
 builder.Services.AddScoped<IAviationWeatherService<Metar>, MetarCronService>();
 builder.Services.AddScoped<IAviationWeatherService<Taf>, TafCronService>();
 builder.Services.AddScoped<IAviationWeatherService<Airsigmet>, AirsigmetCronService>();

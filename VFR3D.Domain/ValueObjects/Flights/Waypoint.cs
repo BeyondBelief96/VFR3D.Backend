@@ -2,6 +2,9 @@
 
 namespace VFR3D.Domain.ValueObjects.Flights;
 
+/// <summary>
+/// A waypoint represents a point of interest in a flight plan, represented by a latitude, longitude, and altitude.
+/// </summary>
 public class Waypoint
 {
     public string Id { get; set; } = string.Empty;
