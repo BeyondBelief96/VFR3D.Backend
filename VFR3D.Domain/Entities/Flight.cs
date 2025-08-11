@@ -58,6 +58,12 @@ namespace VFR3D.Domain.Entities
         [Column("state_codes_along_route", TypeName = "jsonb")]
         public List<string> StateCodesAlongRoute { get; set; } = [];
 
+        [Column("airspace_global_ids", TypeName = "jsonb")]
+        public List<string> AirspaceGlobalIds { get; set; } = [];
+
+        [Column("special_use_airspace_global_ids", TypeName = "jsonb")]
+        public List<string> SpecialUseAirspaceGlobalIds { get; set; } = [];
+
         // Navigation Property
         public virtual AircraftPerformanceProfile? AircraftPerformanceProfile { get; set; }
     }

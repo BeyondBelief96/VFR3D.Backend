@@ -141,6 +141,46 @@ namespace VFR3D.Infrastructure.Services.AirportInformationServices
             }
         }
 
+        public async Task<IEnumerable<AirspaceDto>> GetByGlobalIds(string[] globalIds)
+        {
+            try
+            {
+                _logger.LogInformation("Getting airspaces by global ids: {Ids}", string.Join(", ", globalIds));
+
+                var upperIds = globalIds.Select(i => i.ToUpper()).ToArray();
+                var airspaces = await _context.Airspaces
+                    .Where(a => a.GlobalId != null && upperIds.Contains(a.GlobalId.ToUpper()))
+                    .ToListAsync();
+
+                return airspaces.Select(AirspaceMapper.ToDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting airspaces by global ids: {Ids}", string.Join(", ", globalIds));
+                throw;
+            }
+        }
+
+        public async Task<IEnumerable<SpecialUseAirspaceDto>> GetSpecialUseByGlobalIds(string[] globalIds)
+        {
+            try
+            {
+                _logger.LogInformation("Getting special use airspaces by global ids: {Ids}", string.Join(", ", globalIds));
+
+                var upperIds = globalIds.Select(i => i.ToUpper()).ToArray();
+                var airspaces = await _context.SpecialUseAirspaces
+                    .Where(a => a.GlobalId != null && upperIds.Contains(a.GlobalId.ToUpper()))
+                    .ToListAsync();
+
+                return airspaces.Select(AirspaceMapper.ToDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting special use airspaces by global ids: {Ids}", string.Join(", ", globalIds));
+                throw;
+            }
+        }
+
         public async Task<IReadOnlyCollection<string>> GetAirspaceGlobalIdsForRouteAsync(
             IEnumerable<WaypointDto> waypoints,
             CancellationToken cancellationToken = default)
