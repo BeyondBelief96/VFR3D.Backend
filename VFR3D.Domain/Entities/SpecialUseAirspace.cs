@@ -8,11 +8,8 @@ namespace VFR3D.Domain.Entities
     public class SpecialUseAirspace
     {
         [Key]
-        [Column("object_id")]
-        public int ObjectId { get; set; }
-
         [Column("global_id", TypeName = "varchar(50)")]
-        public string? GlobalId { get; set; }
+        public string GlobalId { get; set; } = string.Empty;
 
         [Column("name", TypeName = "varchar(200)")]
         public string? Name { get; set; }

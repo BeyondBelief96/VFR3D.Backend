@@ -1,13 +1,14 @@
-﻿using FluentAssertions;
+﻿using Bogus;
+using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
+using VFR3D.Domain.Entities;
 using VFR3D.Domain.Enums;
 using VFR3D.Infrastructure.Dtos.Navlog;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Services;
+using VFR3D.Infrastructure.Services.AirportInformationServices;
 using Xunit;
-using Bogus;
-using VFR3D.Domain.Entities;
 
 namespace VFR3D.Tests.Services
 {
@@ -16,6 +17,7 @@ namespace VFR3D.Tests.Services
             private readonly IAircraftPerformanceProfileRepository _aircraftPerformanceProfileRepository;
             private readonly IWindsAloftService _windsAloftService;
             private readonly IMagneticVariationService _magneticVariationService;
+            private readonly IAirspaceService _airspaceService;
             private readonly ILogger<NavlogService> _logger;
             private readonly NavlogService _navlogService;
             private readonly Faker _faker;
@@ -25,6 +27,7 @@ namespace VFR3D.Tests.Services
                 // Setup mocks
                 _aircraftPerformanceProfileRepository = Substitute.For<IAircraftPerformanceProfileRepository>();
                 _windsAloftService = Substitute.For<IWindsAloftService>();
+                _airspaceService = Substitute.For<IAirspaceService>();
                 _magneticVariationService = Substitute.For<IMagneticVariationService>();
                 _logger = Substitute.For<ILogger<NavlogService>>();
 
@@ -32,6 +35,7 @@ namespace VFR3D.Tests.Services
                 _navlogService = new NavlogService(
                     _aircraftPerformanceProfileRepository,
                     _windsAloftService,
+                    _airspaceService,
                     _magneticVariationService,
                     _logger
                 );

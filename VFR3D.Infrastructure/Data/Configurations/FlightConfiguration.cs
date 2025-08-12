@@ -63,11 +63,69 @@ namespace VFR3D.Infrastructure.Data.Configurations
                 .HasColumnType("jsonb")
                 .HasColumnName("state_codes_along_route");
 
+            builder.Property(e => e.AirspaceGlobalIds)
+                .HasColumnType("jsonb")
+                .HasColumnName("airspace_global_ids");
+
+            builder.Property(e => e.SpecialUseAirspaceGlobalIds)
+                .HasColumnType("jsonb")
+                .HasColumnName("special_use_airspace_global_ids");
+
             // Relationships
             builder.HasOne(e => e.AircraftPerformanceProfile)
                 .WithMany(a => a.Flights)
                 .HasForeignKey(e => e.AircraftPerformanceId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Many-to-many: flights <-> airspaces via global_id
+            builder
+                .HasMany(f => f.Airspaces)
+                .WithMany()
+                .UsingEntity<Dictionary<string, object>>(
+                    "flight_airspaces",
+                    right => right.HasOne<Airspace>()
+                                 .WithMany()
+                                 .HasForeignKey("airspace_global_id")
+                                 .HasPrincipalKey(nameof(Airspace.GlobalId))
+                                 .OnDelete(DeleteBehavior.Cascade),
+                    left => left.HasOne<Flight>()
+                                .WithMany()
+                                .HasForeignKey("flight_id")
+                                .HasPrincipalKey(nameof(Flight.Id))
+                                .OnDelete(DeleteBehavior.Cascade),
+                    join =>
+                    {
+                        join.ToTable("flight_airspaces");
+                        join.Property<string>("flight_id");
+                        join.Property<string>("airspace_global_id");
+                        join.HasKey("flight_id", "airspace_global_id");
+                        join.HasIndex("airspace_global_id");
+                    });
+
+            // Many-to-many: flights <-> special_use_airspaces via global_id
+            builder
+                .HasMany(f => f.SpecialUseAirspaces)
+                .WithMany()
+                .UsingEntity<Dictionary<string, object>>(
+                    "flight_special_use_airspaces",
+                    right => right.HasOne<SpecialUseAirspace>()
+                                 .WithMany()
+                                 .HasForeignKey("special_use_airspace_global_id")
+                                 .HasPrincipalKey(nameof(SpecialUseAirspace.GlobalId))
+                                 .OnDelete(DeleteBehavior.Cascade),
+                    left => left.HasOne<Flight>()
+                                .WithMany()
+                                .HasForeignKey("flight_id")
+                                .HasPrincipalKey(nameof(Flight.Id))
+                                .OnDelete(DeleteBehavior.Cascade),
+                    join =>
+                    {
+                        join.ToTable("flight_special_use_airspaces");
+                        join.Property<string>("flight_id");
+                        join.Property<string>("special_use_airspace_global_id");
+                        join.HasKey("flight_id", "special_use_airspace_global_id");
+                        join.HasIndex("special_use_airspace_global_id");
+                    });
 
             // Indexes
             builder.HasIndex(e => e.Auth0UserId);

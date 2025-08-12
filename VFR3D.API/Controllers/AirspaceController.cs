@@ -188,5 +188,75 @@ namespace VFR3D.API.Controllers
                 return StatusCode(500, "An error occurred while retrieving airspaces");
             }
         }
+
+        /// <summary>
+        /// Gets airspaces by global IDs
+        /// </summary>
+        /// <param name="globalIds">Comma-separated list of global IDs</param>
+        /// <returns>List of airspaces matching the specified global IDs</returns>
+        /// <response code="200">Returns the list of airspaces</response>
+        /// <response code="400">If no global IDs are provided</response>
+        /// <response code="500">If there was an internal server error</response>
+        [HttpGet("by-global-ids")]
+        [ProducesResponseType(typeof(IEnumerable<AirspaceDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IEnumerable<AirspaceDto>>> GetByGlobalIds([FromQuery] string globalIds)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(globalIds))
+                {
+                    return BadRequest("Global IDs are required");
+                }
+
+                var idArray = globalIds.Split(',')
+                    .Select(id => id.Trim())
+                    .ToArray();
+
+                var airspaces = await airspaceService.GetByGlobalIds(idArray);
+                return Ok(airspaces);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error retrieving airspaces by global IDs: {GlobalIds}", globalIds);
+                return StatusCode(500, "An error occurred while retrieving airspaces by global IDs");
+            }
+        }
+
+        /// <summary>
+        /// Gets special use airspaces by global IDs
+        /// </summary>
+        /// <param name="globalIds">Comma-separated list of global IDs</param>
+        /// <returns>List of special use airspaces matching the specified global IDs</returns>
+        /// <response code="200">Returns the list of special use airspaces</response>
+        /// <response code="400">If no global IDs are provided</response>
+        /// <response code="500">If there was an internal server error</response>
+        [HttpGet("special-use/by-global-ids")]
+        [ProducesResponseType(typeof(IEnumerable<SpecialUseAirspaceDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IEnumerable<SpecialUseAirspaceDto>>> GetSpecialUseByGlobalIds([FromQuery] string globalIds)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(globalIds))
+                {
+                    return BadRequest("Global IDs are required");
+                }
+
+                var idArray = globalIds.Split(',')
+                    .Select(id => id.Trim())
+                    .ToArray();
+
+                var airspaces = await airspaceService.GetSpecialUseByGlobalIds(idArray);
+                return Ok(airspaces);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error retrieving special use airspaces by global IDs: {GlobalIds}", globalIds);
+                return StatusCode(500, "An error occurred while retrieving special use airspaces by global IDs");
+            }
+        }
     }
 }

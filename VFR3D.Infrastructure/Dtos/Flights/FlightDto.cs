@@ -18,5 +18,7 @@ public record FlightDto
     public double AverageWindComponent { get; set; }
     public List<NavigationLegDto> Legs { get; set; } = [];
     public List<string> StateCodesAlongRoute { get; set; } = [];
+    public List<string> AirspaceGlobalIds { get; set; } = [];
+    public List<string> SpecialUseAirspaceGlobalIds { get; set; } = [];
     public AircraftPerformanceProfileDto? AircraftPerformanceProfile { get; set; }
 }

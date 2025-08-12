@@ -1,5 +1,8 @@
 ﻿namespace VFR3D.Domain.ValueObjects.Flights;
 
+/// <summary>
+/// A navlog leg represents a segment of a flight plan, represented by a start and end waypoint, and computed flight parameters.
+/// </summary>
 public class NavlogLeg
 {
     public Waypoint LegStartPoint { get; set; } = new();
