@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -14,9 +15,11 @@ using VFR3D.Infrastructure.Data;
 namespace VFR3D.Infrastructure.Migrations
 {
     [DbContext(typeof(VFR3DDbContext))]
-    partial class VFR3DDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250811195124_UseGlobalIdForAirspaces")]
+    partial class UseGlobalIdForAirspaces
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1025,10 +1028,6 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("aircraft_performance_id");
 
-                    b.Property<List<string>>("AirspaceGlobalIds")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("airspace_global_ids");
-
                     b.Property<string>("Auth0UserId")
                         .IsRequired()
                         .HasColumnType("text")
@@ -1056,10 +1055,6 @@ namespace VFR3D.Infrastructure.Migrations
                     b.Property<int>("PlannedCruisingAltitude")
                         .HasColumnType("integer")
                         .HasColumnName("planned_cruising_altitude");
-
-                    b.Property<List<string>>("SpecialUseAirspaceGlobalIds")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("special_use_airspace_global_ids");
 
                     b.Property<List<string>>("StateCodesAlongRoute")
                         .IsRequired()
@@ -1569,36 +1564,6 @@ namespace VFR3D.Infrastructure.Migrations
                     b.ToTable("metar");
                 });
 
-            modelBuilder.Entity("flight_airspaces", b =>
-                {
-                    b.Property<string>("flight_id")
-                        .HasColumnType("text");
-
-                    b.Property<string>("airspace_global_id")
-                        .HasColumnType("varchar(50)");
-
-                    b.HasKey("flight_id", "airspace_global_id");
-
-                    b.HasIndex("airspace_global_id");
-
-                    b.ToTable("flight_airspaces", (string)null);
-                });
-
-            modelBuilder.Entity("flight_special_use_airspaces", b =>
-                {
-                    b.Property<string>("flight_id")
-                        .HasColumnType("text");
-
-                    b.Property<string>("special_use_airspace_global_id")
-                        .HasColumnType("varchar(50)");
-
-                    b.HasKey("flight_id", "special_use_airspace_global_id");
-
-                    b.HasIndex("special_use_airspace_global_id");
-
-                    b.ToTable("flight_special_use_airspaces", (string)null);
-                });
-
             modelBuilder.Entity("VFR3D.Domain.Entities.Flight", b =>
                 {
                     b.HasOne("VFR3D.Domain.Entities.AircraftPerformanceProfile", "AircraftPerformanceProfile")
@@ -1608,36 +1573,6 @@ namespace VFR3D.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("AircraftPerformanceProfile");
-                });
-
-            modelBuilder.Entity("flight_airspaces", b =>
-                {
-                    b.HasOne("VFR3D.Domain.Entities.Airspace", null)
-                        .WithMany()
-                        .HasForeignKey("airspace_global_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("VFR3D.Domain.Entities.Flight", null)
-                        .WithMany()
-                        .HasForeignKey("flight_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("flight_special_use_airspaces", b =>
-                {
-                    b.HasOne("VFR3D.Domain.Entities.Flight", null)
-                        .WithMany()
-                        .HasForeignKey("flight_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("VFR3D.Domain.Entities.SpecialUseAirspace", null)
-                        .WithMany()
-                        .HasForeignKey("special_use_airspace_global_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("VFR3D.Domain.Entities.AircraftPerformanceProfile", b =>

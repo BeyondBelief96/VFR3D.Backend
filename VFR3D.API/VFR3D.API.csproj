@@ -19,8 +19,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging.AzureAppServices" Version="9.0.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.3" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite" Version="9.0.3" />
-    <PackageReference Include="NSwag.AspNetCore" Version="14.2.0" />
-    <PackageReference Include="NSwag.MSBuild" Version="14.2.0">
+    <PackageReference Include="NSwag.AspNetCore" Version="14.5.0" />
+    <PackageReference Include="NSwag.MSBuild" Version="14.5.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>

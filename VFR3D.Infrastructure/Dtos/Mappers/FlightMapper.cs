@@ -22,6 +22,8 @@ public static class FlightMapper
             AverageWindComponent = flight.AverageWindComponent,
             Legs = flight.Legs.Select(NavlogLegMapper.MapToDto).ToList(),
             StateCodesAlongRoute = flight.StateCodesAlongRoute,
+            AirspaceGlobalIds = flight.AirspaceGlobalIds ?? new List<string>(),
+            SpecialUseAirspaceGlobalIds = flight.SpecialUseAirspaceGlobalIds ?? new List<string>(),
             AircraftPerformanceProfile = flight.AircraftPerformanceProfile != null 
                 ? AircraftPerformanceProfileMapper.MapToDto(flight.AircraftPerformanceProfile)
                 : null
@@ -44,7 +46,9 @@ public static class FlightMapper
             TotalFuelUsed = dto.TotalFuelUsed,
             AverageWindComponent = dto.AverageWindComponent,
             Legs = dto.Legs.Select(NavlogLegMapper.MapToEntity).ToList(),
-            StateCodesAlongRoute = dto.StateCodesAlongRoute
+            StateCodesAlongRoute = dto.StateCodesAlongRoute,
+            AirspaceGlobalIds = dto.AirspaceGlobalIds ?? new List<string>(),
+            SpecialUseAirspaceGlobalIds = dto.SpecialUseAirspaceGlobalIds ?? new List<string>()
         };
     }
 
