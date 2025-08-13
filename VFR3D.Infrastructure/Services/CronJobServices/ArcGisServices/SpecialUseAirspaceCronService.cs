@@ -3,9 +3,9 @@ using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Interfaces;
-using VFR3D.Infrastructure.Services.ArcgisServices.Models;
+using VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices.Models;
 
-namespace VFR3D.Infrastructure.Services.ArcgisServices
+namespace VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices
 {
     public class SpecialUseAirspaceCronService : ArcGisBaseService<SpecialUseAirspace>, IAirspaceCronService<SpecialUseAirspace>
     {

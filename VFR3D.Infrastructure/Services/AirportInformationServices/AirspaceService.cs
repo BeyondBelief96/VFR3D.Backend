@@ -126,8 +126,8 @@ namespace VFR3D.Infrastructure.Services.AirportInformationServices
                 var upperCodes = icaoOrIdents.Select(i => i.ToUpper()).ToArray();
                 var airspaces = await _context.Airspaces
                     .Where(a => 
-                        (a.IcaoId != null && upperCodes.Contains(a.IcaoId)) || 
-                        (a.Ident != null && upperCodes.Contains(a.Ident)))
+                        a.IcaoId != null && upperCodes.Contains(a.IcaoId) || 
+                        a.Ident != null && upperCodes.Contains(a.Ident))
                     .OrderBy(a => a.Name)
                     .ToListAsync();
 
@@ -198,6 +198,20 @@ namespace VFR3D.Infrastructure.Services.AirportInformationServices
                     .Where(a => a.Geometry != null)
                     .Where(a => a.Geometry!.Intersects(routeEnvelope))
                     .Where(a => a.Geometry!.Intersects(route))
+                    .Where(a => a.Class != "E") // Exclude "E" class airspaces
+                    .Where(a =>
+                        // Include if ICAO starts with US prefixes
+                        (a.IcaoId != null && (
+                            a.IcaoId.StartsWith("K") ||
+                            a.IcaoId.StartsWith("PH") ||
+                            a.IcaoId.StartsWith("PA")))
+                        ||
+                        // OR include if Ident starts with US prefixes
+                        (a.Ident != null && (
+                            a.Ident.StartsWith("K") ||
+                            a.Ident.StartsWith("PH") ||
+                            a.Ident.StartsWith("PA")))
+                    )
                     .Select(a => a.GlobalId!)
                     .Distinct();
 
@@ -206,8 +220,8 @@ namespace VFR3D.Infrastructure.Services.AirportInformationServices
                 if (airportCodes.Count > 0)
                 {
                     var airportAirspaceIds = _context.Airspaces.AsNoTracking()
-                        .Where(a => (a.IcaoId != null && airportCodes.Contains(a.IcaoId))
-                                    || (a.Ident != null && airportCodes.Contains(a.Ident)))
+                        .Where(a => a.IcaoId != null && airportCodes.Contains(a.IcaoId)
+                                    || a.Ident != null && airportCodes.Contains(a.Ident))
                         .Select(a => a.GlobalId!);
 
                     query = query.Union(airportAirspaceIds);

@@ -4,9 +4,9 @@ using System.Text.Json;
 using VFR3D.Infrastructure.Data;
 using Microsoft.Extensions.Logging;
 using VFR3D.Infrastructure.Utilities;
-using VFR3D.Infrastructure.Services.ArcgisServices.Models;
+using VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices.Models;
 
-namespace VFR3D.Infrastructure.Services.ArcgisServices
+namespace VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices
 {
     public abstract class ArcGisBaseService<TEntity> where TEntity : class
     {

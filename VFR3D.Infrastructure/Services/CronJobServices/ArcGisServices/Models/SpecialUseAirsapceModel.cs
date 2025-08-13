@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace VFR3D.Infrastructure.Services.ArcgisServices.Models
+namespace VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices.Models
 {
     public class SpecialUseAirspaceModel
     {
