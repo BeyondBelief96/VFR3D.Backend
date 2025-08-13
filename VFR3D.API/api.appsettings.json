@@ -7,6 +7,6 @@
   },
   "AllowedHosts": "*",
   "ConnectionStrings": {
-    "DefaultConnection": "Host=localhost;Database=vfr3d_development_database;Username=vfr3d_development_user;Password=localdevpassword;Port=5432"
+    "DefaultConnection": "Host=azpg-vfr3d-test-db.postgres.database.azure.com;Database=postgres;Username=vfr3d_testing_user;Password=gbZQXQTgjrSiIzxIVLkvFm6dJOdvmfRD;Port=5432"
   }
 }

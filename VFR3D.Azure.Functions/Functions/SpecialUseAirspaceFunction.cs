@@ -32,10 +32,11 @@ namespace VFR3D.Azure.Functions.Functions
             {
                 var currentDate = DateTime.UtcNow;
 
-                if (await _publicationService.ShouldRunUpdateAsync(PublicationType.Airspaces, currentDate))
+                if (await _publicationService.ShouldRunUpdateAsync(PublicationType.SpecialUseAirspaces, currentDate))
                 {
                     _logger.LogInformation("Starting special use airspace update process");
                     await _specialUseAirspaceService.UpdateAirspacesAsync(cancellationToken);
+                    await _publicationService.UpdateLastSuccessfulRunAsync(PublicationType.SpecialUseAirspaces, currentDate);
                     _logger.LogInformation("Special use airspace update completed successfully");
                 }
                 else

@@ -30,4 +30,5 @@
     <ProjectReference Include="..\VFR3D.Domain\VFR3D.Domain.csproj" />
     <ProjectReference Include="..\VFR3D.Infrastructure\VFR3D.Infrastructure.csproj" />
   </ItemGroup>
+  <ProjectExtensions><VisualStudio><UserProperties local_1settings_1json__JsonSchema="https://www.schemastore.org/loki.json" /></VisualStudio></ProjectExtensions>
 </Project>

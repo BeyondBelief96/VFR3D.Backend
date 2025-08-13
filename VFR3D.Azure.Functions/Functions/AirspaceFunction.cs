@@ -36,6 +36,7 @@ namespace VFR3D.Azure.Functions.Functions
                 {
                     _logger.LogInformation("Starting airspace update process");
                     await _airspaceService.UpdateAirspacesAsync(cancellationToken);
+                    await _publicationService.UpdateLastSuccessfulRunAsync(PublicationType.Airspaces, currentDate);
                     _logger.LogInformation("Airspace update completed successfully");
                 }
                 else

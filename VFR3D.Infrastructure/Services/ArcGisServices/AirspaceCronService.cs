@@ -41,41 +41,53 @@ namespace VFR3D.Infrastructure.Services.ArcgisServices
 
             foreach (var feature in response.Features)
             {
-                var existingAirspace = await FindExistingEntity(feature.Attributes.ObjectId, cancellationToken)
-                    ?? CreateNewEntity(feature.Attributes.ObjectId);
-
-                MapFieldsToEntity(existingAirspace, feature.Attributes);
-                existingAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
-
-                if (existingAirspace.Id == 0)
+                var globalId = feature.Attributes.GlobalId ?? string.Empty;
+                if (string.IsNullOrEmpty(globalId))
                 {
-                    await _dbContext.Airspaces.AddAsync(existingAirspace, cancellationToken);
+                    _logger.LogWarning("Skipping airspace with null or empty GlobalId");
+                    continue;
+                }
+
+                var existingAirspace = await _dbContext.Airspaces
+                    .FirstOrDefaultAsync(a => a.GlobalId == globalId, cancellationToken);
+
+                if (existingAirspace == null)
+                {
+                    var newAirspace = new Airspace { GlobalId = globalId };
+                    MapFieldsToEntity(newAirspace, feature.Attributes);
+                    newAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
+
+                    _dbContext.Airspaces.Add(newAirspace); 
+                    _logger.LogDebug("Adding new airspace with GlobalId: {GlobalId}", globalId);
                 }
                 else
                 {
-                    _dbContext.Airspaces.Update(existingAirspace);
+                    MapFieldsToEntity(existingAirspace, feature.Attributes);
+                    existingAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
+                    _logger.LogDebug("Updating existing airspace with GlobalId: {GlobalId}", globalId);
                 }
             }
 
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Updated {Count} Class {Class} airspaces", response.Features.Count, airspaceClass);
+            var changesCount = await _dbContext.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Processed {Count} Class {Class} airspaces with {Changes} database changes",
+                response.Features.Count, airspaceClass, changesCount);
         }
 
         protected override async Task<Airspace?> FindExistingEntity(object id, CancellationToken cancellationToken)
         {
-            return await _dbContext.Airspaces.FirstOrDefaultAsync(a => a.ObjectId == (int)id, cancellationToken);
+            return await _dbContext.Airspaces.FirstOrDefaultAsync(a => a.GlobalId == (string)id, cancellationToken);
         }
 
         protected override Airspace CreateNewEntity(object id)
         {
-            return new Airspace { ObjectId = (int)id };
+            return new Airspace { GlobalId = (string)id };
         }
 
         protected override void MapFieldsToEntity(Airspace entity, object attributes)
         {
             if (attributes is not AirspaceModel attrs) return;
 
-            entity.GlobalId = attrs.GlobalId;
+            entity.GlobalId = attrs.GlobalId ?? entity.GlobalId;
             entity.Ident = attrs.Ident;
             entity.IcaoId = attrs.IcaoId;
             entity.Name = attrs.Name;

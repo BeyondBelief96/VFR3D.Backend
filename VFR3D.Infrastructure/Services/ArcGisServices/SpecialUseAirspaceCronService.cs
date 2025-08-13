@@ -33,41 +33,78 @@ namespace VFR3D.Infrastructure.Services.ArcgisServices
 
             foreach (var feature in response.Features)
             {
-                var existingAirspace = await FindExistingEntity(feature.Attributes.ObjectId, cancellationToken)
-                    ?? CreateNewEntity(feature.Attributes.ObjectId);
-
-                MapFieldsToEntity(existingAirspace, feature.Attributes);
-                existingAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
-
-                if (await _dbContext.SpecialUseAirspaces.FindAsync(new object[] { existingAirspace.ObjectId }, cancellationToken) == null)
+                var globalId = feature.Attributes.GlobalId ?? string.Empty;
+                if (string.IsNullOrEmpty(globalId))
                 {
-                    await _dbContext.SpecialUseAirspaces.AddAsync(existingAirspace, cancellationToken);
+                    _logger.LogWarning("Skipping special use airspace with null or empty GlobalId");
+                    continue;
+                }
+
+                // ✅ FIXED: Check if entity exists first
+                var existingAirspace = await _dbContext.SpecialUseAirspaces
+                    .FirstOrDefaultAsync(a => a.GlobalId == globalId, cancellationToken);
+
+                if (existingAirspace == null)
+                {
+                    // 🟢 ENTITY DOESN'T EXIST - CREATE NEW ONE
+                    var newAirspace = new SpecialUseAirspace { GlobalId = globalId };
+                    MapFieldsToEntity(newAirspace, feature.Attributes);
+                    newAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
+
+                    _dbContext.SpecialUseAirspaces.Add(newAirspace); // ✅ Use Add() for new entities
+                    _logger.LogDebug("Adding new special use airspace with GlobalId: {GlobalId}", globalId);
                 }
                 else
                 {
-                    _dbContext.SpecialUseAirspaces.Update(existingAirspace);
+                    // 🟡 ENTITY EXISTS - UPDATE IT
+                    MapFieldsToEntity(existingAirspace, feature.Attributes);
+                    existingAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
+
+                    // ✅ No need to call Update() - EF automatically tracks changes to existing entities
+                    _logger.LogDebug("Updating existing special use airspace with GlobalId: {GlobalId}", globalId);
                 }
             }
 
-            await _dbContext.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Updated {Count} special use airspaces", response.Features.Count);
+            try
+            {
+                var changesCount = await _dbContext.SaveChangesAsync(cancellationToken);
+                _logger.LogInformation("Processed {Count} special use airspaces with {Changes} database changes",
+                    response.Features.Count, changesCount);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                _logger.LogError(ex, "Concurrency exception while updating special use airspaces. This may indicate the data was modified by another process.");
+
+                // Optionally, reload and retry for each conflicted entity
+                foreach (var entry in ex.Entries)
+                {
+                    if (entry.Entity is SpecialUseAirspace airspace)
+                    {
+                        _logger.LogWarning("Concurrency conflict for special use airspace GlobalId: {GlobalId}", airspace.GlobalId);
+                        // Reload the entity from database
+                        await entry.ReloadAsync(cancellationToken);
+                    }
+                }
+
+                throw; // Re-throw if you want the function to fail, or handle gracefully
+            }
         }
 
         protected override async Task<SpecialUseAirspace?> FindExistingEntity(object id, CancellationToken cancellationToken)
         {
-            return await _dbContext.SpecialUseAirspaces.FirstOrDefaultAsync(a => a.ObjectId == (int)id, cancellationToken);
+            return await _dbContext.SpecialUseAirspaces.FirstOrDefaultAsync(a => a.GlobalId == (string)id, cancellationToken);
         }
 
         protected override SpecialUseAirspace CreateNewEntity(object id)
         {
-            return new SpecialUseAirspace { ObjectId = (int)id };
+            return new SpecialUseAirspace { GlobalId = (string)id };
         }
 
         protected override void MapFieldsToEntity(SpecialUseAirspace entity, object attributes)
         {
             if (attributes is not SpecialUseAirspaceModel attrs) return;
 
-            entity.GlobalId = attrs.GlobalId;
+            entity.GlobalId = attrs.GlobalId ?? entity.GlobalId;
             entity.Name = attrs.Name;
             entity.TypeCode = attrs.TypeCode;
             entity.Class = attrs.Class;
