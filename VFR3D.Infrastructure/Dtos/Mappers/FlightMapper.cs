@@ -26,7 +26,8 @@ public static class FlightMapper
             SpecialUseAirspaceGlobalIds = flight.SpecialUseAirspaceGlobalIds ?? new List<string>(),
             AircraftPerformanceProfile = flight.AircraftPerformanceProfile != null 
                 ? AircraftPerformanceProfileMapper.MapToDto(flight.AircraftPerformanceProfile)
-                : null
+                : null,
+            RelatedFlightId = flight.RelatedFlightId
         };
     }
 
@@ -48,7 +49,8 @@ public static class FlightMapper
             Legs = dto.Legs.Select(NavlogLegMapper.MapToEntity).ToList(),
             StateCodesAlongRoute = dto.StateCodesAlongRoute,
             AirspaceGlobalIds = dto.AirspaceGlobalIds ?? new List<string>(),
-            SpecialUseAirspaceGlobalIds = dto.SpecialUseAirspaceGlobalIds ?? new List<string>()
+            SpecialUseAirspaceGlobalIds = dto.SpecialUseAirspaceGlobalIds ?? new List<string>(),
+            RelatedFlightId = dto.RelatedFlightId,
         };
     }
 
@@ -62,7 +64,7 @@ public static class FlightMapper
             DepartureTime = request.DepartureTime,
             PlannedCruisingAltitude = request.PlannedCruisingAltitude,
             AircraftPerformanceId = request.AircraftPerformanceProfileId,
-            Waypoints = request.Waypoints.Select(WaypointMapper.MapToEntity).ToList()
+            Waypoints = request.Waypoints.Select(WaypointMapper.MapToEntity).ToList(),
         };
     }
 

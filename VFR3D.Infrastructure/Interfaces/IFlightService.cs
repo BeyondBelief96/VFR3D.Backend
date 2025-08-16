@@ -10,4 +10,5 @@ public interface IFlightService
     Task<FlightDto> GetFlight(string userId, string flightId);
     Task DeleteFlight(string userId, string flightId);
     Task<FlightDto> RegenerateNavlog(string userId, string flightId);
+    Task<(FlightDto Outbound, FlightDto Return)> CreateRoundTripFlight(string userId, CreateRoundTripFlightRequestDto request);
 }

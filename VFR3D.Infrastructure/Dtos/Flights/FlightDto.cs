@@ -21,4 +21,5 @@ public record FlightDto
     public List<string> AirspaceGlobalIds { get; set; } = [];
     public List<string> SpecialUseAirspaceGlobalIds { get; set; } = [];
     public AircraftPerformanceProfileDto? AircraftPerformanceProfile { get; set; }
+    public string? RelatedFlightId { get; set; }
 }

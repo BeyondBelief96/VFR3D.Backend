@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VFR3D.Domain.Entities;
 using VFR3D.Domain.Enums;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.Flights;
@@ -282,6 +283,119 @@ public class FlightService : IFlightService
         }
     }
 
+    public async Task<(FlightDto Outbound, FlightDto Return)> CreateRoundTripFlight(string userId, CreateRoundTripFlightRequestDto request)
+    {
+        try
+        {
+            _logger.LogInformation("Creating round trip flight for user {UserId}", userId);
+
+            // Create outbound flight
+            var outboundRequest = new CreateFlightRequestDto
+            {
+                Name = request.OutboundName,
+                DepartureTime = request.DepartureTime,
+                PlannedCruisingAltitude = request.PlannedCruisingAltitude,
+                Waypoints = request.Waypoints,
+                AircraftPerformanceProfileId = request.AircraftPerformanceProfileId
+            };
+
+            var outboundFlight = FlightMapper.CreateFromRequest(userId, outboundRequest);
+
+            // Create return flight with reversed waypoints
+            var returnRequest = new CreateFlightRequestDto
+            {
+                Name = request.ReturnName,
+                DepartureTime = request.ReturnDepartureTime,
+                PlannedCruisingAltitude = request.PlannedCruisingAltitude,
+                Waypoints = request.Waypoints.AsEnumerable().Reverse().ToList(),
+                AircraftPerformanceProfileId = request.AircraftPerformanceProfileId
+            };
+
+            var returnFlight = FlightMapper.CreateFromRequest(userId, returnRequest);
+
+            // Calculate navlogs for both flights
+            var outboundNavlogResponse = await _navlogService.CalculateNavlog(new NavlogRequestDto
+            {
+                TimeOfDeparture = outboundFlight.DepartureTime,
+                Waypoints = request.Waypoints,
+                PlannedCruisingAltitude = request.PlannedCruisingAltitude,
+                AircraftPerformanceProfileId = request.AircraftPerformanceProfileId
+            });
+
+            var returnNavlogResponse = await _navlogService.CalculateNavlog(new NavlogRequestDto
+            {
+                TimeOfDeparture = returnFlight.DepartureTime,
+                Waypoints = returnRequest.Waypoints,
+                PlannedCruisingAltitude = request.PlannedCruisingAltitude,
+                AircraftPerformanceProfileId = request.AircraftPerformanceProfileId
+            });
+
+            // Get state codes for each route
+            var outboundStateCodes = await GetStateCodesAlongRoute(outboundRequest.Waypoints);
+            var returnStateCodes = await GetStateCodesAlongRoute(returnRequest.Waypoints);
+
+            // Set navigation data for outbound flight
+            outboundFlight.TotalRouteDistance = outboundNavlogResponse.TotalRouteDistance;
+            outboundFlight.TotalRouteTimeHours = outboundNavlogResponse.TotalRouteTimeHours;
+            outboundFlight.TotalFuelUsed = outboundNavlogResponse.TotalFuelUsed;
+            outboundFlight.AverageWindComponent = outboundNavlogResponse.AverageWindComponent;
+            outboundFlight.StateCodesAlongRoute = outboundStateCodes;
+            outboundFlight.Legs = outboundNavlogResponse.Legs.Select(NavlogLegMapper.MapToEntity).ToList();
+            outboundFlight.AirspaceGlobalIds = outboundNavlogResponse.AirspaceGlobalIds?.ToList() ?? [];
+            outboundFlight.SpecialUseAirspaceGlobalIds = outboundNavlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? [];
+
+            // Set navigation data for return flight
+            returnFlight.TotalRouteDistance = returnNavlogResponse.TotalRouteDistance;
+            returnFlight.TotalRouteTimeHours = returnNavlogResponse.TotalRouteTimeHours;
+            returnFlight.TotalFuelUsed = returnNavlogResponse.TotalFuelUsed;
+            returnFlight.AverageWindComponent = returnNavlogResponse.AverageWindComponent;
+            returnFlight.StateCodesAlongRoute = returnStateCodes;
+            returnFlight.Legs = returnNavlogResponse.Legs.Select(NavlogLegMapper.MapToEntity).ToList();
+            returnFlight.AirspaceGlobalIds = returnNavlogResponse.AirspaceGlobalIds?.ToList() ?? [];
+            returnFlight.SpecialUseAirspaceGlobalIds = returnNavlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? [];
+
+            // Link the flights to each other
+            outboundFlight.RelatedFlightId = returnFlight.Id;
+            returnFlight.RelatedFlightId = outboundFlight.Id;
+
+            // Process airspace relationships for both flights
+            await ProcessAirspaceRelationships(outboundFlight);
+            await ProcessAirspaceRelationships(returnFlight);
+
+            // Save both flights
+            _context.Flights.Add(outboundFlight);
+            _context.Flights.Add(returnFlight);
+            await _context.SaveChangesAsync();
+
+            return (FlightMapper.MapToDto(outboundFlight), FlightMapper.MapToDto(returnFlight));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating round trip flight for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    // Helper method to reduce code duplication
+    private async Task ProcessAirspaceRelationships(Flight flight)
+    {
+        if (flight.AirspaceGlobalIds?.Count > 0)
+        {
+            var relatedAirspaces = await _context.Airspaces
+                .Where(a => flight.AirspaceGlobalIds.Contains(a.GlobalId))
+                .ToListAsync();
+            flight.Airspaces = relatedAirspaces;
+        }
+
+        if (flight.SpecialUseAirspaceGlobalIds?.Count > 0)
+        {
+            var relatedSuas = await _context.SpecialUseAirspaces
+                .Where(s => flight.SpecialUseAirspaceGlobalIds.Contains(s.GlobalId))
+                .ToListAsync();
+            flight.SpecialUseAirspaces = relatedSuas;
+        }
+    }
+
     private async Task<List<string>> GetStateCodesAlongRoute(List<WaypointDto> waypoints)
     {
         var stateCodes = new HashSet<string>();
@@ -299,10 +413,6 @@ public class FlightService : IFlightService
                 {
                     stateCodes.Add(airport.StateCode);
                 }
-            }
-            else if (waypoint.Latitude != 0 && waypoint.Longitude != 0)
-            {
-                // TODO: Implement state lookup by coordinates if needed
             }
         }
 

@@ -63,6 +63,9 @@ namespace VFR3D.Domain.Entities
         [Column("special_use_airspace_global_ids", TypeName = "jsonb")]
         public List<string>? SpecialUseAirspaceGlobalIds { get; set; } = [];
 
+        [Column("related_flight_id")]
+        public string? RelatedFlightId { get; set; }
+
         // Navigation Property
         public virtual AircraftPerformanceProfile? AircraftPerformanceProfile { get; set; }
 

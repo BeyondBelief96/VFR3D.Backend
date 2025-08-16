@@ -86,6 +86,33 @@ public class FlightController(
     }
 
     /// <summary>
+    /// Creates a round trip flight (outbound and return)
+    /// </summary>
+    [HttpPost("roundtrip")]
+    [ProducesResponseType(typeof((FlightDto Outbound, FlightDto Return)), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<(FlightDto Outbound, FlightDto Return)>> CreateRoundTripFlight(
+        string userId,
+        [FromBody] CreateRoundTripFlightRequestDto request)
+    {
+        try
+        {
+            var (outbound, @return) = await flightService.CreateRoundTripFlight(userId, request);
+            return Ok(new { Outbound = outbound, Return = @return });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error creating round trip flight for user {UserId}", userId);
+            return StatusCode(500, "An error occurred while creating the round trip flight");
+        }
+    }
+
+    /// <summary>
     /// Updates an existing flight
     /// </summary>
     [HttpPatch("{userId}/{flightId}")]
