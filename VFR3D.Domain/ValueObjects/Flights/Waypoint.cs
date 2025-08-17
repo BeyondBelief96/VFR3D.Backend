@@ -13,4 +13,7 @@ public class Waypoint
     public double Longitude { get; set; }
     public double Altitude { get; set; }
     public WaypointType? WaypointType { get; set; }
+    public double? RefuelGallons { get; set; }
+    public bool? RefuelToFull { get; set; }
+    public bool? IsRefuelingStop { get; set; }
 }

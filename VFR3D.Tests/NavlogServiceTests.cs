@@ -505,20 +505,256 @@ namespace VFR3D.Tests.Services
             result.Legs[1].GroundSpeed.Should().BeApproximately(expectedGroundSpeed, 5); // Allow small margin
         }
 
-            // Helper method to create a waypoint with specific values when needed
-            private WaypointDto CreateSpecificWaypoint(string name, double lat, double lon, double altitude,
-                    WaypointType waypointType = WaypointType.Airport)
+        [Fact]
+        public async Task CalculateNavlog_ShouldInsertTOCAndTOD_PerSegment_WithRefuelStops()
+        {
+            // Arrange
+            var departureTime = DateTime.UtcNow;
+            var refuelAltitude = 700;
+            var waypoints = new List<WaypointDto>
             {
-                return new WaypointDto
+                CreateSpecificWaypoint("KBNA", 36.1244, -86.6782, 599),
+                new WaypointDto
                 {
                     Id = Guid.NewGuid().ToString(),
-                    Name = name,
-                    Latitude = lat,
-                    Longitude = lon,
-                    Altitude = altitude,
-                    WaypointType = waypointType
-                };
-            }
+                    Name = "KXYZ",
+                    Latitude = 35.5,
+                    Longitude = -86.0,
+                    Altitude = refuelAltitude,
+                    WaypointType = WaypointType.Airport,
+                    IsRefuelingStop = true,
+                    RefuelToFull = true
+                },
+                CreateSpecificWaypoint("KATL", 33.6367, -84.4278, 1026)
+            };
+
+            var request = new NavlogRequestDto
+            {
+                TimeOfDeparture = departureTime,
+                Waypoints = waypoints,
+                PlannedCruisingAltitude = 7500,
+                AircraftPerformanceProfileId = "test-profile-id"
+            };
+
+            _magneticVariationService.GetMagneticVariation(Arg.Any<double>(), Arg.Any<double>()).Returns(0);
+            var windsAloftData = GenerateWindsAloftData(departureTime);
+            _windsAloftService.FetchWindsAloftData(Arg.Any<int>()).Returns(windsAloftData);
+
+            // Act
+            var result = await _navlogService.CalculateNavlog(request);
+
+            // Assert
+            result.Should().NotBeNull();
+            // Start, TOC-1, TOD-1, Refuel, TOC-2, TOD-2, End => 7 waypoints => 6 legs
+            result.Legs.Should().HaveCount(6);
+
+            result.Legs.Select(l => l.LegEndPoint.Id).Where(id => id.StartsWith("TOC-")).Distinct().Count().Should().Be(2);
+            result.Legs.Select(l => l.LegEndPoint.Id).Where(id => id.StartsWith("TOD-")).Distinct().Count().Should().Be(2);
+            result.Legs.Any(l => l.LegEndPoint.Name == "TOC").Should().BeTrue();
+            result.Legs.Any(l => l.LegEndPoint.Name == "TOD").Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task CalculateNavlog_ShouldDeductSTT_AtStart_And_AfterRefuel_Full()
+        {
+            // Arrange
+            var departureTime = DateTime.UtcNow;
+            var waypoints = new List<WaypointDto>
+            {
+                CreateSpecificWaypoint("KBNA", 36.1244, -86.6782, 599),
+                new WaypointDto
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Name = "KXYZ",
+                    Latitude = 35.5,
+                    Longitude = -86.0,
+                    Altitude = 700,
+                    WaypointType = WaypointType.Airport,
+                    IsRefuelingStop = true,
+                    RefuelToFull = true
+                },
+                CreateSpecificWaypoint("KATL", 33.6367, -84.4278, 1026)
+            };
+
+            var request = new NavlogRequestDto
+            {
+                TimeOfDeparture = departureTime,
+                Waypoints = waypoints,
+                PlannedCruisingAltitude = 7500,
+                AircraftPerformanceProfileId = "test-profile-id"
+            };
+
+            _magneticVariationService.GetMagneticVariation(Arg.Any<double>(), Arg.Any<double>()).Returns(0);
+            var windsAloftData = GenerateWindsAloftData(departureTime);
+            _windsAloftService.FetchWindsAloftData(Arg.Any<int>()).Returns(windsAloftData);
+
+            // Act
+            var result = await _navlogService.CalculateNavlog(request);
+
+            // Assert
+            var stt = 3.0; // from test profile
+            var full = 40.0; // from test profile
+
+            // First leg should reflect STT deduction at start
+            var leg0 = result.Legs[0];
+            var expectedAfterLeg0 = full - stt - leg0.LegFuelBurnGals;
+            leg0.RemainingFuelGals.Should().BeApproximately(expectedAfterLeg0, 0.1);
+
+            // Leg ending at refuel should show full fuel immediately after refuel
+            var legEndingAtRefuel = result.Legs.First(l => l.LegEndPoint.Name == "KXYZ");
+            legEndingAtRefuel.RemainingFuelGals.Should().BeApproximately(full, 0.1);
+
+            // Next leg (after refuel) should apply STT again
+            var legAfterRefuel = result.Legs[result.Legs.IndexOf(legEndingAtRefuel) + 1];
+            var expectedAfterNext = full - stt - legAfterRefuel.LegFuelBurnGals;
+            legAfterRefuel.RemainingFuelGals.Should().BeApproximately(expectedAfterNext, 0.1);
+        }
+
+        [Fact]
+        public async Task CalculateNavlog_ShouldCapRefuelGallons_AtFull()
+        {
+            // Arrange
+            var departureTime = DateTime.UtcNow;
+            var waypoints = new List<WaypointDto>
+            {
+                CreateSpecificWaypoint("KBNA", 36.1244, -86.6782, 599),
+                new WaypointDto
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Name = "KXYZ",
+                    Latitude = 35.5,
+                    Longitude = -86.0,
+                    Altitude = 700,
+                    WaypointType = WaypointType.Airport,
+                    IsRefuelingStop = true,
+                    RefuelToFull = false,
+                    RefuelGallons = 100 // exceed capacity
+                },
+                CreateSpecificWaypoint("KATL", 33.6367, -84.4278, 1026)
+            };
+
+            var request = new NavlogRequestDto
+            {
+                TimeOfDeparture = departureTime,
+                Waypoints = waypoints,
+                PlannedCruisingAltitude = 7500,
+                AircraftPerformanceProfileId = "test-profile-id"
+            };
+
+            _magneticVariationService.GetMagneticVariation(Arg.Any<double>(), Arg.Any<double>()).Returns(0);
+            var windsAloftData = GenerateWindsAloftData(departureTime);
+            _windsAloftService.FetchWindsAloftData(Arg.Any<int>()).Returns(windsAloftData);
+
+            // Act
+            var result = await _navlogService.CalculateNavlog(request);
+
+            // Assert
+            var full = 40.0; // from test profile
+            var legEndingAtRefuel = result.Legs.First(l => l.LegEndPoint.Name == "KXYZ");
+            legEndingAtRefuel.RemainingFuelGals.Should().BeApproximately(full, 0.1);
+        }
+
+        [Fact]
+        public async Task CalculateNavlog_ShouldPreserveAltitude_ForRefuelStops()
+        {
+            // Arrange
+            var departureTime = DateTime.UtcNow;
+            var refuelAltitude = 700;
+            var waypoints = new List<WaypointDto>
+            {
+                CreateSpecificWaypoint("KBNA", 36.1244, -86.6782, 599),
+                new WaypointDto
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Name = "KXYZ",
+                    Latitude = 35.5,
+                    Longitude = -86.0,
+                    Altitude = refuelAltitude,
+                    WaypointType = WaypointType.Airport,
+                    IsRefuelingStop = true,
+                    RefuelToFull = true
+                },
+                CreateSpecificWaypoint("KATL", 33.6367, -84.4278, 1026)
+            };
+
+            var request = new NavlogRequestDto
+            {
+                TimeOfDeparture = departureTime,
+                Waypoints = waypoints,
+                PlannedCruisingAltitude = 7500,
+                AircraftPerformanceProfileId = "test-profile-id"
+            };
+
+            _magneticVariationService.GetMagneticVariation(Arg.Any<double>(), Arg.Any<double>()).Returns(0);
+            var windsAloftData = GenerateWindsAloftData(departureTime);
+            _windsAloftService.FetchWindsAloftData(Arg.Any<int>()).Returns(windsAloftData);
+
+            // Act
+            var result = await _navlogService.CalculateNavlog(request);
+
+            // Assert
+            var legEndingAtRefuel = result.Legs.First(l => l.LegEndPoint.Name == "KXYZ");
+            legEndingAtRefuel.LegEndPoint.Altitude.Should().Be(refuelAltitude);
+        }
+
+        [Fact]
+        public async Task CalculateNavlog_TotalFuelUsed_IncludesSTTPerDepartureSegment()
+        {
+            // Arrange
+            var departureTime = DateTime.UtcNow;
+            var waypoints = new List<WaypointDto>
+            {
+                CreateSpecificWaypoint("KBNA", 36.1244, -86.6782, 599),
+                new WaypointDto
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Name = "KXYZ",
+                    Latitude = 35.5,
+                    Longitude = -86.0,
+                    Altitude = 700,
+                    WaypointType = WaypointType.Airport,
+                    IsRefuelingStop = true,
+                    RefuelToFull = true
+                },
+                CreateSpecificWaypoint("KATL", 33.6367, -84.4278, 1026)
+            };
+
+            var request = new NavlogRequestDto
+            {
+                TimeOfDeparture = departureTime,
+                Waypoints = waypoints,
+                PlannedCruisingAltitude = 7500,
+                AircraftPerformanceProfileId = "test-profile-id"
+            };
+
+            _magneticVariationService.GetMagneticVariation(Arg.Any<double>(), Arg.Any<double>()).Returns(0);
+            var windsAloftData = GenerateWindsAloftData(departureTime);
+            _windsAloftService.FetchWindsAloftData(Arg.Any<int>()).Returns(windsAloftData);
+
+            // Act
+            var result = await _navlogService.CalculateNavlog(request);
+
+            // Assert
+            var totalLegBurn = result.Legs.Sum(l => l.LegFuelBurnGals);
+            var stt = 3.0; // from test profile
+            var expectedTotalFuelUsed = totalLegBurn + (stt * 2); // initial + one refuel
+            result.TotalFuelUsed.Should().BeApproximately(expectedTotalFuelUsed, 0.25);
+        }
+
+        // Helper method to create a waypoint with specific values when needed
+        private WaypointDto CreateSpecificWaypoint(string name, double lat, double lon, double altitude,
+                WaypointType waypointType = WaypointType.Airport)
+        {
+            return new WaypointDto
+            {
+                Id = Guid.NewGuid().ToString(),
+                Name = name,
+                Latitude = lat,
+                Longitude = lon,
+                Altitude = altitude,
+                WaypointType = waypointType
+            };
+        }
 
         private WindsAloftDto GenerateWindsAloftData(DateTime referenceTime, int? overrideWindDirection = null, int? overrideWindSpeed = null)
         {

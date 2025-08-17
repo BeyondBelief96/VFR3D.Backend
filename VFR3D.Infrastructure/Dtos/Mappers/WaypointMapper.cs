@@ -14,7 +14,10 @@ public static class WaypointMapper
             Latitude = dto.Latitude,
             Longitude = dto.Longitude,
             Altitude = dto.Altitude,
-            WaypointType = dto.WaypointType
+            WaypointType = dto.WaypointType,
+            RefuelGallons = dto.RefuelGallons,
+            RefuelToFull = dto.RefuelToFull,
+            IsRefuelingStop = dto.IsRefuelingStop
         };
     }
 
@@ -27,7 +30,10 @@ public static class WaypointMapper
             Latitude = entity.Latitude,
             Longitude = entity.Longitude,
             Altitude = entity.Altitude,
-            WaypointType = entity.WaypointType
+            WaypointType = entity.WaypointType,
+            RefuelGallons = entity.RefuelGallons,
+            RefuelToFull = entity.RefuelToFull,
+            IsRefuelingStop = entity.IsRefuelingStop
         };
     }
 }

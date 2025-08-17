@@ -11,4 +11,7 @@ public record WaypointDto
     public double Longitude { get; init; }
     public double Altitude { get; init; }
     public WaypointType? WaypointType { get; init; }
+    public double? RefuelGallons { get; init; }
+    public bool? RefuelToFull { get; init; }
+    public bool? IsRefuelingStop { get; init; }
 }

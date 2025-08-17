@@ -166,7 +166,7 @@ namespace VFR3D.Tests.IntegrationTests
                 result.Should().NotBeNull();
                 result.Auth0UserId.Should().Be(userId);
                 result.Name.Should().Be(request.Name);
-                DateTime.Parse(result.DepartureTime).Should().Be(request.DepartureTime);
+                DateTime.Parse(result.DepartureTime).ToUniversalTime().Should().Be(request.DepartureTime.ToUniversalTime());
                 result.PlannedCruisingAltitude.Should().Be(request.PlannedCruisingAltitude);
                 result.AircraftPerformanceId.Should().Be(request.AircraftPerformanceProfileId);
                 result.TotalRouteDistance.Should().Be(mockNavlogResponse.TotalRouteDistance);
@@ -394,7 +394,7 @@ namespace VFR3D.Tests.IntegrationTests
             result.Should().NotBeNull();
             result.Id.Should().Be(flightId);
             result.Name.Should().Be(updateRequest.Name);
-            DateTime.Parse(result.DepartureTime).Should().Be(updateRequest.DepartureTime.Value);
+            DateTime.Parse(result.DepartureTime).ToUniversalTime().Should().Be(updateRequest.DepartureTime.Value.ToUniversalTime());
             result.PlannedCruisingAltitude.Should().Be(updateRequest.PlannedCruisingAltitude.Value);
             result.AircraftPerformanceId.Should().Be(updateRequest.AircraftPerformanceProfileId);
             result.TotalRouteDistance.Should().Be(mockNavlogResponse.TotalRouteDistance);
@@ -478,7 +478,7 @@ namespace VFR3D.Tests.IntegrationTests
             // Assert
             result.Should().NotBeNull();
             result.Name.Should().Be(updateRequest.Name);
-            DateTime.Parse(result.DepartureTime).Should().Be(originalDepartureTime);
+            DateTime.Parse(result.DepartureTime).ToUniversalTime().Should().Be(originalDepartureTime.ToUniversalTime());
             result.PlannedCruisingAltitude.Should().Be(originalAltitude);
 
             // Verify NavlogService was NOT called

@@ -75,8 +75,12 @@ public class NavlogService : INavlogService
 
             for (var i = 0; i < waypointsAdjustedForCruisingAltitude.Count - 1; i++)
             {
-                var isClimbLeg = i == 0;
-                var isDescentLeg = i == waypointsAdjustedForCruisingAltitude.Count - 2;
+                var nextWp = waypointsAdjustedForCruisingAltitude[i + 1];
+                var currWp = waypointsAdjustedForCruisingAltitude[i];
+                var isClimbLeg = string.Equals(nextWp.Name, "TOC", StringComparison.OrdinalIgnoreCase) ||
+                                 (nextWp.Id?.StartsWith("TOC-", StringComparison.OrdinalIgnoreCase) ?? false);
+                var isDescentLeg = string.Equals(currWp.Name, "TOD", StringComparison.OrdinalIgnoreCase) ||
+                                   (currWp.Id?.StartsWith("TOD-", StringComparison.OrdinalIgnoreCase) ?? false);
 
                 var leg = await ProcessLeg(
                     isClimbLeg,
@@ -92,12 +96,13 @@ public class NavlogService : INavlogService
             }
 
             response.TotalRouteDistance = CalculateTotalRouteDistance(response.Legs);
-            response.TotalFuelUsed = CalculateTotalFuelUsed(response.Legs, performanceProfile.SttFuelGals);
+            var additionalDepartures = waypointsAdjustedForCruisingAltitude.Count(w => (w.IsRefuelingStop ?? false));
+            response.TotalFuelUsed = CalculateTotalFuelUsed(response.Legs, performanceProfile.SttFuelGals * (1 + additionalDepartures));
             response.TotalRouteTimeHours = CalculateTotalRouteTime(response.Legs);
             response.AverageWindComponent = CalculateAverageHeadwind(response.Legs);
 
             CalculateDistanceRemaining(response.Legs, response.TotalRouteDistance);
-            CalculateRemainingFuel(response.Legs, performanceProfile.FuelOnBoardGals);
+            CalculateRemainingFuel(response.Legs, performanceProfile.FuelOnBoardGals, performanceProfile);
 
             try
             {
@@ -156,7 +161,10 @@ public class NavlogService : INavlogService
     {
         return waypoints.Select((waypoint, index) =>
         {
-            if (index == 0 || index == waypoints.Count - 1)
+            var isTerminal = index == 0 || index == waypoints.Count - 1;
+            var isRefuelStop = (waypoint.IsRefuelingStop ?? false);
+
+            if (isTerminal || isRefuelStop)
             {
                 return waypoint;
             }
@@ -168,7 +176,10 @@ public class NavlogService : INavlogService
                 Latitude = waypoint.Latitude,
                 Longitude = waypoint.Longitude,
                 Altitude = plannedCruisingAltitude,
-                WaypointType = waypoint.WaypointType
+                WaypointType = waypoint.WaypointType,
+                RefuelGallons = waypoint.RefuelGallons,
+                RefuelToFull = waypoint.RefuelToFull,
+                IsRefuelingStop = waypoint.IsRefuelingStop
             };
         }).ToList();
     }
@@ -178,55 +189,97 @@ public class NavlogService : INavlogService
         int plannedCruisingAltitude,
         AircraftPerformanceProfile performance)
     {
-        var startPoint = waypoints[0];
-        var endPoint = waypoints[^1];
-
-        // Calculate climb point
-        var altitudeDifference = plannedCruisingAltitude - startPoint.Altitude;
-        var climbTime = altitudeDifference / (performance.ClimbFpm * 60); // convert to hours
-        var climbDistance = performance.ClimbTrueAirspeed * climbTime; // Nautical Miles
-
-        var topOfClimbPoint = FindPointAtDistance(
-            startPoint,
-            climbDistance,
-            CalculateTrueCourse(startPoint.Latitude, startPoint.Longitude, waypoints[1].Latitude, waypoints[1].Longitude));
-        
-        var topOfClimbWaypoint = new WaypointDto
+        var refuelIndices = new List<int>();
+        for (var i = 1; i < waypoints.Count - 1; i++)
         {
-            Id = "TOC",
-            Name = "TOC",
-            Latitude = topOfClimbPoint.Latitude,
-            Longitude = topOfClimbPoint.Longitude,
-            Altitude = plannedCruisingAltitude,
-            WaypointType = WaypointType.CalculatedPoint
-        };
+            if ((waypoints[i].IsRefuelingStop ?? false))
+            {
+                refuelIndices.Add(i);
+            }
+        }
 
-        // Calculate descent point
-        var descentAltitudeDifference = plannedCruisingAltitude - endPoint.Altitude;
-        var descentTime = descentAltitudeDifference / (performance.DescentFpm * 60); // convert to hours
-        var descentDistance = performance.DescentTrueAirspeed * descentTime; // Nautical Miles
-
-        var topOfDescentPoint = FindPointAtDistance(
-            endPoint,
-            -descentDistance,
-            CalculateTrueCourse(waypoints[^2].Latitude, waypoints[^2].Longitude, endPoint.Latitude, endPoint.Longitude));
-
-        var topOfDescentWaypoint = new WaypointDto
-        {
-            Id = "TOD",
-            Name = "TOD",
-            Latitude = topOfDescentPoint.Latitude,
-            Longitude = topOfDescentPoint.Longitude,
-            Altitude = plannedCruisingAltitude,
-            WaypointType = WaypointType.CalculatedPoint
-        };
+        var segmentAnchors = new List<int> { 0 };
+        segmentAnchors.AddRange(refuelIndices);
+        segmentAnchors.Add(waypoints.Count - 1);
 
         var result = new List<WaypointDto>();
-        result.Add(startPoint);
-        result.Add(topOfClimbWaypoint);
-        result.AddRange(waypoints.Skip(1).Take(waypoints.Count - 2));
-        result.Add(topOfDescentWaypoint);
-        result.Add(endPoint);
+        int tocCounter = 1;
+        int todCounter = 1;
+
+        for (var s = 0; s < segmentAnchors.Count - 1; s++)
+        {
+            var segStartIndex = segmentAnchors[s];
+            var segEndIndex = segmentAnchors[s + 1];
+
+            var segStart = waypoints[segStartIndex];
+            var segEnd = waypoints[segEndIndex];
+
+            if (result.Count == 0)
+            {
+                result.Add(segStart);
+            }
+            else if (result[^1] != segStart)
+            {
+                result.Add(segStart);
+            }
+
+            if (segStartIndex < segEndIndex)
+            {
+                var toward = waypoints[Math.Min(segStartIndex + 1, segEndIndex)];
+                var altitudeDifference = plannedCruisingAltitude - segStart.Altitude;
+                var climbTime = altitudeDifference / (performance.ClimbFpm * 60.0);
+                var climbDistance = performance.ClimbTrueAirspeed * climbTime;
+
+                var topOfClimbPoint = FindPointAtDistance(
+                    segStart,
+                    climbDistance,
+                    CalculateTrueCourse(segStart.Latitude, segStart.Longitude, toward.Latitude, toward.Longitude));
+
+                var topOfClimbWaypoint = new WaypointDto
+                {
+                    Id = $"TOC-{tocCounter++}",
+                    Name = "TOC",
+                    Latitude = topOfClimbPoint.Latitude,
+                    Longitude = topOfClimbPoint.Longitude,
+                    Altitude = plannedCruisingAltitude,
+                    WaypointType = WaypointType.CalculatedPoint
+                };
+
+                result.Add(topOfClimbWaypoint);
+            }
+
+            for (var j = segStartIndex + 1; j < segEndIndex; j++)
+            {
+                result.Add(waypoints[j]);
+            }
+
+            if (segEndIndex - segStartIndex >= 1)
+            {
+                var from = waypoints[Math.Max(segEndIndex - 1, segStartIndex)];
+                var descentAltitudeDifference = plannedCruisingAltitude - segEnd.Altitude;
+                var descentTime = descentAltitudeDifference / (performance.DescentFpm * 60.0);
+                var descentDistance = performance.DescentTrueAirspeed * descentTime;
+
+                var topOfDescentPoint = FindPointAtDistance(
+                    segEnd,
+                    -descentDistance,
+                    CalculateTrueCourse(from.Latitude, from.Longitude, segEnd.Latitude, segEnd.Longitude));
+
+                var topOfDescentWaypoint = new WaypointDto
+                {
+                    Id = $"TOD-{todCounter++}",
+                    Name = "TOD",
+                    Latitude = topOfDescentPoint.Latitude,
+                    Longitude = topOfDescentPoint.Longitude,
+                    Altitude = plannedCruisingAltitude,
+                    WaypointType = WaypointType.CalculatedPoint
+                };
+
+                result.Add(topOfDescentWaypoint);
+            }
+
+            result.Add(segEnd);
+        }
 
         return result;
     }
@@ -461,13 +514,42 @@ public class NavlogService : INavlogService
             }
         }
 
-        private void CalculateRemainingFuel(List<NavigationLegDto> legs, double startingFuel)
+        private void CalculateRemainingFuel(List<NavigationLegDto> legs, double startingFuel, AircraftPerformanceProfile performance)
         {
             double remainingFuel = startingFuel;
-            foreach (var leg in legs)
+            bool needsSttDeduction = true; // Deduct STT at initial departure
+
+            for (int i = 0; i < legs.Count; i++)
             {
+                if (needsSttDeduction)
+                {
+                    remainingFuel = Math.Max(0, remainingFuel - performance.SttFuelGals);
+                    needsSttDeduction = false;
+                }
+
+                var leg = legs[i];
                 remainingFuel -= leg.LegFuelBurnGals;
                 leg.RemainingFuelGals = remainingFuel;
+
+                if ((leg.LegEndPoint.IsRefuelingStop ?? false))
+                {
+                    var toFull = leg.LegEndPoint.RefuelToFull ?? false;
+                    var addGallons = leg.LegEndPoint.RefuelGallons ?? 0;
+
+                    if (toFull)
+                    {
+                        remainingFuel = performance.FuelOnBoardGals;
+                    }
+                    else if (addGallons > 0)
+                    {
+                        remainingFuel = Math.Min(performance.FuelOnBoardGals, remainingFuel + addGallons);
+                    }
+
+                    // Show post-refuel amount at end of this leg
+                    leg.RemainingFuelGals = remainingFuel;
+                    // Next leg will start with STT deduction
+                    needsSttDeduction = true;
+                }
             }
         }
 
