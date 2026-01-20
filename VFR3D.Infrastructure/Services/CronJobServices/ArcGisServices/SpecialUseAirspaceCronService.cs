@@ -31,62 +31,74 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices
 
             var response = await QueryFeatures<SpecialUseAirspaceModel>(parameters, cancellationToken);
 
+            // Extract valid GlobalIds from response
+            var globalIds = response.Features
+                .Select(f => f.Attributes.GlobalId)
+                .Where(id => !string.IsNullOrEmpty(id))
+                .ToList();
+
+            // Batch load existing airspaces to avoid N+1 queries
+            var existingAirspaces = await _dbContext.SpecialUseAirspaces
+                .Where(a => globalIds.Contains(a.GlobalId))
+                .ToDictionaryAsync(a => a.GlobalId, cancellationToken);
+
+            var newAirspaces = new List<SpecialUseAirspace>();
+            var skippedCount = 0;
+
             foreach (var feature in response.Features)
             {
                 var globalId = feature.Attributes.GlobalId ?? string.Empty;
                 if (string.IsNullOrEmpty(globalId))
                 {
-                    _logger.LogWarning("Skipping special use airspace with null or empty GlobalId");
+                    skippedCount++;
                     continue;
                 }
 
-                // ✅ FIXED: Check if entity exists first
-                var existingAirspace = await _dbContext.SpecialUseAirspaces
-                    .FirstOrDefaultAsync(a => a.GlobalId == globalId, cancellationToken);
-
-                if (existingAirspace == null)
+                if (existingAirspaces.TryGetValue(globalId, out var existingAirspace))
                 {
-                    // 🟢 ENTITY DOESN'T EXIST - CREATE NEW ONE
-                    var newAirspace = new SpecialUseAirspace { GlobalId = globalId };
-                    MapFieldsToEntity(newAirspace, feature.Attributes);
-                    newAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
-
-                    _dbContext.SpecialUseAirspaces.Add(newAirspace); // ✅ Use Add() for new entities
-                    _logger.LogDebug("Adding new special use airspace with GlobalId: {GlobalId}", globalId);
+                    MapFieldsToEntity(existingAirspace, feature.Attributes);
+                    existingAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
                 }
                 else
                 {
-                    // 🟡 ENTITY EXISTS - UPDATE IT
-                    MapFieldsToEntity(existingAirspace, feature.Attributes);
-                    existingAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
-
-                    // ✅ No need to call Update() - EF automatically tracks changes to existing entities
-                    _logger.LogDebug("Updating existing special use airspace with GlobalId: {GlobalId}", globalId);
+                    var newAirspace = new SpecialUseAirspace { GlobalId = globalId };
+                    MapFieldsToEntity(newAirspace, feature.Attributes);
+                    newAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
+                    newAirspaces.Add(newAirspace);
                 }
+            }
+
+            if (newAirspaces.Count > 0)
+            {
+                await _dbContext.SpecialUseAirspaces.AddRangeAsync(newAirspaces, cancellationToken);
+                _logger.LogDebug("Adding {Count} new special use airspaces", newAirspaces.Count);
+            }
+
+            if (skippedCount > 0)
+            {
+                _logger.LogWarning("Skipped {Count} special use airspaces with null or empty GlobalId", skippedCount);
             }
 
             try
             {
                 var changesCount = await _dbContext.SaveChangesAsync(cancellationToken);
-                _logger.LogInformation("Processed {Count} special use airspaces with {Changes} database changes",
-                    response.Features.Count, changesCount);
+                _logger.LogInformation("Processed {Count} special use airspaces: {NewCount} new, {UpdatedCount} updated, {Changes} database changes",
+                    response.Features.Count, newAirspaces.Count, existingAirspaces.Count, changesCount);
             }
             catch (DbUpdateConcurrencyException ex)
             {
                 _logger.LogError(ex, "Concurrency exception while updating special use airspaces. This may indicate the data was modified by another process.");
 
-                // Optionally, reload and retry for each conflicted entity
                 foreach (var entry in ex.Entries)
                 {
                     if (entry.Entity is SpecialUseAirspace airspace)
                     {
                         _logger.LogWarning("Concurrency conflict for special use airspace GlobalId: {GlobalId}", airspace.GlobalId);
-                        // Reload the entity from database
                         await entry.ReloadAsync(cancellationToken);
                     }
                 }
 
-                throw; // Re-throw if you want the function to fail, or handle gracefully
+                throw;
             }
         }
 

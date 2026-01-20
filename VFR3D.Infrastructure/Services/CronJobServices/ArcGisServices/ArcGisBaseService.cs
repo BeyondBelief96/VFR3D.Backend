@@ -17,6 +17,11 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices
         protected readonly GeometryFactory _geometryFactory;
         protected abstract string BaseUrl { get; }
 
+        /// <summary>
+        /// Number of records to fetch per page. ArcGIS services typically have a max of 1000-2000.
+        /// </summary>
+        protected virtual int PageSize => 1000;
+
         protected ArcGisBaseService(
             ILogger logger,
             IHttpClientFactory httpClientFactory,
@@ -33,20 +38,62 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices
             };
         }
 
+        /// <summary>
+        /// Query features with automatic pagination to handle large datasets.
+        /// </summary>
         protected async Task<ArcGisResponse<TAttributes>> QueryFeatures<TAttributes>(
             Dictionary<string, string> parameters,
             CancellationToken cancellationToken = default)
         {
+            var allFeatures = new List<ArcGisFeature<TAttributes>>();
+            var offset = 0;
+            bool hasMoreRecords;
+
+            do
+            {
+                var pageResponse = await QueryFeaturesPage<TAttributes>(parameters, offset, cancellationToken);
+                allFeatures.AddRange(pageResponse.Features);
+                hasMoreRecords = pageResponse.ExceededTransferLimit;
+                offset += pageResponse.Features.Count;
+
+                if (hasMoreRecords)
+                {
+                    _logger.LogDebug("Fetched {Count} features, total so far: {Total}. Fetching more...",
+                        pageResponse.Features.Count, allFeatures.Count);
+                }
+            } while (hasMoreRecords);
+
+            _logger.LogInformation("Total features fetched: {Count}", allFeatures.Count);
+
+            return new ArcGisResponse<TAttributes>
+            {
+                Features = allFeatures,
+                ExceededTransferLimit = false
+            };
+        }
+
+        /// <summary>
+        /// Query a single page of features from ArcGIS.
+        /// </summary>
+        private async Task<ArcGisResponse<TAttributes>> QueryFeaturesPage<TAttributes>(
+            Dictionary<string, string> parameters,
+            int offset,
+            CancellationToken cancellationToken)
+        {
             try
             {
-                var httpClient = _httpClientFactory.CreateClient();
+                var httpClient = _httpClientFactory.CreateClient("ArcGis");
                 var queryParams = new Dictionary<string, string>(parameters)
                 {
                     ["f"] = "json",
-                    ["outSR"] = "4326"
+                    ["outSR"] = "4326",
+                    ["resultRecordCount"] = PageSize.ToString(),
+                    ["resultOffset"] = offset.ToString()
                 };
 
                 var url = WebUtilities.AddQueryString(BaseUrl, queryParams);
+                _logger.LogDebug("Fetching ArcGIS features from offset {Offset}", offset);
+
                 var response = await httpClient.GetAsync(url, cancellationToken);
                 response.EnsureSuccessStatusCode();
 
@@ -62,7 +109,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error querying ArcGIS features");
+                _logger.LogError(ex, "Error querying ArcGIS features at offset {Offset}", offset);
                 throw;
             }
         }

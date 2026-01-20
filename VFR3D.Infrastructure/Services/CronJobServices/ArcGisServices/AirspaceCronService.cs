@@ -39,38 +39,57 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices
 
             var response = await QueryFeatures<AirspaceModel>(parameters, cancellationToken);
 
+            // Extract valid GlobalIds from response
+            var globalIds = response.Features
+                .Select(f => f.Attributes.GlobalId)
+                .Where(id => !string.IsNullOrEmpty(id))
+                .ToList();
+
+            // Batch load existing airspaces to avoid N+1 queries
+            var existingAirspaces = await _dbContext.Airspaces
+                .Where(a => globalIds.Contains(a.GlobalId))
+                .ToDictionaryAsync(a => a.GlobalId, cancellationToken);
+
+            var newAirspaces = new List<Airspace>();
+            var skippedCount = 0;
+
             foreach (var feature in response.Features)
             {
                 var globalId = feature.Attributes.GlobalId ?? string.Empty;
                 if (string.IsNullOrEmpty(globalId))
                 {
-                    _logger.LogWarning("Skipping airspace with null or empty GlobalId");
+                    skippedCount++;
                     continue;
                 }
 
-                var existingAirspace = await _dbContext.Airspaces
-                    .FirstOrDefaultAsync(a => a.GlobalId == globalId, cancellationToken);
-
-                if (existingAirspace == null)
+                if (existingAirspaces.TryGetValue(globalId, out var existingAirspace))
+                {
+                    MapFieldsToEntity(existingAirspace, feature.Attributes);
+                    existingAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
+                }
+                else
                 {
                     var newAirspace = new Airspace { GlobalId = globalId };
                     MapFieldsToEntity(newAirspace, feature.Attributes);
                     newAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
-
-                    _dbContext.Airspaces.Add(newAirspace); 
-                    _logger.LogDebug("Adding new airspace with GlobalId: {GlobalId}", globalId);
-                }
-                else
-                {
-                    MapFieldsToEntity(existingAirspace, feature.Attributes);
-                    existingAirspace.Geometry = CreatePolygonFromRings(feature.Geometry?.Rings ?? Array.Empty<List<double[]>>());
-                    _logger.LogDebug("Updating existing airspace with GlobalId: {GlobalId}", globalId);
+                    newAirspaces.Add(newAirspace);
                 }
             }
 
+            if (newAirspaces.Count > 0)
+            {
+                await _dbContext.Airspaces.AddRangeAsync(newAirspaces, cancellationToken);
+                _logger.LogDebug("Adding {Count} new Class {Class} airspaces", newAirspaces.Count, airspaceClass);
+            }
+
+            if (skippedCount > 0)
+            {
+                _logger.LogWarning("Skipped {Count} airspaces with null or empty GlobalId", skippedCount);
+            }
+
             var changesCount = await _dbContext.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation("Processed {Count} Class {Class} airspaces with {Changes} database changes",
-                response.Features.Count, airspaceClass, changesCount);
+            _logger.LogInformation("Processed {Count} Class {Class} airspaces: {NewCount} new, {UpdatedCount} updated, {Changes} database changes",
+                response.Features.Count, airspaceClass, newAirspaces.Count, existingAirspaces.Count, changesCount);
         }
 
         protected override async Task<Airspace?> FindExistingEntity(object id, CancellationToken cancellationToken)

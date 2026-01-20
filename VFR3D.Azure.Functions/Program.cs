@@ -76,6 +76,12 @@ builder.Services.AddScoped<CommunicationFrequencyCronService>();
 builder.Services.AddAwsServices(builder.Configuration);
 builder.Services.AddHttpClient();
 
+// Configure HttpClient for ArcGIS services with extended timeout
+builder.Services.AddHttpClient("ArcGis", client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(10);
+});
+
 // Register database context
 builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 {
