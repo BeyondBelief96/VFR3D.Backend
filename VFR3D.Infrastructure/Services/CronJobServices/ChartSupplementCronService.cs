@@ -1,6 +1,4 @@
-﻿using Amazon.S3;
-using Amazon.S3.Model;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.IO.Compression;
@@ -19,21 +17,21 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
         private readonly ILogger<ChartSupplementCronService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly VFR3DDbContext _dbContext;
-        private readonly IAmazonS3 _s3Client;
-        private readonly AwsSettings _awsSettings;
+        private readonly ICloudStorageService _cloudStorageService;
+        private readonly CloudStorageSettings _cloudStorageSettings;
 
         public ChartSupplementCronService(
-        ILogger<ChartSupplementCronService> logger,
-        IHttpClientFactory httpClientFactory,
-        VFR3DDbContext dbContext,
-        IAmazonS3 s3Client,
-        IOptions<AwsSettings> awsSettings)
+            ILogger<ChartSupplementCronService> logger,
+            IHttpClientFactory httpClientFactory,
+            VFR3DDbContext dbContext,
+            ICloudStorageService cloudStorageService,
+            IOptions<CloudStorageSettings> cloudStorageSettings)
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;
             _dbContext = dbContext;
-            _s3Client = s3Client;
-            _awsSettings = awsSettings.Value;
+            _cloudStorageService = cloudStorageService;
+            _cloudStorageSettings = cloudStorageSettings.Value;
         }
 
         public async Task DownloadAndProcessChartSupplementsAsync(CancellationToken cancellationToken = default)
@@ -75,7 +73,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
                 await ParseAndStoreXmlDataAsync(xmlContent, cancellationToken);
 
                 var pdfEntries = zipArchive.Entries.Where(e => e.Name.EndsWith(".pdf"));
-                await UploadPdfsToS3Async(pdfEntries, cancellationToken);
+                await UploadPdfsToStorageAsync(pdfEntries, cancellationToken);
 
                 _logger.LogInformation("Completed chart supplement processing.");
             }
@@ -225,46 +223,27 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
             }
         }
 
-        private async Task UploadPdfsToS3Async(IEnumerable<ZipArchiveEntry> pdfEntries, CancellationToken cancellationToken)
+        private async Task UploadPdfsToStorageAsync(IEnumerable<ZipArchiveEntry> pdfEntries, CancellationToken cancellationToken)
         {
+            var containerName = _cloudStorageSettings.ChartSupplementsContainerName;
             var existingObjects = new Dictionary<string, string>();
-            var listRequest = new ListObjectsV2Request
-            {
-                BucketName = _awsSettings.ChartSupplementsBucketName,
-                MaxKeys = 1000
-            };
 
             try
             {
-                do
+                _logger.LogInformation("Listing existing blobs in container: {ContainerName}", containerName);
+                var existingBlobs = await _cloudStorageService.ListBlobsAsync(containerName);
+
+                foreach (var blobName in existingBlobs)
                 {
-                    _logger.LogInformation($"S3 Service URL: {_awsSettings.ServiceUrl}");
-                    _logger.LogInformation($"Bucket name: {_awsSettings.ChartSupplementsBucketName}");
-                    var listResponse = await _s3Client.ListObjectsV2Async(listRequest, cancellationToken);
-
-                    foreach (var item in listResponse.S3Objects)
-                    {
-                        var baseName = ExtractBaseName(item.Key);
-                        existingObjects[baseName] = item.Key;
-                    }
-
-                    if (listResponse.IsTruncated)
-                    {
-                        listRequest.ContinuationToken = listResponse.NextContinuationToken;
-                    }
-                    else
-                    {
-                        break;
-                    }
+                    var baseName = ExtractBaseName(blobName);
+                    existingObjects[baseName] = blobName;
                 }
-                while (true);
 
-                _logger.LogInformation("Found {Count} existing chart supplements in S3", existingObjects.Count);
-
+                _logger.LogInformation("Found {Count} existing chart supplements in storage", existingObjects.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error listing existing objects in S3 Bucket: {_awsSettings.ChartSupplementsBucketName}");
+                _logger.LogError(ex, "Error listing existing blobs in container: {ContainerName}", containerName);
                 throw;
             }
 
@@ -281,13 +260,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
                             existingKey,
                             pdfEntry.Name);
 
-                        var deleteRequest = new DeleteObjectRequest
-                        {
-                            BucketName = _awsSettings.ChartSupplementsBucketName,
-                            Key = existingKey
-                        };
-
-                        await _s3Client.DeleteObjectAsync(deleteRequest, cancellationToken);
+                        await _cloudStorageService.DeleteBlobAsync(containerName, existingKey);
                         _logger.LogDebug("Deleted old edition {OldKey}", existingKey);
                     }
 
@@ -296,16 +269,8 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
                     await pdfStream.CopyToAsync(memoryStream, cancellationToken);
                     memoryStream.Position = 0;
 
-                    var putRequest = new PutObjectRequest
-                    {
-                        BucketName = _awsSettings.ChartSupplementsBucketName,
-                        Key = pdfEntry.Name,
-                        InputStream = memoryStream,
-                        ContentType = "application/pdf"
-                    };
-
-                    await _s3Client.PutObjectAsync(putRequest, cancellationToken);
-                    _logger.LogDebug("Uploaded {Action} PDF {FileName} to S3",
+                    await _cloudStorageService.UploadBlobAsync(containerName, pdfEntry.Name, memoryStream, "application/pdf");
+                    _logger.LogDebug("Uploaded {Action} PDF {FileName} to storage",
                         existingObjects.ContainsKey(baseName) ? "updated" : "new",
                         pdfEntry.Name);
                 }

@@ -120,7 +120,6 @@ builder.Services.AddOpenApiDocument(options =>
 builder.Services.Configure<NOAASettings>(builder.Configuration.GetSection("NOAASettings"));
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("StripeSettings"));
 builder.Services.Configure<Auth0Settings>(builder.Configuration.GetSection("Auth0Settings"));
-builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"));
 builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
 
 // Setup DB Context
@@ -150,8 +149,7 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 
 // Configure Services
 builder.Services.AddMemoryCache();
-builder.Services.AddAwsServices(builder.Configuration); // Keep for AWS Secrets Manager (DB SSL cert)
-builder.Services.AddCloudStorageServices(builder.Configuration); // Azure Blob Storage
+builder.Services.AddCloudStorageServices(builder.Configuration);
 builder.Services.AddScoped<IAircraftPerformanceProfileRepository, AircraftPerformanceProfileRepository>();
 builder.Services.AddScoped<IMetarService, MetarService>();
 builder.Services.AddScoped<IPirepService, PirepService>();

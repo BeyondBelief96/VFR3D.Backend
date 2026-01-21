@@ -57,9 +57,6 @@ builder.Services.Configure<DatabaseSettings>(options =>
     }
 });
 
-// Register settings
-builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS")); // Keep for AWS Secrets Manager (DB SSL cert)
-
 // Register services
 builder.Services.AddScoped<IFaaPublicationCycleService, FaaPublicationCycleService>();
 builder.Services.AddScoped<IChartSupplementCronService, ChartSupplementCronService>();
@@ -72,8 +69,7 @@ builder.Services.AddScoped<IAirspaceCronService<Airspace>, AirspaceCronService>(
 builder.Services.AddScoped<IAirspaceCronService<SpecialUseAirspace>, SpecialUseAirspaceCronService>();
 builder.Services.AddScoped<AirportCronService>();
 builder.Services.AddScoped<CommunicationFrequencyCronService>();
-builder.Services.AddAwsServices(builder.Configuration); // Keep for AWS Secrets Manager (DB SSL cert)
-builder.Services.AddCloudStorageServices(builder.Configuration); // Azure Blob Storage
+builder.Services.AddCloudStorageServices(builder.Configuration);
 builder.Services.AddHttpClient();
 
 // Configure HttpClient for ArcGIS services with extended timeout
