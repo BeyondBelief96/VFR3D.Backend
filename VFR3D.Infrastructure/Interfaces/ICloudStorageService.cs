@@ -2,7 +2,6 @@ namespace VFR3D.Infrastructure.Interfaces;
 
 /// <summary>
 /// Cloud-agnostic storage service abstraction for blob/object storage operations.
-/// Supports both Azure Blob Storage and AWS S3 implementations.
 /// </summary>
 public interface ICloudStorageService
 {

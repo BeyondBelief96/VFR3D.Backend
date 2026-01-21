@@ -7,7 +7,8 @@
       "Bash(grep:*)",
       "Bash(docker compose -f docker-compose.local.yml down)",
       "Bash(dotnet add:*)",
-      "Bash(dotnet remove:*)"
+      "Bash(dotnet remove:*)",
+      "Bash(dotnet test:*)"
     ],
     "deny": [],
     "ask": []

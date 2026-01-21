@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using VFR3D.Infrastructure.Dtos.Navlog;
 using VFR3D.Infrastructure.Interfaces;
@@ -37,20 +38,39 @@ namespace VFR3D.Infrastructure.Services.WeatherServices
                 const string baseUrl = "https://aviationweather.gov/api/data/windtemp";
                 var formattedFcst = fcstHours.ToString("D2");
 
-                var textResponse = await httpClient.GetStringAsync(
-                    $"{baseUrl}?region=us&level=low&fcst={formattedFcst}");
+                var textResponse = await FetchWithStatusHandlingAsync(
+                    httpClient,
+                    $"{baseUrl}?region=us&level=low&fcst={formattedFcst}",
+                    "winds aloft text data");
+
+                if (textResponse == null)
+                {
+                    _logger.LogInformation("No winds aloft data available from API (204 No Content)");
+                    return new WindsAloftDto
+                    {
+                        ValidTime = DateTime.UtcNow,
+                        ForUseStartTime = DateTime.UtcNow,
+                        ForUseEndTime = DateTime.UtcNow.AddHours(6),
+                        WindTemp = new List<WindsAloftSiteDto>()
+                    };
+                }
 
                 var validTime = ExtractValidTime(textResponse);
                 var (forUseStartTime, forUseEndTime) = ExtractForUseTimes(textResponse);
 
-                var tasks = AltitudeLevels.Select(level => 
-                    httpClient.GetStringAsync($"{baseUrl}?region=us&level={level}&fcst={formattedFcst}&format=json"));
-                
+                var tasks = AltitudeLevels.Select(level =>
+                    FetchWithStatusHandlingAsync(
+                        httpClient,
+                        $"{baseUrl}?region=us&level={level}&fcst={formattedFcst}&format=json",
+                        $"winds aloft level {level} data"));
+
                 var responses = await Task.WhenAll(tasks);
                 var airportDataMap = new Dictionary<string, WindsAloftSiteDto>();
 
                 foreach (var response in responses)
                 {
+                    if (response == null) continue;
+
                     var levelData = JsonSerializer.Deserialize<WindsAloftLevelData>(response, _jsonOptions);
                     if (levelData?.Sites == null) continue;
 
@@ -91,6 +111,45 @@ namespace VFR3D.Infrastructure.Services.WeatherServices
             {
                 _logger.LogError(ex, "Error fetching winds aloft data for forecast hours: {FcstHours}", fcstHours);
                 throw;
+            }
+        }
+
+        private async Task<string?> FetchWithStatusHandlingAsync(HttpClient httpClient, string url, string dataDescription)
+        {
+            using var response = await httpClient.GetAsync(url);
+
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.OK:
+                    return await response.Content.ReadAsStringAsync();
+
+                case HttpStatusCode.NoContent:
+                    return null;
+
+                case HttpStatusCode.BadRequest:
+                    _logger.LogError("Aviation Weather API returned 400 Bad Request for {DataDescription}", dataDescription);
+                    throw new HttpRequestException("Aviation Weather API returned 400 Bad Request - invalid parameters or URL");
+
+                case HttpStatusCode.NotFound:
+                    _logger.LogError("Aviation Weather API returned 404 Not Found for {DataDescription}", dataDescription);
+                    throw new HttpRequestException("Aviation Weather API endpoint not found (404)");
+
+                case HttpStatusCode.TooManyRequests:
+                    _logger.LogWarning("Aviation Weather API rate limit exceeded (429 Too Many Requests) for {DataDescription}", dataDescription);
+                    throw new HttpRequestException("Aviation Weather API rate limit exceeded (429)");
+
+                case HttpStatusCode.InternalServerError:
+                    _logger.LogError("Aviation Weather API returned 500 Internal Server Error for {DataDescription}", dataDescription);
+                    throw new HttpRequestException("Aviation Weather API internal server error (500)");
+
+                case HttpStatusCode.BadGateway:
+                case HttpStatusCode.GatewayTimeout:
+                    _logger.LogWarning("Aviation Weather API service disruption ({StatusCode}) for {DataDescription}", (int)response.StatusCode, dataDescription);
+                    throw new HttpRequestException($"Aviation Weather API service disruption ({(int)response.StatusCode})");
+
+                default:
+                    _logger.LogError("Aviation Weather API returned unexpected status code {StatusCode} for {DataDescription}", (int)response.StatusCode, dataDescription);
+                    throw new HttpRequestException($"Aviation Weather API returned unexpected status code: {(int)response.StatusCode}");
             }
         }
 
