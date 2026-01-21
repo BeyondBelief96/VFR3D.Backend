@@ -1,6 +1,6 @@
-﻿using Amazon.SecretsManager.Model;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos;
 using VFR3D.Infrastructure.Dtos.Mappers;

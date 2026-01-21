@@ -1,5 +1,7 @@
 {
   "CloudStorage": {
+    "AccountName": "rgvfr3dcentralustes98ad",
+    "AccountKey": "Vt8BpD/P9XkctUpuF31zQ89R7yBAfjyJyZ+HMmQdes2H1G/Xo0+ZlMKnp/hvvguzK57tljkGSEt1+ASteklMbQ==",
     "ConnectionString": "DefaultEndpointsProtocol=https;AccountName=rgvfr3dcentralustes98ad;AccountKey=Vt8BpD/P9XkctUpuF31zQ89R7yBAfjyJyZ+HMmQdes2H1G/Xo0+ZlMKnp/hvvguzK57tljkGSEt1+ASteklMbQ==;EndpointSuffix=core.windows.net",
     "ChartSupplementsContainerName": "vfr3d-chart-supplements-centralus-test",
     "AirportDiagramsContainerName": "vfr3d-airport-diagrams-centralus-test",

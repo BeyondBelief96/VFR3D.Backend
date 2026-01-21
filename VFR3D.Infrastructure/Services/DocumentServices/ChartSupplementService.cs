@@ -1,35 +1,32 @@
-﻿using Amazon.S3;
-using Amazon.S3.Model;
-using Amazon.SecretsManager.Model;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Settings;
+using VFR3D.Domain.Exceptions;
 
 namespace VFR3D.Infrastructure.Services.DocumentServices;
 
 public class ChartSupplementService : IChartSupplementService
 {
     private readonly VFR3DDbContext _context;
-    private readonly IAmazonS3 _s3Client;
+    private readonly ICloudStorageService _cloudStorageService;
     private readonly ILogger<ChartSupplementService> _logger;
-    private readonly string _bucketName;
+    private readonly string _containerName;
 
     public ChartSupplementService(
         VFR3DDbContext context,
-        IAmazonS3 s3Client,
-        IOptions<AwsSettings> awsSettings,
+        ICloudStorageService cloudStorageService,
+        IOptions<CloudStorageSettings> cloudStorageSettings,
         ILogger<ChartSupplementService> logger)
     {
         _context = context;
-        _s3Client = s3Client;
+        _cloudStorageService = cloudStorageService;
         _logger = logger;
-        _bucketName = awsSettings.Value.ChartSupplementsBucketName
-            ?? throw new InvalidOperationException("AWS:ChartSupplementsBucketName not configured");
+        _containerName = cloudStorageSettings.Value.ChartSupplementsContainerName
+            ?? throw new InvalidOperationException("CloudStorage:ChartSupplementsContainerName not configured");
     }
 
     private string StripIcaoPrefix(string airportCode)
@@ -94,14 +91,10 @@ public class ChartSupplementService : IChartSupplementService
         try
         {
             var transformedFileName = TransformFileName(chartSupplement.FileName);
-            var request = new GetPreSignedUrlRequest
-            {
-                BucketName = _bucketName,
-                Key = transformedFileName,
-                Expires = DateTime.UtcNow.AddHours(1)
-            };
-
-            var presignedUrl = await Task.Run(() => _s3Client.GetPreSignedURL(request));
+            var presignedUrl = await _cloudStorageService.GeneratePresignedUrlAsync(
+                _containerName,
+                transformedFileName,
+                TimeSpan.FromHours(1));
 
             return new ChartSupplementUrlDto
             {

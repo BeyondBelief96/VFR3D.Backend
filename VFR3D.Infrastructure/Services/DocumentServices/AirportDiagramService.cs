@@ -1,34 +1,32 @@
-﻿using Amazon.S3;
-using Amazon.S3.Model;
-using Amazon.SecretsManager.Model;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Settings;
+using VFR3D.Domain.Exceptions;
 
 namespace VFR3D.Infrastructure.Services.DocumentServices;
 
 public class AirportDiagramService : IAirportDiagramService
 {
     private readonly VFR3DDbContext _context;
-    private readonly IAmazonS3 _s3Client;
+    private readonly ICloudStorageService _cloudStorageService;
     private readonly ILogger<AirportDiagramService> _logger;
-    private readonly string _bucketName;
+    private readonly string _containerName;
 
     public AirportDiagramService(
         VFR3DDbContext context,
-        IAmazonS3 s3Client,
-        IOptions<AwsSettings> awsSettings,
+        ICloudStorageService cloudStorageService,
+        IOptions<CloudStorageSettings> cloudStorageSettings,
         ILogger<AirportDiagramService> logger)
     {
         _context = context;
-        _s3Client = s3Client;
+        _cloudStorageService = cloudStorageService;
         _logger = logger;
-        _bucketName = awsSettings.Value.AirportDiagramsBucketName 
-            ?? throw new InvalidOperationException("AWS:AirportDiagramsBucketName not configured");
+        _containerName = cloudStorageSettings.Value.AirportDiagramsContainerName
+            ?? throw new InvalidOperationException("CloudStorage:AirportDiagramsContainerName not configured");
     }
 
     public async Task<AirportDiagramUrlDto> GetAirportDiagramUrlByAirportCode(string airportCode)
@@ -50,14 +48,10 @@ public class AirportDiagramService : IAirportDiagramService
         try
         {
             var transformedFileName = airportDiagram.FileName.ToUpper();
-            var request = new GetPreSignedUrlRequest
-            {
-                BucketName = _bucketName,
-                Key = transformedFileName,
-                Expires = DateTime.UtcNow.AddHours(1)
-            };
-
-            var presignedUrl = await Task.Run(() => _s3Client.GetPreSignedURL(request));
+            var presignedUrl = await _cloudStorageService.GeneratePresignedUrlAsync(
+                _containerName,
+                transformedFileName,
+                TimeSpan.FromHours(1));
 
             return new AirportDiagramUrlDto
             {

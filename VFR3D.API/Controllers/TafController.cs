@@ -1,6 +1,6 @@
-﻿using Amazon.SecretsManager.Model;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using VFR3D.API.Authentication;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Dtos;
 using VFR3D.Infrastructure.Interfaces;
 
