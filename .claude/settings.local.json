@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(dotnet build:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(docker logs:*)",
+      "Bash(grep:*)",
+      "Bash(docker compose -f docker-compose.local.yml down)"
     ],
     "deny": [],
     "ask": []

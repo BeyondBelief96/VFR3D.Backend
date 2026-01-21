@@ -58,10 +58,9 @@ builder.Services.Configure<DatabaseSettings>(options =>
 });
 
 // Register settings
-builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"));
+builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS")); // Keep for AWS Secrets Manager (DB SSL cert)
 
 // Register services
-builder.Services.AddScoped<IAwsInitializationService, AwsInitializationService>();
 builder.Services.AddScoped<IFaaPublicationCycleService, FaaPublicationCycleService>();
 builder.Services.AddScoped<IChartSupplementCronService, ChartSupplementCronService>();
 builder.Services.AddScoped<IAirportDiagramCronService, AirportDiagramCronService>();
@@ -73,7 +72,8 @@ builder.Services.AddScoped<IAirspaceCronService<Airspace>, AirspaceCronService>(
 builder.Services.AddScoped<IAirspaceCronService<SpecialUseAirspace>, SpecialUseAirspaceCronService>();
 builder.Services.AddScoped<AirportCronService>();
 builder.Services.AddScoped<CommunicationFrequencyCronService>();
-builder.Services.AddAwsServices(builder.Configuration);
+builder.Services.AddAwsServices(builder.Configuration); // Keep for AWS Secrets Manager (DB SSL cert)
+builder.Services.AddCloudStorageServices(builder.Configuration); // Azure Blob Storage
 builder.Services.AddHttpClient();
 
 // Configure HttpClient for ArcGIS services with extended timeout
@@ -112,18 +112,18 @@ builder.Services
 // Get required services for initialization
 var serviceProvider = builder.Services.BuildServiceProvider();
 var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
-var awsInitService = serviceProvider.GetRequiredService<IAwsInitializationService>();
+var cloudStorageInitService = serviceProvider.GetRequiredService<ICloudStorageInitializationService>();
 
-// Initialize AWS resources on startup
-logger.LogInformation("Initializing AWS resources during startup...");
+// Initialize Azure Blob Storage resources on startup
+logger.LogInformation("Initializing Azure Blob Storage resources during startup...");
 try
 {
-    awsInitService.InitializeAsync(CancellationToken.None).GetAwaiter().GetResult();
-    logger.LogInformation("AWS resources initialized successfully");
+    cloudStorageInitService.InitializeAsync(CancellationToken.None).GetAwaiter().GetResult();
+    logger.LogInformation("Azure Blob Storage resources initialized successfully");
 }
 catch (Exception ex)
 {
-    logger.LogError(ex, "Failed to initialize AWS resources");
+    logger.LogError(ex, "Failed to initialize Azure Blob Storage resources");
 }
 
 // Database seeding

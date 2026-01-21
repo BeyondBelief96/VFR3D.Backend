@@ -156,7 +156,8 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 
 // Configure Services
 builder.Services.AddMemoryCache();
-builder.Services.AddAwsServices(builder.Configuration);
+builder.Services.AddAwsServices(builder.Configuration); // Keep for AWS Secrets Manager (DB SSL cert)
+builder.Services.AddCloudStorageServices(builder.Configuration); // Azure Blob Storage
 builder.Services.AddScoped<IAircraftPerformanceProfileRepository, AircraftPerformanceProfileRepository>();
 builder.Services.AddScoped<IMetarService, MetarService>();
 builder.Services.AddScoped<IPirepService, PirepService>();
