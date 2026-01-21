@@ -5,7 +5,9 @@
       "WebSearch",
       "Bash(docker logs:*)",
       "Bash(grep:*)",
-      "Bash(docker compose -f docker-compose.local.yml down)"
+      "Bash(docker compose -f docker-compose.local.yml down)",
+      "Bash(dotnet add:*)",
+      "Bash(dotnet remove:*)"
     ],
     "deny": [],
     "ask": []

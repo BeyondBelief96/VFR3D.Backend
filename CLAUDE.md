@@ -13,7 +13,7 @@ VFR3D.Backend is a .NET 8 aviation data platform that provides weather informati
 
 This is a Clean Architecture solution with the following layers:
 
-- **VFR3D.Domain**: Core domain entities, value objects, and enums (no external dependencies)
+- **VFR3D.Domain**: Core domain entities, value objects, enums, and exceptions (no external dependencies)
 - **VFR3D.Infrastructure**: Data access (EF Core), external service integrations, repositories, DTOs, and mappers
 - **VFR3D.API**: REST API controllers and authentication handlers
 - **VFR3D.Azure.Functions**: Timer-triggered functions for data synchronization
@@ -31,7 +31,13 @@ This is a Clean Architecture solution with the following layers:
 - NOAA Aviation Weather API for METAR, TAF, PIREP, AIRMET/SIGMET data
 - FAA NASR data for airports and communication frequencies
 - ArcGIS services for airspace boundaries (via ArcGisBaseService)
-- AWS S3 (via AwsSecretsService) for storing airport diagrams and chart supplements
+- Azure Blob Storage for storing airport diagrams and chart supplements (via ICloudStorageService)
+
+**Cloud Storage**: Uses `ICloudStorageService` abstraction with `AzureBlobStorageService` implementation. Supports:
+- SAS token URL generation for secure blob access
+- Blob upload, delete, and batch delete operations
+- Container management
+- Managed Identity authentication (production) or connection string (development)
 
 **Value Objects**: Complex weather data structures (sky conditions, turbulence, icing) are modeled as value objects owned by entities (see VFR3D.Domain/ValueObjects).
 
@@ -70,15 +76,16 @@ dotnet ef migrations remove --project VFR3D.Infrastructure --startup-project VFR
 
 ### Running Locally
 
-**With Docker Compose** (recommended for full stack including PostgreSQL + LocalStack):
+**With Docker Compose** (recommended for full stack including PostgreSQL):
 ```bash
 docker-compose -f docker-compose.local.yml up
 ```
 
 This starts:
 - PostgreSQL with PostGIS (port 5432)
-- LocalStack (S3 mock on port 4566)
 - API with hot reload (port 7014)
+
+Note: The Docker container connects to Azure Blob Storage directly using the connection string in docker-compose.local.yml.
 
 **API Only** (requires separate database):
 ```bash
@@ -86,7 +93,7 @@ cd VFR3D.API
 dotnet run
 ```
 
-**Azure Functions Only** (requires separate database):
+**Azure Functions Only** (requires separate database and Azure Storage):
 ```bash
 cd VFR3D.Azure.Functions
 func start
@@ -106,6 +113,27 @@ The VFR3DDbContext requires NetTopologySuite for PostGIS geometry types. When cr
 Timer triggers use cron expressions (6-field format):
 - `"0 */10 * * * *"` = every 10 minutes (weather data)
 - Functions inherit database connection and service configuration from Program.cs
+- Requires `AzureWebJobsStorage` connection string for timer state tracking
+
+### Cloud Storage Service
+
+The `ICloudStorageService` interface provides cloud-agnostic blob storage operations:
+
+```csharp
+// Key methods:
+Task<string> GeneratePresignedUrlAsync(string containerName, string blobName, TimeSpan expiration);
+Task UploadBlobAsync(string containerName, string blobName, Stream content, string contentType);
+Task DeleteBlobAsync(string containerName, string blobName);
+Task DeleteBlobsAsync(string containerName, IEnumerable<string> blobNames); // 256 per batch for Azure
+Task<List<string>> ListBlobsAsync(string containerName, string? prefix = null);
+```
+
+Configuration is via `CloudStorageSettings`:
+- `ConnectionString`: Full Azure Storage connection string (for local dev)
+- `AccountName`: Storage account name (for Managed Identity)
+- `UseManagedIdentity`: Enable for production
+- `ChartSupplementsContainerName`: Container for FAA chart supplements
+- `AirportDiagramsContainerName`: Container for airport diagrams
 
 ### NASR Data Synchronization
 
@@ -141,10 +169,18 @@ Both applications use hierarchical configuration:
 
 Key settings sections:
 - `Database`: Connection parameters (Host, Database, Username, Password, Port)
-- `AWS`: LocalStack/S3 configuration (Region, AccessKeyId, SecretAccessKey, ServiceUrl, bucket names)
+- `CloudStorage`: Azure Blob Storage configuration (ConnectionString, AccountName, UseManagedIdentity, container names)
 - `NOAASettings`: API key for weather services
 - `Auth0Settings`: JWT authentication configuration
 - `StripeSettings`: Payment subscription configuration
+
+### Azure Functions Required Settings
+
+For local development, `local.settings.json` must include:
+- `AzureWebJobsStorage`: Azure Storage connection string (for timer trigger state)
+- `CloudStorage__ConnectionString`: Azure Blob Storage connection string
+- `CloudStorage__ChartSupplementsContainerName`: Container name for chart supplements
+- `CloudStorage__AirportDiagramsContainerName`: Container name for airport diagrams
 
 ## Git Workflow
 

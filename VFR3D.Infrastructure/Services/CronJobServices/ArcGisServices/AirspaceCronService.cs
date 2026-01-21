@@ -21,7 +21,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices
 
         public async Task UpdateAirspacesAsync(CancellationToken cancellationToken = default)
         {
-            foreach (var airspaceClass in new[] { "B", "C", "D", "E" })
+            foreach (var airspaceClass in new[] { "B", "C", "D" })
             {
                 await UpdateAirspacesByClass(airspaceClass, cancellationToken);
             }
