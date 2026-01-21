@@ -29,12 +29,6 @@ builder.Configuration
     .AddJsonFile($"api.appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
     .AddEnvironmentVariables();
 
-// Add Docker-specific configuration if running in Docker
-if (isRunningInDocker)
-{
-    builder.Configuration.AddJsonFile("appsettings.Docker.json", optional: true);
-}
-
 builder.Configuration.AddEnvironmentVariables();
 
 // Setup CORS

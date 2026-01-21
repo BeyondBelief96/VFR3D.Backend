@@ -7,6 +7,13 @@
     "AirportDiagramsContainerName": "vfr3d-airport-diagrams-centralus-test",
     "UseManagedIdentity": false
   },
+  "Database": {
+    "Host": "localhost",
+    "Database": "vfr3d_development_database",
+    "Username": "vfr3d_development_user",
+    "Password": "localdevpassword",
+    "Port": 5432
+  },
   "Logging": {
     "LogLevel": {
       "Default": "Information",
