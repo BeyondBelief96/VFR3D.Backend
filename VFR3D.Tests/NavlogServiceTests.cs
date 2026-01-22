@@ -7,7 +7,6 @@ using VFR3D.Domain.Enums;
 using VFR3D.Infrastructure.Dtos.Navlog;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Services;
-using VFR3D.Infrastructure.Services.AirportInformationServices;
 using Xunit;
 
 namespace VFR3D.Tests.Services
