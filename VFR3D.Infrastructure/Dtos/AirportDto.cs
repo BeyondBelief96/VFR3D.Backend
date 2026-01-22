@@ -14,6 +14,8 @@
         public decimal? LatDecimal { get; init; }
         public decimal? LongDecimal { get; init; }
         public decimal? Elev { get; init; }
+        public decimal? MagVarn { get; init; }
+        public string? MagHemis { get; init; }
         public string? ChartName { get; init; }
         public string? ArptStatus { get; init; }
         public string? FuelTypes { get; init; }

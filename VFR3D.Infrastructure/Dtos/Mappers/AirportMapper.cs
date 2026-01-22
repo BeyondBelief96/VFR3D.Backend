@@ -20,6 +20,8 @@ namespace VFR3D.Infrastructure.Dtos.Mappers
                 LatDecimal = airport.LatDecimal,
                 LongDecimal = airport.LongDecimal,
                 Elev = airport.Elev,
+                MagVarn = airport.MagVarn,
+                MagHemis = airport.MagHemis,
                 ChartName = airport.ChartName,
                 ArptStatus = airport.ArptStatus,
                 FuelTypes = airport.FuelTypes,

@@ -1,3 +1,5 @@
+using VFR3D.Domain.Enums;
+
 namespace VFR3D.Infrastructure.Dtos;
 
 public record RunwayDto
@@ -6,10 +8,10 @@ public record RunwayDto
     public string RunwayId { get; init; } = string.Empty;
     public int? Length { get; init; }
     public int? Width { get; init; }
-    public string? SurfaceTypeCode { get; init; }
-    public string? SurfaceTreatmentCode { get; init; }
+    public RunwaySurfaceType SurfaceType { get; init; }
+    public RunwaySurfaceTreatment SurfaceTreatment { get; init; }
     public string? PavementClassification { get; init; }
-    public string? EdgeLightIntensity { get; init; }
+    public RunwayEdgeLightIntensity EdgeLightIntensity { get; init; }
     public int? WeightBearingSingleWheel { get; init; }
     public int? WeightBearingDualWheel { get; init; }
     public int? WeightBearingDualTandem { get; init; }
@@ -22,10 +24,10 @@ public record RunwayEndDto
     public Guid Id { get; init; }
     public string RunwayEndId { get; init; } = string.Empty;
     public int? TrueAlignment { get; init; }
-    public string? ApproachType { get; init; }
+    public InstrumentApproachType ApproachType { get; init; }
     public bool RightHandTrafficPattern { get; init; }
-    public string? RunwayMarkingsType { get; init; }
-    public string? RunwayMarkingsCondition { get; init; }
+    public RunwayMarkingsType MarkingsType { get; init; }
+    public RunwayMarkingsCondition MarkingsCondition { get; init; }
     public decimal? Latitude { get; init; }
     public decimal? Longitude { get; init; }
     public decimal? Elevation { get; init; }
@@ -36,15 +38,15 @@ public record RunwayEndDto
     public decimal? DisplacedThresholdElevation { get; init; }
     public int? DisplacedThresholdLength { get; init; }
     public decimal? TouchdownZoneElevation { get; init; }
-    public string? VisualGlideSlopeIndicator { get; init; }
+    public VisualGlideSlopeIndicatorType VisualGlideSlopeIndicator { get; init; }
     public string? RunwayVisualRangeEquipment { get; init; }
     public bool RunwayVisibilityValueEquipment { get; init; }
-    public string? ApproachLightSystem { get; init; }
+    public ApproachLightSystemType ApproachLightSystem { get; init; }
     public bool HasRunwayEndLights { get; init; }
     public bool HasCenterlineLights { get; init; }
     public bool HasTouchdownZoneLights { get; init; }
     public string? ControllingObjectDescription { get; init; }
-    public string? ControllingObjectMarkedLighted { get; init; }
+    public ControllingObjectMarking ControllingObjectMarking { get; init; }
     public int? ControllingObjectClearanceSlope { get; init; }
     public int? ControllingObjectHeightAboveRunway { get; init; }
     public int? ControllingObjectDistanceFromRunway { get; init; }
