@@ -8,7 +8,9 @@
       "Bash(docker compose -f docker-compose.local.yml down)",
       "Bash(dotnet add:*)",
       "Bash(dotnet remove:*)",
-      "Bash(dotnet test:*)"
+      "Bash(dotnet test:*)",
+      "Bash(dir:*)",
+      "WebFetch(domain:www.faa.gov)"
     ],
     "deny": [],
     "ask": []

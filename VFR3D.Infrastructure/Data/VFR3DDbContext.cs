@@ -37,6 +37,10 @@ namespace VFR3D.Infrastructure.Data
         
         public virtual DbSet<AircraftPerformanceProfile> AircraftPerformanceProfiles => Set<AircraftPerformanceProfile>();
 
+        public virtual DbSet<Runway> Runways => Set<Runway>();
+
+        public virtual DbSet<RunwayEnd> RunwayEnds => Set<RunwayEnd>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

@@ -158,6 +158,7 @@ builder.Services.AddScoped<IAirsigmetService, AirsigmetService>();
 builder.Services.AddScoped<IAirportDiagramService, AirportDiagramService>();
 builder.Services.AddScoped<IChartSupplementService, ChartSupplementService>();  
 builder.Services.AddScoped<IAirportService, AirportService>();
+builder.Services.AddScoped<IRunwayService, RunwayService>();
 builder.Services.AddScoped<ICommunicationFrequencyService, CommunicationFrequencyService>();
 builder.Services.AddScoped<IAirspaceService, AirspaceService>();
 builder.Services.AddScoped<IMagneticVariationService, MagneticVariationService>();
