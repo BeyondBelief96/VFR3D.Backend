@@ -101,6 +101,39 @@ public class ObstacleController(
     }
 
     /// <summary>
+    /// Gets multiple obstacles by their OAS numbers
+    /// </summary>
+    /// <param name="oasNumbers">List of OAS numbers</param>
+    /// <returns>List of obstacles sorted by height AMSL descending</returns>
+    [HttpPost("by-oas-numbers")]
+    [ProducesResponseType(typeof(IEnumerable<ObstacleDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<IEnumerable<ObstacleDto>>> GetByOasNumbers([FromBody] List<string> oasNumbers)
+    {
+        try
+        {
+            if (oasNumbers == null || oasNumbers.Count == 0)
+            {
+                return BadRequest("At least one OAS number is required");
+            }
+
+            if (oasNumbers.Count > 1000)
+            {
+                return BadRequest("Maximum of 1000 OAS numbers allowed per request");
+            }
+
+            var obstacles = await obstacleService.GetByOasNumbers(oasNumbers);
+            return Ok(obstacles);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error getting obstacles by OAS numbers");
+            return StatusCode(500, "An error occurred while retrieving obstacles");
+        }
+    }
+
+    /// <summary>
     /// Gets obstacles within a bounding box
     /// </summary>
     /// <param name="minLat">Minimum latitude</param>

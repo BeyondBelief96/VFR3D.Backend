@@ -17,11 +17,14 @@ public class ObstacleService : IObstacleService
     private readonly ILogger<ObstacleService> _logger;
     private readonly GeometryFactory _geometryFactory;
 
-    // 10 nautical miles in meters
-    private const double CorridorWidthMeters = 10 * 1852;
-    private const double AirportVicinityMeters = 10 * 1852;
+    // 5 nautical miles in meters for route corridor
+    private const double CorridorWidthMeters = 5 * 1852;
+    // 5 nautical miles in meters for airport vicinity
+    private const double AirportVicinityMeters = 5 * 1852;
     // Altitude margin below cruising altitude for route corridor obstacles
     private const int AltitudeMarginFeet = 2000;
+    // Minimum height AGL for airport vicinity obstacles (filters out very short obstacles)
+    private const int MinAirportVicinityHeightAgl = 200;
 
     public ObstacleService(
         VFR3DDbContext context,
@@ -47,6 +50,34 @@ public class ObstacleService : IObstacleService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting obstacle by OAS number: {OasNumber}", oasNumber);
+            throw;
+        }
+    }
+
+    public async Task<IEnumerable<ObstacleDto>> GetByOasNumbers(IEnumerable<string> oasNumbers)
+    {
+        try
+        {
+            var oasNumberList = oasNumbers.Select(o => o.ToUpper()).ToList();
+
+            if (oasNumberList.Count == 0)
+            {
+                return [];
+            }
+
+            _logger.LogInformation("Getting {Count} obstacles by OAS numbers", oasNumberList.Count);
+
+            var obstacles = await _context.Obstacles
+                .AsNoTracking()
+                .Where(o => oasNumberList.Contains(o.OasNumber))
+                .OrderByDescending(o => o.HeightAmsl)
+                .ToListAsync();
+
+            return obstacles.Select(ObstacleMapper.ToDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting obstacles by OAS numbers");
             throw;
         }
     }
@@ -229,12 +260,12 @@ public class ObstacleService : IObstacleService
 
         _logger.LogInformation(
             "Searching for obstacles within {CorridorNm} NM corridor of route with {WaypointCount} waypoints, cruising altitude: {Altitude}",
-            10, waypoints.Count, cruisingAltitude);
+            5, waypoints.Count, cruisingAltitude);
 
         var query = _context.Obstacles.AsNoTracking()
             .Where(o => o.Location != null && o.Location.IsWithinDistance(route, CorridorWidthMeters));
 
-        // Include obstacles within 2000 ft below cruising altitude or any above
+        // Include obstacles within 1000 ft below cruising altitude or any above
         if (cruisingAltitude.HasValue)
         {
             var minThreatHeight = cruisingAltitude.Value - AltitudeMarginFeet;
@@ -262,10 +293,9 @@ public class ObstacleService : IObstacleService
         }
 
         _logger.LogInformation(
-            "Searching for obstacles within {RadiusNm} NM of {AirportCount} airports on route",
-            10, airportWaypoints.Count);
+            "Searching for obstacles >= {MinHeightAgl} ft AGL within {RadiusNm} NM of {AirportCount} airports on route",
+            MinAirportVicinityHeightAgl, 5, airportWaypoints.Count);
 
-        // Create points for each airport and query obstacles near them
         var allAirportOasNumbers = new List<string>();
 
         foreach (var airport in airportWaypoints)
@@ -273,7 +303,9 @@ public class ObstacleService : IObstacleService
             var airportPoint = _geometryFactory.CreatePoint(new Coordinate(airport.Longitude, airport.Latitude));
 
             var nearbyObstacles = await _context.Obstacles.AsNoTracking()
-                .Where(o => o.Location != null && o.Location.IsWithinDistance(airportPoint, AirportVicinityMeters))
+                .Where(o => o.Location != null &&
+                            o.Location.IsWithinDistance(airportPoint, AirportVicinityMeters) &&
+                            o.HeightAgl >= MinAirportVicinityHeightAgl)
                 .Select(o => o.OasNumber)
                 .ToListAsync(cancellationToken);
 

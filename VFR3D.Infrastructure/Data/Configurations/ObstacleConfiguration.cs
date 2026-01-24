@@ -35,7 +35,7 @@ public class ObstacleConfiguration : IEntityTypeConfiguration<Obstacle>
         builder.Property(e => e.JulianDate).HasMaxLength(7);
 
         builder.Property(e => e.Location)
-            .HasColumnType("geometry(Point, 4326)");
+            .HasColumnType("geography(Point, 4326)");
 
         // Indexes for efficient querying
         builder.HasIndex(e => e.OasNumber).IsUnique();

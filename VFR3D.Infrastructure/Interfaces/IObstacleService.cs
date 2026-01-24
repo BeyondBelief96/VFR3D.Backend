@@ -6,6 +6,7 @@ namespace VFR3D.Infrastructure.Interfaces;
 public interface IObstacleService
 {
     Task<ObstacleDto?> GetByOasNumber(string oasNumber);
+    Task<IEnumerable<ObstacleDto>> GetByOasNumbers(IEnumerable<string> oasNumbers);
     Task<IEnumerable<ObstacleDto>> SearchNearby(decimal latitude, decimal longitude, double radiusNm, int? minHeightAgl = null, int limit = 100);
     Task<IEnumerable<ObstacleDto>> GetByState(string stateCode, int? minHeightAgl = null, int limit = 1000);
     Task<IEnumerable<ObstacleDto>> GetByBoundingBox(decimal minLat, decimal maxLat, decimal minLon, decimal maxLon, int? minHeightAgl = null, int limit = 1000);

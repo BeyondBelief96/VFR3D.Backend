@@ -92,6 +92,6 @@ public class Obstacle
     [Column("julian_date", TypeName = "varchar(7)")]
     public string? JulianDate { get; set; }
 
-    [Column("location", TypeName = "geometry(Point, 4326)")]
+    [Column("location", TypeName = "geography(Point, 4326)")]
     public Point? Location { get; set; }
 }
