@@ -41,6 +41,8 @@ namespace VFR3D.Infrastructure.Data
 
         public virtual DbSet<RunwayEnd> RunwayEnds => Set<RunwayEnd>();
 
+        public virtual DbSet<Obstacle> Obstacles => Set<Obstacle>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

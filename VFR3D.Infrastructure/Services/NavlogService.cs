@@ -13,6 +13,7 @@ public class NavlogService : INavlogService
     private readonly IAircraftPerformanceProfileRepository _aircraftPerformanceProfileRepository;
     private readonly IWindsAloftService _windsAloftService;
     private readonly IAirspaceService _airspaceService;
+    private readonly IObstacleService _obstacleService;
     private readonly IMagneticVariationService _magneticVariationService;
     private readonly ILogger<NavlogService> _logger;
 
@@ -20,12 +21,14 @@ public class NavlogService : INavlogService
         IAircraftPerformanceProfileRepository aircraftPerformanceProfileRepository,
         IWindsAloftService windsAloftService,
         IAirspaceService airspaceService,
+        IObstacleService obstacleService,
         IMagneticVariationService magneticVariationService,
         ILogger<NavlogService> logger)
     {
         _aircraftPerformanceProfileRepository = aircraftPerformanceProfileRepository;
         _windsAloftService = windsAloftService;
         _airspaceService = airspaceService;
+        _obstacleService = obstacleService;
         _magneticVariationService = magneticVariationService;
         _logger = logger;
     }
@@ -115,6 +118,19 @@ public class NavlogService : INavlogService
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to determine intersecting airspaces for route");
+            }
+
+            try
+            {
+                var obstacleOasNumbers = await _obstacleService.GetObstacleOasNumbersForRouteAsync(
+                    waypointsAdjustedForCruisingAltitude,
+                    request.PlannedCruisingAltitude);
+
+                response.ObstacleOasNumbers = obstacleOasNumbers;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to determine obstacles along route");
             }
 
             return response;

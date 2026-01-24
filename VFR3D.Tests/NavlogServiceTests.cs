@@ -17,6 +17,7 @@ namespace VFR3D.Tests.Services
             private readonly IWindsAloftService _windsAloftService;
             private readonly IMagneticVariationService _magneticVariationService;
             private readonly IAirspaceService _airspaceService;
+            private readonly IObstacleService _obstacleService;
             private readonly ILogger<NavlogService> _logger;
             private readonly NavlogService _navlogService;
             private readonly Faker _faker;
@@ -27,6 +28,7 @@ namespace VFR3D.Tests.Services
                 _aircraftPerformanceProfileRepository = Substitute.For<IAircraftPerformanceProfileRepository>();
                 _windsAloftService = Substitute.For<IWindsAloftService>();
                 _airspaceService = Substitute.For<IAirspaceService>();
+                _obstacleService = Substitute.For<IObstacleService>();
                 _magneticVariationService = Substitute.For<IMagneticVariationService>();
                 _logger = Substitute.For<ILogger<NavlogService>>();
 
@@ -35,6 +37,7 @@ namespace VFR3D.Tests.Services
                     _aircraftPerformanceProfileRepository,
                     _windsAloftService,
                     _airspaceService,
+                    _obstacleService,
                     _magneticVariationService,
                     _logger
                 );

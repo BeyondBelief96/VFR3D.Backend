@@ -40,6 +40,30 @@ namespace VFR3D.API.Controllers
         }
 
         /// <summary>
+        /// Searches airports by ICAO code, FAA ID, name, or city
+        /// </summary>
+        /// <param name="query">Search query (minimum 2 characters)</param>
+        /// <returns>List of airports matching the search criteria, prioritizing ICAO/ID matches</returns>
+        /// <response code="200">Returns the list of matching airports (max 50)</response>
+        /// <response code="500">If there was an internal server error</response>
+        [HttpGet("search")]
+        [ProducesResponseType(typeof(IEnumerable<AirportDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<ActionResult<IEnumerable<AirportDto>>> SearchAirports([FromQuery] string query)
+        {
+            try
+            {
+                var airports = await airportService.SearchAirports(query);
+                return Ok(airports);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error searching airports with query: {Query}", query);
+                return StatusCode(500, "An error occurred while searching airports");
+            }
+        }
+
+        /// <summary>
         /// Gets an airport by its ICAO code or identifier
         /// </summary>
         /// <param name="icaoCodeOrIdent">ICAO code or airport identifier</param>

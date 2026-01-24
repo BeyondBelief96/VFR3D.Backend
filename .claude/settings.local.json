@@ -10,7 +10,11 @@
       "Bash(dotnet remove:*)",
       "Bash(dotnet test:*)",
       "Bash(dir:*)",
-      "WebFetch(domain:www.faa.gov)"
+      "WebFetch(domain:www.faa.gov)",
+      "Bash(dotnet ef database update:*)",
+      "Bash(dotnet ef migrations:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker ps:*)"
     ],
     "deny": [],
     "ask": []

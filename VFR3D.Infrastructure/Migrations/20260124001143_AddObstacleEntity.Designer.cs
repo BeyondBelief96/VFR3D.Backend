@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -14,9 +15,11 @@ using VFR3D.Infrastructure.Data;
 namespace VFR3D.Infrastructure.Migrations
 {
     [DbContext(typeof(VFR3DDbContext))]
-    partial class VFR3DDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260124001143_AddObstacleEntity")]
+    partial class AddObstacleEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1067,10 +1070,6 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("name");
 
-                    b.Property<List<string>>("ObstacleOasNumbers")
-                        .HasColumnType("jsonb")
-                        .HasColumnName("obstacle_oas_numbers");
-
                     b.Property<int>("PlannedCruisingAltitude")
                         .HasColumnType("integer")
                         .HasColumnName("planned_cruising_altitude");
@@ -2002,21 +2001,6 @@ namespace VFR3D.Infrastructure.Migrations
                     b.ToTable("flight_airspaces", (string)null);
                 });
 
-            modelBuilder.Entity("flight_obstacles", b =>
-                {
-                    b.Property<string>("flight_id")
-                        .HasColumnType("text");
-
-                    b.Property<string>("obstacle_oas_number")
-                        .HasColumnType("varchar(10)");
-
-                    b.HasKey("flight_id", "obstacle_oas_number");
-
-                    b.HasIndex("obstacle_oas_number");
-
-                    b.ToTable("flight_obstacles", (string)null);
-                });
-
             modelBuilder.Entity("flight_special_use_airspaces", b =>
                 {
                     b.Property<string>("flight_id")
@@ -2073,21 +2057,6 @@ namespace VFR3D.Infrastructure.Migrations
                     b.HasOne("VFR3D.Domain.Entities.Flight", null)
                         .WithMany()
                         .HasForeignKey("flight_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("flight_obstacles", b =>
-                {
-                    b.HasOne("VFR3D.Domain.Entities.Flight", null)
-                        .WithMany()
-                        .HasForeignKey("flight_id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("VFR3D.Domain.Entities.Obstacle", null)
-                        .WithMany()
-                        .HasForeignKey("obstacle_oas_number")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

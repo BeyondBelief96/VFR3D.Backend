@@ -10,4 +10,5 @@ public interface IAirportService
     Task<IEnumerable<AirportDto>> GetAirportsByStates(string[] stateCodes);
     Task<IEnumerable<AirportDto>> GetAirportsByIcaoCodesOrIdents(string[] codesOrIdents);
     Task<IEnumerable<AirportDto>> GetAirportsByPrefix(string prefix);
+    Task<IEnumerable<AirportDto>> SearchAirports(string query);
 }

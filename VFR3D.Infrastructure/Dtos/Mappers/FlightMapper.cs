@@ -24,7 +24,8 @@ public static class FlightMapper
             StateCodesAlongRoute = flight.StateCodesAlongRoute,
             AirspaceGlobalIds = flight.AirspaceGlobalIds ?? new List<string>(),
             SpecialUseAirspaceGlobalIds = flight.SpecialUseAirspaceGlobalIds ?? new List<string>(),
-            AircraftPerformanceProfile = flight.AircraftPerformanceProfile != null 
+            ObstacleOasNumbers = flight.ObstacleOasNumbers ?? new List<string>(),
+            AircraftPerformanceProfile = flight.AircraftPerformanceProfile != null
                 ? AircraftPerformanceProfileMapper.MapToDto(flight.AircraftPerformanceProfile)
                 : null,
             RelatedFlightId = flight.RelatedFlightId
@@ -50,6 +51,7 @@ public static class FlightMapper
             StateCodesAlongRoute = dto.StateCodesAlongRoute,
             AirspaceGlobalIds = dto.AirspaceGlobalIds ?? new List<string>(),
             SpecialUseAirspaceGlobalIds = dto.SpecialUseAirspaceGlobalIds ?? new List<string>(),
+            ObstacleOasNumbers = dto.ObstacleOasNumbers ?? new List<string>(),
             RelatedFlightId = dto.RelatedFlightId,
         };
     }

@@ -127,6 +127,35 @@ namespace VFR3D.Infrastructure.Data.Configurations
                         join.HasIndex("special_use_airspace_global_id");
                     });
 
+            // Many-to-many: flights <-> obstacles via oas_number
+            builder
+                .HasMany(f => f.Obstacles)
+                .WithMany()
+                .UsingEntity<Dictionary<string, object>>(
+                    "flight_obstacles",
+                    right => right.HasOne<Obstacle>()
+                                 .WithMany()
+                                 .HasForeignKey("obstacle_oas_number")
+                                 .HasPrincipalKey(nameof(Obstacle.OasNumber))
+                                 .OnDelete(DeleteBehavior.Cascade),
+                    left => left.HasOne<Flight>()
+                                .WithMany()
+                                .HasForeignKey("flight_id")
+                                .HasPrincipalKey(nameof(Flight.Id))
+                                .OnDelete(DeleteBehavior.Cascade),
+                    join =>
+                    {
+                        join.ToTable("flight_obstacles");
+                        join.Property<string>("flight_id");
+                        join.Property<string>("obstacle_oas_number");
+                        join.HasKey("flight_id", "obstacle_oas_number");
+                        join.HasIndex("obstacle_oas_number");
+                    });
+
+            builder.Property(e => e.ObstacleOasNumbers)
+                .HasColumnType("jsonb")
+                .HasColumnName("obstacle_oas_numbers");
+
             // Indexes
             builder.HasIndex(e => e.Auth0UserId);
             builder.HasIndex(e => e.AircraftPerformanceId);

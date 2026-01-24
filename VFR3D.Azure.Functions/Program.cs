@@ -71,6 +71,7 @@ builder.Services.AddScoped<AirportCronService>();
 builder.Services.AddScoped<CommunicationFrequencyCronService>();
 builder.Services.AddScoped<RunwayCronService>();
 builder.Services.AddScoped<RunwayEndCronService>();
+builder.Services.AddScoped<IObstacleCronService, ObstacleCronService>();
 builder.Services.AddCloudStorageServices(builder.Configuration);
 builder.Services.AddHttpClient();
 

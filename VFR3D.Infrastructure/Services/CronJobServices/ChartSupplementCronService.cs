@@ -143,28 +143,29 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
                     .Where(cs => cs.AirportCode != null && batchCodes.Contains(cs.AirportCode))
                     .ToListAsync(cancellationToken);
 
-                // Group existing supplements by AirportCode and FileName
+                // Group existing supplements by AirportCode only
                 var existingLookup = existingSupplements
-                    .ToLookup(x => (x.AirportCode, x.FileName));
+                    .ToLookup(x => x.AirportCode);
 
                 foreach (var supplement in batch)
                 {
-                    // Look for an exact match on both AirportCode and FileName
-                    var existingMatch = existingLookup[(supplement.AirportCode, supplement.FileName)].FirstOrDefault();
+                    // Look for an existing record with the same AirportCode
+                    var existingMatch = existingLookup[supplement.AirportCode].FirstOrDefault();
 
                     if (existingMatch != null)
                     {
-                        // Update existing record if the content has changed
+                        // Update existing record including FileName for new editions
                         await _dbContext.ChartSupplements
                             .Where(cs => cs.Id == existingMatch.Id)
                             .ExecuteUpdateAsync(s => s
                                 .SetProperty(b => b.AirportName, supplement.AirportName)
-                                .SetProperty(b => b.AirportCity, supplement.AirportCity),
+                                .SetProperty(b => b.AirportCity, supplement.AirportCity)
+                                .SetProperty(b => b.FileName, supplement.FileName),
                                 cancellationToken);
                     }
                     else
                     {
-                        // This is a new combination of AirportCode and FileName
+                        // This is a new airport
                         await _dbContext.ChartSupplements.AddAsync(supplement, cancellationToken);
                     }
                 }
@@ -189,28 +190,29 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
                     .Where(cs => cs.NavigationalAidName != null && batchNames.Contains(cs.NavigationalAidName))
                     .ToListAsync(cancellationToken);
 
-                // Group existing supplements by NavigationalAidName and FileName
+                // Group existing supplements by NavigationalAidName only
                 var existingLookup = existingSupplements
-                    .ToLookup(x => (x.NavigationalAidName, x.FileName));
+                    .ToLookup(x => x.NavigationalAidName);
 
                 foreach (var supplement in batch)
                 {
-                    // Look for an exact match on both NavigationalAidName and FileName
-                    var existingMatch = existingLookup[(supplement.NavigationalAidName, supplement.FileName)].FirstOrDefault();
+                    // Look for an existing record with the same NavigationalAidName
+                    var existingMatch = existingLookup[supplement.NavigationalAidName].FirstOrDefault();
 
                     if (existingMatch != null)
                     {
-                        // Update existing record if the content has changed
+                        // Update existing record including FileName for new editions
                         await _dbContext.ChartSupplements
                             .Where(cs => cs.Id == existingMatch.Id)
                             .ExecuteUpdateAsync(s => s
                                 .SetProperty(b => b.AirportName, supplement.AirportName)
-                                .SetProperty(b => b.AirportCity, supplement.AirportCity),
+                                .SetProperty(b => b.AirportCity, supplement.AirportCity)
+                                .SetProperty(b => b.FileName, supplement.FileName),
                                 cancellationToken);
                     }
                     else
                     {
-                        // This is a new combination of NavigationalAidName and FileName
+                        // This is a new navaid
                         await _dbContext.ChartSupplements.AddAsync(supplement, cancellationToken);
                     }
                 }

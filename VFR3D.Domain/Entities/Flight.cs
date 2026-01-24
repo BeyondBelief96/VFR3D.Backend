@@ -66,6 +66,9 @@ namespace VFR3D.Domain.Entities
         [Column("related_flight_id")]
         public string? RelatedFlightId { get; set; }
 
+        [Column("obstacle_oas_numbers", TypeName = "jsonb")]
+        public List<string>? ObstacleOasNumbers { get; set; } = [];
+
         // Navigation Property
         public virtual AircraftPerformanceProfile? AircraftPerformanceProfile { get; set; }
 
@@ -74,5 +77,8 @@ namespace VFR3D.Domain.Entities
 
         // Many-to-many: Special Use Airspaces intersected by this flight
         public virtual ICollection<SpecialUseAirspace> SpecialUseAirspaces { get; set; } = new HashSet<SpecialUseAirspace>();
+
+        // Many-to-many: Obstacles along the flight route
+        public virtual ICollection<Obstacle> Obstacles { get; set; } = new HashSet<Obstacle>();
     }
 }

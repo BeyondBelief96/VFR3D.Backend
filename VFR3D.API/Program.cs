@@ -161,6 +161,7 @@ builder.Services.AddScoped<IAirportService, AirportService>();
 builder.Services.AddScoped<IRunwayService, RunwayService>();
 builder.Services.AddScoped<ICommunicationFrequencyService, CommunicationFrequencyService>();
 builder.Services.AddScoped<IAirspaceService, AirspaceService>();
+builder.Services.AddScoped<IObstacleService, ObstacleService>();
 builder.Services.AddScoped<IMagneticVariationService, MagneticVariationService>();
 builder.Services.AddScoped<IWindsAloftService, WindsAloftService>();
 builder.Services.AddScoped<INavlogService, NavlogService>();
