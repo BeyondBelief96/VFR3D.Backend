@@ -19,6 +19,8 @@ namespace VFR3D.Infrastructure.Data
 
         public virtual DbSet<Airsigmet> Airsigmets => Set<Airsigmet>();
 
+        public virtual DbSet<GAirmet> GAirmets => Set<GAirmet>();
+
         public virtual DbSet<ChartSupplement> ChartSupplements => Set<ChartSupplement>();
 
         public virtual DbSet<AirportDiagram> AirportDiagrams => Set<AirportDiagram>();

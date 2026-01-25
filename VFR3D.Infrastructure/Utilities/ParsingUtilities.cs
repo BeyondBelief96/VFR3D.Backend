@@ -16,5 +16,8 @@
 
         public static int ParseInt(string? value)
             => int.TryParse(value, out var result) ? result : 0;
+
+        public static double ParseDouble(string? value)
+            => double.TryParse(value, out var result) ? result : 0d;
     }
 }

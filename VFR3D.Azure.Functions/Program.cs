@@ -64,6 +64,7 @@ builder.Services.AddScoped<IAirportDiagramCronService, AirportDiagramCronService
 builder.Services.AddScoped<IAviationWeatherService<Metar>, MetarCronService>();
 builder.Services.AddScoped<IAviationWeatherService<Taf>, TafCronService>();
 builder.Services.AddScoped<IAviationWeatherService<Airsigmet>, AirsigmetCronService>();
+builder.Services.AddScoped<IAviationWeatherService<GAirmet>, GAirmetCronService>();
 builder.Services.AddScoped<IAviationWeatherService<Pirep>, PirepCronService>();
 builder.Services.AddScoped<IAirspaceCronService<Airspace>, AirspaceCronService>();
 builder.Services.AddScoped<IAirspaceCronService<SpecialUseAirspace>, SpecialUseAirspaceCronService>();
