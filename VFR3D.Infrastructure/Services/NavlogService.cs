@@ -179,8 +179,10 @@ public class NavlogService : INavlogService
         {
             var isTerminal = index == 0 || index == waypoints.Count - 1;
             var isRefuelStop = (waypoint.IsRefuelingStop ?? false);
+            var isBottomOfDescent = waypoint.Id?.StartsWith("BOD-", StringComparison.OrdinalIgnoreCase) ?? false;
 
-            if (isTerminal || isRefuelStop)
+            // Preserve altitude for terminal points, refuel stops, and BOD (which is at TPA)
+            if (isTerminal || isRefuelStop || isBottomOfDescent)
             {
                 return waypoint;
             }
@@ -221,6 +223,7 @@ public class NavlogService : INavlogService
         var result = new List<WaypointDto>();
         int tocCounter = 1;
         int todCounter = 1;
+        int bodCounter = 1;
 
         for (var s = 0; s < segmentAnchors.Count - 1; s++)
         {
@@ -272,13 +275,22 @@ public class NavlogService : INavlogService
             if (segEndIndex - segStartIndex >= 1)
             {
                 var from = waypoints[Math.Max(segEndIndex - 1, segStartIndex)];
-                var descentAltitudeDifference = plannedCruisingAltitude - segEnd.Altitude;
+
+                // Calculate traffic pattern altitude (1000 ft above airport elevation, rounded to nearest 100)
+                var trafficPatternAltitude = Math.Round((segEnd.Altitude + 1000) / 100.0) * 100;
+
+                // Calculate descent to reach TPA (not airport elevation)
+                var descentAltitudeDifference = plannedCruisingAltitude - trafficPatternAltitude;
                 var descentTime = descentAltitudeDifference / (performance.DescentFpm * 60.0);
                 var descentDistance = performance.DescentTrueAirspeed * descentTime;
 
+                // Add 3nm to account for reaching TPA 3nm before the airport
+                const double trafficPatternEntryDistanceNm = 3.0;
+                var totalDistanceFromAirport = descentDistance + trafficPatternEntryDistanceNm;
+
                 var topOfDescentPoint = FindPointAtDistance(
                     segEnd,
-                    -descentDistance,
+                    -totalDistanceFromAirport,
                     CalculateTrueCourse(from.Latitude, from.Longitude, segEnd.Latitude, segEnd.Longitude));
 
                 var topOfDescentWaypoint = new WaypointDto
@@ -292,6 +304,24 @@ public class NavlogService : INavlogService
                 };
 
                 result.Add(topOfDescentWaypoint);
+
+                // Add bottom of descent point at TPA, 3nm from the airport
+                var bottomOfDescentPoint = FindPointAtDistance(
+                    segEnd,
+                    -trafficPatternEntryDistanceNm,
+                    CalculateTrueCourse(from.Latitude, from.Longitude, segEnd.Latitude, segEnd.Longitude));
+
+                var bottomOfDescentWaypoint = new WaypointDto
+                {
+                    Id = $"BOD-{bodCounter++}",
+                    Name = "BOD",
+                    Latitude = bottomOfDescentPoint.Latitude,
+                    Longitude = bottomOfDescentPoint.Longitude,
+                    Altitude = trafficPatternAltitude,
+                    WaypointType = WaypointType.CalculatedPoint
+                };
+
+                result.Add(bottomOfDescentWaypoint);
             }
 
             result.Add(segEnd);

@@ -145,13 +145,15 @@ namespace VFR3D.Tests.Services
 
                 // Assert
                 result.Should().NotBeNull();
-                result.Legs.Should().HaveCount(3); // Start -> TOC -> End with TOD close to End
+                result.Legs.Should().HaveCount(4); // Start -> TOC -> TOD -> BOD -> End
                 result.Legs[0].LegStartPoint.Name.Should().Be("KBNA");
                 result.Legs[0].LegEndPoint.Name.Should().Be("TOC");
                 result.Legs[1].LegStartPoint.Name.Should().Be("TOC");
                 result.Legs[1].LegEndPoint.Name.Should().Be("TOD");
                 result.Legs[2].LegStartPoint.Name.Should().Be("TOD");
-                result.Legs[2].LegEndPoint.Name.Should().Be("KATL");
+                result.Legs[2].LegEndPoint.Name.Should().Be("BOD");
+                result.Legs[3].LegStartPoint.Name.Should().Be("BOD");
+                result.Legs[3].LegEndPoint.Name.Should().Be("KATL");
             }
 
             [Fact]
@@ -187,7 +189,7 @@ namespace VFR3D.Tests.Services
                 result.TotalRouteDistance.Should().BeGreaterThan(0);
                 result.TotalRouteTimeHours.Should().BeGreaterThan(0);
                 result.TotalFuelUsed.Should().BeGreaterThan(3.0); // At least STT fuel
-                result.Legs.Should().HaveCount(3);
+                result.Legs.Should().HaveCount(4); // Start -> TOC -> TOD -> BOD -> End
 
                 // Check that the last leg has zero remaining distance
                 result.Legs.Last().DistanceRemaining.Should().BeApproximately(0, 0.01);
@@ -335,8 +337,8 @@ namespace VFR3D.Tests.Services
 
                 // Assert
                 result.Should().NotBeNull();
-                // TOC + (n-2) waypoints + TOD + Final = n+1 legs where n is the original waypoint count
-                result.Legs.Should().HaveCount(5);
+                // Start -> TOC -> intermediate waypoints -> TOD -> BOD -> End
+                result.Legs.Should().HaveCount(6);
 
                 // Check that all legs have correct endpoints
                 result.Legs[0].LegStartPoint.Name.Should().Be("KBNA");
@@ -348,7 +350,9 @@ namespace VFR3D.Tests.Services
                 result.Legs[3].LegStartPoint.Name.Should().Be("KLIT");
                 result.Legs[3].LegEndPoint.Name.Should().Be("TOD");
                 result.Legs[4].LegStartPoint.Name.Should().Be("TOD");
-                result.Legs[4].LegEndPoint.Name.Should().Be("KDFW");
+                result.Legs[4].LegEndPoint.Name.Should().Be("BOD");
+                result.Legs[5].LegStartPoint.Name.Should().Be("BOD");
+                result.Legs[5].LegEndPoint.Name.Should().Be("KDFW");
             }
 
             [Fact]
@@ -453,7 +457,7 @@ namespace VFR3D.Tests.Services
 
                 // Assert
                 result.Should().NotBeNull();
-                result.Legs.Should().HaveCount(3);
+                result.Legs.Should().HaveCount(4); // Start -> TOC -> TOD -> BOD -> End
 
                 // Check climb and descent calculations with high elevation airports
                 result.Legs[0].LegStartPoint.Name.Should().Be("KEGE");
@@ -463,8 +467,14 @@ namespace VFR3D.Tests.Services
 
                 result.Legs[2].LegStartPoint.Name.Should().Be("TOD");
                 result.Legs[2].LegStartPoint.Altitude.Should().Be(13500);
-                result.Legs[2].LegEndPoint.Name.Should().Be("KASE");
-                result.Legs[2].LegEndPoint.Altitude.Should().Be(7820);
+                result.Legs[2].LegEndPoint.Name.Should().Be("BOD");
+                // BOD altitude should be TPA: round((7820 + 1000) / 100) * 100 = 8800
+                result.Legs[2].LegEndPoint.Altitude.Should().Be(8800);
+
+                result.Legs[3].LegStartPoint.Name.Should().Be("BOD");
+                result.Legs[3].LegStartPoint.Altitude.Should().Be(8800);
+                result.Legs[3].LegEndPoint.Name.Should().Be("KASE");
+                result.Legs[3].LegEndPoint.Altitude.Should().Be(7820);
             }
 
         [Theory]
@@ -547,13 +557,15 @@ namespace VFR3D.Tests.Services
 
             // Assert
             result.Should().NotBeNull();
-            // Start, TOC-1, TOD-1, Refuel, TOC-2, TOD-2, End => 7 waypoints => 6 legs
-            result.Legs.Should().HaveCount(6);
+            // Start, TOC-1, TOD-1, BOD-1, Refuel, TOC-2, TOD-2, BOD-2, End => 9 waypoints => 8 legs
+            result.Legs.Should().HaveCount(8);
 
             result.Legs.Select(l => l.LegEndPoint.Id).Where(id => id.StartsWith("TOC-")).Distinct().Count().Should().Be(2);
             result.Legs.Select(l => l.LegEndPoint.Id).Where(id => id.StartsWith("TOD-")).Distinct().Count().Should().Be(2);
+            result.Legs.Select(l => l.LegEndPoint.Id).Where(id => id.StartsWith("BOD-")).Distinct().Count().Should().Be(2);
             result.Legs.Any(l => l.LegEndPoint.Name == "TOC").Should().BeTrue();
             result.Legs.Any(l => l.LegEndPoint.Name == "TOD").Should().BeTrue();
+            result.Legs.Any(l => l.LegEndPoint.Name == "BOD").Should().BeTrue();
         }
 
         [Fact]
