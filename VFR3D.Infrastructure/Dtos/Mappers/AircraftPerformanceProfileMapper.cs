@@ -11,6 +11,7 @@ public static class AircraftPerformanceProfileMapper
         {
             Id = entity.Id,
             UserId = entity.UserId,
+            AircraftId = entity.AircraftId,
             ProfileName = entity.ProfileName,
             ClimbTrueAirspeed = entity.ClimbTrueAirspeed,
             CruiseTrueAirspeed = entity.CruiseTrueAirspeed,
@@ -31,6 +32,7 @@ public static class AircraftPerformanceProfileMapper
         {
             Id = dto.Id,
             UserId = dto.UserId,
+            AircraftId = dto.AircraftId,
             ProfileName = dto.ProfileName,
             ClimbTrueAirspeed = dto.ClimbTrueAirspeed,
             CruiseTrueAirspeed = dto.CruiseTrueAirspeed,
@@ -51,6 +53,7 @@ public static class AircraftPerformanceProfileMapper
         {
             Id = Guid.NewGuid().ToString(),
             UserId = userId,
+            AircraftId = request.AircraftId,
             ProfileName = request.ProfileName,
             ClimbTrueAirspeed = request.ClimbTrueAirspeed,
             CruiseTrueAirspeed = request.CruiseTrueAirspeed,
@@ -67,6 +70,7 @@ public static class AircraftPerformanceProfileMapper
 
     public static void UpdateFromRequest(AircraftPerformanceProfile entity, UpdateAircraftPerformanceProfileRequestDto request)
     {
+        entity.AircraftId = request.AircraftId;
         entity.ProfileName = request.ProfileName;
         entity.ClimbTrueAirspeed = request.ClimbTrueAirspeed;
         entity.CruiseTrueAirspeed = request.CruiseTrueAirspeed;

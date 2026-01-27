@@ -167,6 +167,7 @@ builder.Services.AddScoped<IMagneticVariationService, MagneticVariationService>(
 builder.Services.AddScoped<IWindsAloftService, WindsAloftService>();
 builder.Services.AddScoped<INavlogService, NavlogService>();
 builder.Services.AddScoped<IAircraftPerformanceProfileService, AircraftPerformanceProfileService>();
+builder.Services.AddScoped<IAircraftService, AircraftService>();
 builder.Services.AddScoped<IPerformanceCalculatorService, PerformanceCalculatorService>();
 builder.Services.AddScoped<IFlightService, FlightService>();
 builder.Services.AddScoped<IStripeService, StripeService>();

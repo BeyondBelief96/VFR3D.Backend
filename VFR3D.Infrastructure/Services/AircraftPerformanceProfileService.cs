@@ -40,6 +40,7 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
             {
                 Id = Guid.NewGuid().ToString(),
                 UserId = request.UserId,
+                AircraftId = request.AircraftId,
                 ProfileName = request.ProfileName,
                 ClimbTrueAirspeed = request.ClimbTrueAirspeed,
                 CruiseTrueAirspeed = request.CruiseTrueAirspeed,
@@ -78,6 +79,7 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
             }
 
             // Update profile properties
+            profile.AircraftId = request.AircraftId;
             profile.ProfileName = request.ProfileName;
             profile.ClimbTrueAirspeed = request.ClimbTrueAirspeed;
             profile.CruiseTrueAirspeed = request.CruiseTrueAirspeed;
@@ -175,6 +177,7 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
         {
             Id = profile.Id,
             UserId = profile.UserId,
+            AircraftId = profile.AircraftId,
             ProfileName = profile.ProfileName,
             ClimbTrueAirspeed = profile.ClimbTrueAirspeed,
             CruiseTrueAirspeed = profile.CruiseTrueAirspeed,

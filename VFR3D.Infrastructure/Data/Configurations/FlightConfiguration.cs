@@ -156,8 +156,12 @@ namespace VFR3D.Infrastructure.Data.Configurations
                 .HasColumnType("jsonb")
                 .HasColumnName("obstacle_oas_numbers");
 
+            builder.Property(e => e.AircraftId)
+                .HasColumnName("aircraft_id");
+
             // Indexes
             builder.HasIndex(e => e.Auth0UserId);
+            builder.HasIndex(e => e.AircraftId);
             builder.HasIndex(e => e.AircraftPerformanceId);
             builder.HasIndex(e => new { e.Auth0UserId, e.Name });
         }

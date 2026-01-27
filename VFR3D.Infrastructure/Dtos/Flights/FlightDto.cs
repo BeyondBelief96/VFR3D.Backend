@@ -12,6 +12,7 @@ public record FlightDto
     public int PlannedCruisingAltitude { get; set; }
     public List<WaypointDto> Waypoints { get; set; } = [];
     public string AircraftPerformanceId { get; set; } = string.Empty;
+    public string? AircraftId { get; set; }
     public double TotalRouteDistance { get; set; }
     public double TotalRouteTimeHours { get; set; }
     public double TotalFuelUsed { get; set; }

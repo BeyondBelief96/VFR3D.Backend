@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -14,9 +15,11 @@ using VFR3D.Infrastructure.Data;
 namespace VFR3D.Infrastructure.Migrations
 {
     [DbContext(typeof(VFR3DDbContext))]
-    partial class VFR3DDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260125154153_AddAircraftEntity")]
+    partial class AddAircraftEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2224,7 +2227,7 @@ namespace VFR3D.Infrastructure.Migrations
                     b.HasOne("VFR3D.Domain.Entities.Aircraft", "Aircraft")
                         .WithMany("PerformanceProfiles")
                         .HasForeignKey("AircraftId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Aircraft");
                 });
