@@ -47,6 +47,8 @@ namespace VFR3D.Infrastructure.Data
 
         public virtual DbSet<Obstacle> Obstacles => Set<Obstacle>();
 
+        public virtual DbSet<WeightBalanceProfile> WeightBalanceProfiles => Set<WeightBalanceProfile>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

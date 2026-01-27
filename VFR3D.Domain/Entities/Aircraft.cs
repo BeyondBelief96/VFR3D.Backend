@@ -77,4 +77,5 @@ public class Aircraft
     // Navigation Properties
     public virtual ICollection<AircraftPerformanceProfile> PerformanceProfiles { get; set; } = new List<AircraftPerformanceProfile>();
     public virtual ICollection<Flight> Flights { get; set; } = new List<Flight>();
+    public virtual ICollection<WeightBalanceProfile> WeightBalanceProfiles { get; set; } = new List<WeightBalanceProfile>();
 }
