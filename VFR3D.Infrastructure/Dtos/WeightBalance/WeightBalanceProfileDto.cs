@@ -4,7 +4,7 @@ namespace VFR3D.Infrastructure.Dtos.WeightBalance;
 
 public record WeightBalanceProfileDto
 {
-    public string Id { get; init; } = string.Empty;
+    public Guid Id { get; init; }
     public string UserId { get; init; } = string.Empty;
     public string? AircraftId { get; init; }
     public string ProfileName { get; init; } = string.Empty;
@@ -17,6 +17,7 @@ public record WeightBalanceProfileDto
     public double? MaxZeroFuelWeight { get; init; }
     public WeightUnits WeightUnits { get; init; }
     public ArmUnits ArmUnits { get; init; }
+    public LoadingGraphFormat LoadingGraphFormat { get; init; }
     public List<LoadingStationDto> LoadingStations { get; init; } = [];
     public List<CgEnvelopeDto> CgEnvelopes { get; init; } = [];
 }

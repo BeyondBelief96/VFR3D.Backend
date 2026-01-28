@@ -23,6 +23,7 @@ public static class WeightBalanceProfileMapper
             MaxZeroFuelWeight = entity.MaxZeroFuelWeight,
             WeightUnits = entity.WeightUnits,
             ArmUnits = entity.ArmUnits,
+            LoadingGraphFormat = entity.LoadingGraphFormat,
             LoadingStations = entity.LoadingStations.Select(MapStationToDto).ToList(),
             CgEnvelopes = entity.CgEnvelopes.Select(MapEnvelopeToDto).ToList()
         };
@@ -32,7 +33,6 @@ public static class WeightBalanceProfileMapper
     {
         return new WeightBalanceProfile
         {
-            Id = Guid.NewGuid().ToString(),
             UserId = userId,
             AircraftId = request.AircraftId,
             ProfileName = request.ProfileName,
@@ -45,6 +45,7 @@ public static class WeightBalanceProfileMapper
             MaxZeroFuelWeight = request.MaxZeroFuelWeight,
             WeightUnits = request.WeightUnits,
             ArmUnits = request.ArmUnits,
+            LoadingGraphFormat = request.LoadingGraphFormat,
             LoadingStations = request.LoadingStations.Select(MapStationFromDto).ToList(),
             CgEnvelopes = request.CgEnvelopes.Select(MapEnvelopeFromDto).ToList()
         };
@@ -63,6 +64,7 @@ public static class WeightBalanceProfileMapper
         entity.MaxZeroFuelWeight = request.MaxZeroFuelWeight;
         entity.WeightUnits = request.WeightUnits;
         entity.ArmUnits = request.ArmUnits;
+        entity.LoadingGraphFormat = request.LoadingGraphFormat;
         entity.LoadingStations = request.LoadingStations.Select(MapStationFromDto).ToList();
         entity.CgEnvelopes = request.CgEnvelopes.Select(MapEnvelopeFromDto).ToList();
     }
@@ -73,11 +75,14 @@ public static class WeightBalanceProfileMapper
         {
             Id = station.Id,
             Name = station.Name,
-            Arm = station.Arm,
             MaxWeight = station.MaxWeight,
-            IsFuelStation = station.IsFuelStation,
+            Point1 = MapLoadingGraphPointToDto(station.Point1),
+            Point2 = MapLoadingGraphPointToDto(station.Point2),
+            StationType = station.StationType,
             FuelCapacityGallons = station.FuelCapacityGallons,
-            FuelWeightPerGallon = station.FuelWeightPerGallon
+            FuelWeightPerGallon = station.FuelWeightPerGallon,
+            OilCapacityQuarts = station.OilCapacityQuarts,
+            OilWeightPerQuart = station.OilWeightPerQuart
         };
     }
 
@@ -85,13 +90,34 @@ public static class WeightBalanceProfileMapper
     {
         return new LoadingStation
         {
-            Id = dto.Id,
+            Id = string.IsNullOrWhiteSpace(dto.Id) ? Guid.NewGuid().ToString() : dto.Id,
             Name = dto.Name,
-            Arm = dto.Arm,
             MaxWeight = dto.MaxWeight,
-            IsFuelStation = dto.IsFuelStation,
+            Point1 = MapLoadingGraphPointFromDto(dto.Point1),
+            Point2 = MapLoadingGraphPointFromDto(dto.Point2),
+            StationType = dto.StationType,
             FuelCapacityGallons = dto.FuelCapacityGallons,
-            FuelWeightPerGallon = dto.FuelWeightPerGallon
+            FuelWeightPerGallon = dto.FuelWeightPerGallon,
+            OilCapacityQuarts = dto.OilCapacityQuarts,
+            OilWeightPerQuart = dto.OilWeightPerQuart
+        };
+    }
+
+    private static LoadingGraphPointDto MapLoadingGraphPointToDto(LoadingGraphPoint point)
+    {
+        return new LoadingGraphPointDto
+        {
+            Weight = point.Weight,
+            Value = point.Value
+        };
+    }
+
+    private static LoadingGraphPoint MapLoadingGraphPointFromDto(LoadingGraphPointDto dto)
+    {
+        return new LoadingGraphPoint
+        {
+            Weight = dto.Weight,
+            Value = dto.Value
         };
     }
 
@@ -101,6 +127,7 @@ public static class WeightBalanceProfileMapper
         {
             Id = envelope.Id,
             Name = envelope.Name,
+            Format = envelope.Format,
             Limits = envelope.Limits.Select(MapEnvelopePointToDto).ToList()
         };
     }
@@ -109,8 +136,9 @@ public static class WeightBalanceProfileMapper
     {
         return new CgEnvelope
         {
-            Id = dto.Id,
+            Id = string.IsNullOrWhiteSpace(dto.Id) ? Guid.NewGuid().ToString() : dto.Id,
             Name = dto.Name,
+            Format = dto.Format,
             Limits = dto.Limits.Select(MapEnvelopePointFromDto).ToList()
         };
     }
@@ -120,7 +148,8 @@ public static class WeightBalanceProfileMapper
         return new CgEnvelopePointDto
         {
             Weight = point.Weight,
-            Arm = point.Arm
+            Arm = point.Arm,
+            MomentDividedBy1000 = point.MomentDividedBy1000
         };
     }
 
@@ -129,7 +158,8 @@ public static class WeightBalanceProfileMapper
         return new CgEnvelopePoint
         {
             Weight = dto.Weight,
-            Arm = dto.Arm
+            Arm = dto.Arm,
+            MomentDividedBy1000 = dto.MomentDividedBy1000
         };
     }
 }

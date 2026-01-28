@@ -9,8 +9,9 @@ namespace VFR3D.Domain.Entities;
 public class WeightBalanceProfile
 {
     [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     [Column("id")]
-    public string Id { get; set; } = string.Empty;
+    public Guid Id { get; set; }
 
     [Column("user_id")]
     [Required]
@@ -51,6 +52,9 @@ public class WeightBalanceProfile
 
     [Column("arm_units")]
     public ArmUnits ArmUnits { get; set; } = ArmUnits.Inches;
+
+    [Column("loading_graph_format")]
+    public LoadingGraphFormat LoadingGraphFormat { get; set; } = LoadingGraphFormat.MomentDividedBy1000;
 
     [Column("loading_stations", TypeName = "jsonb")]
     public List<LoadingStation> LoadingStations { get; set; } = [];

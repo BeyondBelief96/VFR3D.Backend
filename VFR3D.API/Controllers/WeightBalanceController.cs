@@ -92,11 +92,11 @@ public class WeightBalanceController(
     /// <param name="userId">The ID of the user who owns the profile</param>
     /// <param name="profileId">The ID of the profile</param>
     /// <returns>The W&B profile</returns>
-    [HttpGet("{userId}/{profileId}")]
+    [HttpGet("{userId}/{profileId:guid}")]
     [ProducesResponseType(typeof(WeightBalanceProfileDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<WeightBalanceProfileDto>> GetProfile(string userId, string profileId)
+    public async Task<ActionResult<WeightBalanceProfileDto>> GetProfile(string userId, Guid profileId)
     {
         try
         {
@@ -144,7 +144,7 @@ public class WeightBalanceController(
     /// <param name="profileId">The ID of the profile to update</param>
     /// <param name="request">The updated profile data</param>
     /// <returns>The updated W&B profile</returns>
-    [HttpPut("{userId}/{profileId}")]
+    [HttpPut("{userId}/{profileId:guid}")]
     [ProducesResponseType(typeof(WeightBalanceProfileDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -152,7 +152,7 @@ public class WeightBalanceController(
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<WeightBalanceProfileDto>> UpdateProfile(
         string userId,
-        string profileId,
+        Guid profileId,
         [FromBody] UpdateWeightBalanceProfileRequestDto request)
     {
         if (string.IsNullOrWhiteSpace(request.ProfileName))
@@ -195,11 +195,11 @@ public class WeightBalanceController(
     /// </summary>
     /// <param name="userId">The ID of the user who owns the profile</param>
     /// <param name="profileId">The ID of the profile to delete</param>
-    [HttpDelete("{userId}/{profileId}")]
+    [HttpDelete("{userId}/{profileId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<IActionResult> DeleteProfile(string userId, string profileId)
+    public async Task<IActionResult> DeleteProfile(string userId, Guid profileId)
     {
         try
         {
@@ -224,14 +224,14 @@ public class WeightBalanceController(
     /// <param name="profileId">The ID of the profile to use for calculation</param>
     /// <param name="request">The calculation request with loaded stations and optional fuel burn</param>
     /// <returns>The calculation result with takeoff/landing CG, station breakdown, and warnings</returns>
-    [HttpPost("{userId}/{profileId}/calculate")]
+    [HttpPost("{userId}/{profileId:guid}/calculate")]
     [ProducesResponseType(typeof(WeightBalanceCalculationResultDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<WeightBalanceCalculationResultDto>> Calculate(
         string userId,
-        string profileId,
+        Guid profileId,
         [FromBody] WeightBalanceCalculationRequestDto request)
     {
         try

@@ -15,6 +15,7 @@ public record UpdateWeightBalanceProfileRequestDto
     public double? MaxZeroFuelWeight { get; init; }
     public WeightUnits WeightUnits { get; init; } = WeightUnits.Pounds;
     public ArmUnits ArmUnits { get; init; } = ArmUnits.Inches;
+    public LoadingGraphFormat LoadingGraphFormat { get; init; } = LoadingGraphFormat.MomentDividedBy1000;
     public List<LoadingStationDto> LoadingStations { get; init; } = [];
     public List<CgEnvelopeDto> CgEnvelopes { get; init; } = [];
 }

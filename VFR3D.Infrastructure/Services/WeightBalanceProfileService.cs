@@ -2,6 +2,7 @@ using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
+using VFR3D.Domain.Enums;
 using VFR3D.Domain.ValueObjects.WeightBalance;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.Mappers;
@@ -62,7 +63,7 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
         }
     }
 
-    public async Task<WeightBalanceProfileDto?> GetProfile(string userId, string profileId)
+    public async Task<WeightBalanceProfileDto?> GetProfile(string userId, Guid profileId)
     {
         try
         {
@@ -112,7 +113,7 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
         }
     }
 
-    public async Task<WeightBalanceProfileDto> UpdateProfile(string userId, string profileId, UpdateWeightBalanceProfileRequestDto request)
+    public async Task<WeightBalanceProfileDto> UpdateProfile(string userId, Guid profileId, UpdateWeightBalanceProfileRequestDto request)
     {
         try
         {
@@ -162,7 +163,7 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
         }
     }
 
-    public async Task DeleteProfile(string userId, string profileId)
+    public async Task DeleteProfile(string userId, Guid profileId)
     {
         try
         {
@@ -184,7 +185,7 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
         }
     }
 
-    public async Task<WeightBalanceCalculationResultDto> Calculate(string userId, string profileId, WeightBalanceCalculationRequestDto request)
+    public async Task<WeightBalanceCalculationResultDto> Calculate(string userId, Guid profileId, WeightBalanceCalculationRequestDto request)
     {
         try
         {
@@ -209,7 +210,7 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
             var warnings = new List<string>();
             var stationBreakdown = new List<StationBreakdownDto>();
 
-            // Start with empty weight
+            // Start with empty weight (empty weight always uses arm directly, not loading graph)
             double totalWeight = profile.EmptyWeight;
             double totalMoment = profile.EmptyWeight * profile.EmptyWeightArm;
 
@@ -239,52 +240,89 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
                 double stationWeight;
                 string stationName;
 
-                if (station.IsFuelStation && load.FuelGallons.HasValue)
+                switch (station.StationType)
                 {
-                    fuelStation = station;
-                    var weightPerGallon = station.FuelWeightPerGallon ?? 6.0;
-                    stationWeight = load.FuelGallons.Value * weightPerGallon;
-                    fuelWeight = stationWeight;
-                    stationName = $"{station.Name} ({load.FuelGallons.Value:F1} gal)";
+                    case LoadingStationType.Fuel when load.FuelGallons.HasValue:
+                        fuelStation = station;
+                        var weightPerGallon = station.FuelWeightPerGallon ?? 6.0;
+                        stationWeight = load.FuelGallons.Value * weightPerGallon;
+                        fuelWeight = stationWeight;
+                        stationName = $"{station.Name} ({load.FuelGallons.Value:F1} gal)";
 
-                    // Check fuel capacity
-                    if (station.FuelCapacityGallons.HasValue && load.FuelGallons.Value > station.FuelCapacityGallons.Value)
-                    {
-                        warnings.Add($"{station.Name}: Fuel exceeds capacity ({load.FuelGallons.Value:F1} > {station.FuelCapacityGallons.Value:F1} gal)");
-                    }
-                }
-                else if (load.Weight.HasValue)
-                {
-                    stationWeight = load.Weight.Value;
-                    stationName = station.Name;
+                        // Check fuel capacity
+                        if (station.FuelCapacityGallons.HasValue && load.FuelGallons.Value > station.FuelCapacityGallons.Value)
+                        {
+                            warnings.Add($"{station.Name}: Fuel exceeds capacity ({load.FuelGallons.Value:F1} > {station.FuelCapacityGallons.Value:F1} gal)");
+                        }
+                        break;
 
-                    // Check max weight
-                    if (stationWeight > station.MaxWeight)
-                    {
-                        warnings.Add($"{station.Name}: Weight exceeds maximum ({stationWeight:F1} > {station.MaxWeight:F1})");
-                    }
+                    case LoadingStationType.Oil when load.OilQuarts.HasValue:
+                        var weightPerQuart = station.OilWeightPerQuart ?? 1.875; // Default aviation oil weight
+                        stationWeight = load.OilQuarts.Value * weightPerQuart;
+                        stationName = $"{station.Name} ({load.OilQuarts.Value:F1} qt)";
+
+                        // Check oil capacity
+                        if (station.OilCapacityQuarts.HasValue && load.OilQuarts.Value > station.OilCapacityQuarts.Value)
+                        {
+                            warnings.Add($"{station.Name}: Oil exceeds capacity ({load.OilQuarts.Value:F1} > {station.OilCapacityQuarts.Value:F1} qt)");
+                        }
+                        break;
+
+                    case LoadingStationType.Standard when load.Weight.HasValue:
+                        stationWeight = load.Weight.Value;
+                        stationName = station.Name;
+
+                        // Check max weight
+                        if (stationWeight > station.MaxWeight)
+                        {
+                            warnings.Add($"{station.Name}: Weight exceeds maximum ({stationWeight:F1} > {station.MaxWeight:F1})");
+                        }
+                        break;
+
+                    default:
+                        // Allow weight override for fuel/oil stations if needed
+                        if (load.Weight.HasValue)
+                        {
+                            stationWeight = load.Weight.Value;
+                            stationName = station.Name;
+
+                            if (stationWeight > station.MaxWeight)
+                            {
+                                warnings.Add($"{station.Name}: Weight exceeds maximum ({stationWeight:F1} > {station.MaxWeight:F1})");
+                            }
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                        break;
                 }
-                else
-                {
-                    continue;
-                }
+
+                // Calculate moment using loading graph interpolation
+                var (stationMoment, stationArm) = CalculateStationMoment(station, stationWeight, profile.LoadingGraphFormat);
 
                 totalWeight += stationWeight;
-                totalMoment += stationWeight * station.Arm;
+                totalMoment += stationMoment;
 
                 stationBreakdown.Add(new StationBreakdownDto
                 {
                     StationId = station.Id,
                     Name = stationName,
                     Weight = stationWeight,
-                    Arm = station.Arm,
-                    Moment = stationWeight * station.Arm
+                    Arm = Math.Round(stationArm, 2),
+                    Moment = Math.Round(stationMoment, 1)
                 });
             }
 
             // Calculate takeoff CG
             double takeoffCgArm = totalWeight > 0 ? totalMoment / totalWeight : 0;
-            bool takeoffWithinEnvelope = IsPointInEnvelope(totalWeight, takeoffCgArm, envelope.Limits);
+
+            // Determine the horizontal value for envelope check based on envelope format
+            double takeoffHorizontalValue = envelope.Format == CgEnvelopeFormat.MomentDividedBy1000
+                ? totalMoment / 1000.0
+                : takeoffCgArm;
+
+            bool takeoffWithinEnvelope = IsPointInEnvelope(totalWeight, takeoffHorizontalValue, envelope.Limits);
 
             // Check takeoff weight limits
             if (totalWeight > profile.MaxTakeoffWeight)
@@ -299,7 +337,8 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
 
             if (!takeoffWithinEnvelope)
             {
-                warnings.Add("Takeoff CG is outside the envelope limits");
+                var envelopeUnit = envelope.Format == CgEnvelopeFormat.MomentDividedBy1000 ? "Moment/1000" : "CG";
+                warnings.Add($"Takeoff {envelopeUnit} is outside the envelope limits");
             }
 
             var takeoffResult = new WeightBalanceCgResultDto
@@ -317,11 +356,22 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
             {
                 var weightPerGallon = fuelStation.FuelWeightPerGallon ?? 6.0;
                 var fuelBurnWeight = request.FuelBurnGallons.Value * weightPerGallon;
+                var remainingFuelWeight = fuelWeight - fuelBurnWeight;
+
+                // Recalculate fuel moment for remaining fuel using loading graph
+                var (originalFuelMoment, _) = CalculateStationMoment(fuelStation, fuelWeight, profile.LoadingGraphFormat);
+                var (remainingFuelMoment, _) = CalculateStationMoment(fuelStation, remainingFuelWeight, profile.LoadingGraphFormat);
 
                 double landingWeight = totalWeight - fuelBurnWeight;
-                double landingMoment = totalMoment - (fuelBurnWeight * fuelStation.Arm);
+                double landingMoment = totalMoment - originalFuelMoment + remainingFuelMoment;
                 double landingCgArm = landingWeight > 0 ? landingMoment / landingWeight : 0;
-                bool landingWithinEnvelope = IsPointInEnvelope(landingWeight, landingCgArm, envelope.Limits);
+
+                // Determine the horizontal value for envelope check based on envelope format
+                double landingHorizontalValue = envelope.Format == CgEnvelopeFormat.MomentDividedBy1000
+                    ? landingMoment / 1000.0
+                    : landingCgArm;
+
+                bool landingWithinEnvelope = IsPointInEnvelope(landingWeight, landingHorizontalValue, envelope.Limits);
 
                 // Check landing weight limits
                 var maxLandingWeight = profile.MaxLandingWeight ?? profile.MaxTakeoffWeight;
@@ -332,7 +382,8 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
 
                 if (!landingWithinEnvelope)
                 {
-                    warnings.Add("Landing CG is outside the envelope limits");
+                    var envelopeUnit = envelope.Format == CgEnvelopeFormat.MomentDividedBy1000 ? "Moment/1000" : "CG";
+                    warnings.Add($"Landing {envelopeUnit} is outside the envelope limits");
                 }
 
                 landingResult = new WeightBalanceCgResultDto
@@ -361,12 +412,44 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
         }
     }
 
-    private static bool IsPointInEnvelope(double weight, double cgArm, List<CgEnvelopePoint> envelope)
+    /// <summary>
+    /// Calculates the moment for a station using loading graph interpolation.
+    /// </summary>
+    /// <param name="station">The loading station</param>
+    /// <param name="weight">The weight at this station</param>
+    /// <param name="format">The loading graph format (Arm or MomentDividedBy1000)</param>
+    /// <returns>A tuple of (moment, arm)</returns>
+    private static (double moment, double arm) CalculateStationMoment(LoadingStation station, double weight, LoadingGraphFormat format)
+    {
+        // Interpolate the value from the loading graph
+        var interpolatedValue = station.InterpolateValue(weight);
+
+        if (format == LoadingGraphFormat.MomentDividedBy1000)
+        {
+            // Loading graph gives us moment/1000, so moment = value * 1000
+            var moment = interpolatedValue * 1000.0;
+            var arm = weight > 0 ? moment / weight : 0;
+            return (moment, arm);
+        }
+        else
+        {
+            // Loading graph gives us arm directly, so moment = weight * arm
+            var arm = interpolatedValue;
+            var moment = weight * arm;
+            return (moment, arm);
+        }
+    }
+
+    /// <summary>
+    /// Determines if a point (weight, horizontalValue) is inside the envelope polygon.
+    /// The horizontalValue is either CG arm or Moment/1000 depending on envelope format.
+    /// Uses ray casting algorithm for point-in-polygon test.
+    /// </summary>
+    private static bool IsPointInEnvelope(double weight, double horizontalValue, List<CgEnvelopePoint> envelope)
     {
         if (envelope.Count < 3)
             return false;
 
-        // Ray casting algorithm for point-in-polygon
         int n = envelope.Count;
         bool inside = false;
 
@@ -375,8 +458,12 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
             var pi = envelope[i];
             var pj = envelope[j];
 
+            var piHorizontal = pi.HorizontalValue;
+            var pjHorizontal = pj.HorizontalValue;
+
+            // Ray casting: check if horizontal ray from point intersects edge
             if ((pi.Weight > weight) != (pj.Weight > weight) &&
-                cgArm < (pj.Arm - pi.Arm) * (weight - pi.Weight) / (pj.Weight - pi.Weight) + pi.Arm)
+                horizontalValue < (pjHorizontal - piHorizontal) * (weight - pi.Weight) / (pj.Weight - pi.Weight) + piHorizontal)
             {
                 inside = !inside;
             }

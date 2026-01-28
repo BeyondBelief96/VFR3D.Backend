@@ -13,6 +13,10 @@ public class WeightBalanceProfileConfiguration : IEntityTypeConfiguration<Weight
         // Primary Key
         builder.HasKey(e => e.Id);
 
+        builder.Property(e => e.Id)
+            .HasColumnName("id")
+            .ValueGeneratedOnAdd();
+
         // Properties
         builder.Property(e => e.UserId)
             .IsRequired()
@@ -60,6 +64,10 @@ public class WeightBalanceProfileConfiguration : IEntityTypeConfiguration<Weight
 
         builder.Property(e => e.ArmUnits)
             .HasColumnName("arm_units")
+            .HasConversion<string>();
+
+        builder.Property(e => e.LoadingGraphFormat)
+            .HasColumnName("loading_graph_format")
             .HasConversion<string>();
 
         builder.Property(e => e.LoadingStations)

@@ -14,7 +14,9 @@
       "Bash(dotnet ef database update:*)",
       "Bash(dotnet ef migrations:*)",
       "Bash(docker exec:*)",
-      "Bash(docker ps:*)"
+      "Bash(docker ps:*)",
+      "Bash(dotnet package search:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
