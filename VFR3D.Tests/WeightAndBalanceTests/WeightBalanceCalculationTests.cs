@@ -11,7 +11,7 @@ using VFR3D.Infrastructure.Dtos.WeightBalance;
 using VFR3D.Infrastructure.Services;
 using Xunit;
 
-namespace VFR3D.Tests;
+namespace VFR3D.Tests.WeightAndBalanceTests;
 
 /// <summary>
 /// Comprehensive test suite for Weight & Balance calculations.

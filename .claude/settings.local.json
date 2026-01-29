@@ -16,7 +16,8 @@
       "Bash(docker exec:*)",
       "Bash(docker ps:*)",
       "Bash(dotnet package search:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

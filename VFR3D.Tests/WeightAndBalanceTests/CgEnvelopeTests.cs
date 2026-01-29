@@ -2,7 +2,7 @@ using FluentAssertions;
 using VFR3D.Domain.ValueObjects.WeightBalance;
 using Xunit;
 
-namespace VFR3D.Tests;
+namespace VFR3D.Tests.WeightAndBalanceTests;
 
 /// <summary>
 /// Tests for CG envelope point-in-polygon detection.

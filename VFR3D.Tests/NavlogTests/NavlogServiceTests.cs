@@ -9,7 +9,7 @@ using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Services;
 using Xunit;
 
-namespace VFR3D.Tests.Services
+namespace VFR3D.Tests.NavlogTests
 {
         public class NavlogServiceTests
         {

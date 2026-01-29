@@ -6,7 +6,7 @@ using RichardSzalay.MockHttp;
 using VFR3D.Infrastructure.Services.WeatherServices;
 using Xunit;
 
-namespace VFR3D.Tests.Services.WeatherServicesTests
+namespace VFR3D.Tests.WeatherServicesTests
 {
     public class WindsAloftServiceTests
     {

@@ -5,7 +5,7 @@ using VFR3D.Infrastructure.Dtos.WeightBalance;
 using VFR3D.Infrastructure.Mappers;
 using Xunit;
 
-namespace VFR3D.Tests;
+namespace VFR3D.Tests.WeightAndBalanceTests;
 
 /// <summary>
 /// Tests for WeightBalanceCalculationMapper.

@@ -14,6 +14,7 @@ using VFR3D.Infrastructure.Repositories;
 using VFR3D.Infrastructure.Services;
 using VFR3D.Infrastructure.Services.AirportInformationServices;
 using VFR3D.Infrastructure.Services.DocumentServices;
+using VFR3D.Infrastructure.Services.NotamServices;
 using VFR3D.Infrastructure.Services.WeatherServices;
 using VFR3D.Infrastructure.Settings;
 using VFR3D.Infrastructure.Utilities;
@@ -121,6 +122,7 @@ builder.Services.Configure<NOAASettings>(builder.Configuration.GetSection("NOAAS
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("StripeSettings"));
 builder.Services.Configure<Auth0Settings>(builder.Configuration.GetSection("Auth0Settings"));
 builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
+builder.Services.Configure<NmsSettings>(builder.Configuration.GetSection("NmsSettings"));
 
 // Setup DB Context
 builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
@@ -174,7 +176,18 @@ builder.Services.AddScoped<IFlightService, FlightService>();
 builder.Services.AddScoped<IStripeService, StripeService>();
 builder.Services.AddScoped<ConditionalAuthHandler>();
 
+// NOTAM Services
+builder.Services.AddSingleton<INmsApiClient, NmsApiClient>();
+builder.Services.AddScoped<INotamService, NotamService>();
+
 builder.Services.AddHttpClient();
+
+// Configure NMS API HttpClient with extended timeout
+builder.Services.AddHttpClient("NmsApi", (serviceProvider, client) =>
+{
+    var nmsSettings = serviceProvider.GetRequiredService<IOptions<NmsSettings>>().Value;
+    client.Timeout = TimeSpan.FromSeconds(nmsSettings.RequestTimeoutSeconds);
+});
 
 var app = builder.Build();
 

@@ -23,5 +23,14 @@
   "AllowedHosts": "*",
   "ConnectionStrings": {
     "DefaultConnection": "Host=azpg-vfr3d-test-db.postgres.database.azure.com;Database=postgres;Username=vfr3d_testing_user;Password=gbZQXQTgjrSiIzxIVLkvFm6dJOdvmfRD;Port=5432"
+  },
+  "NmsSettings": {
+    "BaseUrl": "https://api-staging.cgifederal-aim.com/nmsapi",
+    "AuthBaseUrl": "https://api-staging.cgifederal-aim.com",
+    "ClientId": "GP4riyd8KO5Oy9nRGeNdOgDIaQ4QPetymevYUkToDskAobI4",
+    "ClientSecret": "xycomGcpUNZkrh34Nua7Y8MTmOnDynAzwQqJPE1YeErLGI9NMzAZM9Q2D8WsD5Dw",
+    "CacheDurationMinutes": 5,
+    "DefaultRouteCorridorRadiusNm": 25,
+    "RequestTimeoutSeconds": 30
   }
 }
