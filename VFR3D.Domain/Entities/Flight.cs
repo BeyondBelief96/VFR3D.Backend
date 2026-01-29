@@ -74,15 +74,15 @@ namespace VFR3D.Domain.Entities
 
         // Navigation Properties
         public virtual Aircraft? Aircraft { get; set; }
+
         public virtual AircraftPerformanceProfile? AircraftPerformanceProfile { get; set; }
 
-        // Many-to-many: Airspaces intersected by this flight
         public virtual ICollection<Airspace> Airspaces { get; set; } = new HashSet<Airspace>();
 
-        // Many-to-many: Special Use Airspaces intersected by this flight
         public virtual ICollection<SpecialUseAirspace> SpecialUseAirspaces { get; set; } = new HashSet<SpecialUseAirspace>();
 
-        // Many-to-many: Obstacles along the flight route
         public virtual ICollection<Obstacle> Obstacles { get; set; } = new HashSet<Obstacle>();
+
+        public virtual WeightBalanceCalculation? WeightBalanceCalculation { get; set; }
     }
 }

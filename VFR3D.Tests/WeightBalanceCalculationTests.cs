@@ -1,7 +1,6 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using MockQueryable;
 using MockQueryable.NSubstitute;
 using NSubstitute;
 using VFR3D.Domain.Entities;

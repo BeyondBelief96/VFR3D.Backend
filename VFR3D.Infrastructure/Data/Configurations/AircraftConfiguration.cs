@@ -95,5 +95,10 @@ public class AircraftConfiguration : IEntityTypeConfiguration<Aircraft>
             .WithOne(f => f.Aircraft)
             .HasForeignKey(f => f.AircraftId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasMany(e => e.WeightBalanceProfiles)
+            .WithOne(w => w.Aircraft)
+            .HasForeignKey(w => w.AircraftId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

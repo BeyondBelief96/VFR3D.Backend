@@ -1,4 +1,5 @@
-﻿using VFR3D.Infrastructure.Dtos.AircraftPerformanceProfiles;
+using VFR3D.Infrastructure.Dtos.Aircraft;
+using VFR3D.Infrastructure.Dtos.AircraftPerformanceProfiles;
 using VFR3D.Infrastructure.Dtos.Navlog;
 
 namespace VFR3D.Infrastructure.Dtos.Flights;
@@ -23,5 +24,6 @@ public record FlightDto
     public List<string> SpecialUseAirspaceGlobalIds { get; set; } = [];
     public List<string> ObstacleOasNumbers { get; set; } = [];
     public AircraftPerformanceProfileDto? AircraftPerformanceProfile { get; set; }
+    public AircraftDto? Aircraft { get; set; }
     public string? RelatedFlightId { get; set; }
 }

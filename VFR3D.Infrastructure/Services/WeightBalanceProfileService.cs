@@ -1,13 +1,13 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using VFR3D.Domain.Entities;
 using VFR3D.Domain.Enums;
 using VFR3D.Domain.ValueObjects.WeightBalance;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.Mappers;
 using VFR3D.Infrastructure.Dtos.WeightBalance;
 using VFR3D.Infrastructure.Interfaces;
+using VFR3D.Infrastructure.Mappers;
 
 namespace VFR3D.Infrastructure.Services;
 
@@ -470,5 +470,134 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
         }
 
         return inside;
+    }
+
+    public async Task<WeightBalanceCalculationDto> CalculateAndSave(string userId, SaveWeightBalanceCalculationRequestDto request)
+    {
+        try
+        {
+            // Perform the calculation using existing method
+            var calculationRequest = new WeightBalanceCalculationRequestDto
+            {
+                LoadedStations = request.LoadedStations,
+                EnvelopeId = request.EnvelopeId,
+                FuelBurnGallons = request.FuelBurnGallons
+            };
+
+            var result = await Calculate(userId, request.ProfileId, calculationRequest);
+
+            // If this is a flight-associated calculation, remove any existing calculation for this flight
+            if (!string.IsNullOrEmpty(request.FlightId))
+            {
+                var existingFlightCalc = await _context.WeightBalanceCalculations
+                    .FirstOrDefaultAsync(c => c.UserId == userId && c.FlightId == request.FlightId);
+
+                if (existingFlightCalc != null)
+                {
+                    _context.WeightBalanceCalculations.Remove(existingFlightCalc);
+                }
+            }
+            else
+            {
+                // This is a standalone calculation - remove any previous standalone for this user
+                var existingStandalone = await _context.WeightBalanceCalculations
+                    .FirstOrDefaultAsync(c => c.UserId == userId && c.IsStandalone);
+
+                if (existingStandalone != null)
+                {
+                    _context.WeightBalanceCalculations.Remove(existingStandalone);
+                }
+            }
+
+            // Create and save the new calculation
+            var calculation = WeightBalanceCalculationMapper.CreateFromRequest(userId, request, result);
+
+            _context.WeightBalanceCalculations.Add(calculation);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Saved W&B calculation {CalculationId} for user {UserId}, flight {FlightId}",
+                calculation.Id, userId, request.FlightId ?? "(standalone)");
+
+            return WeightBalanceCalculationMapper.MapToDto(calculation);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving W&B calculation for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    public async Task<WeightBalanceCalculationDto?> GetCalculation(string userId, Guid calculationId)
+    {
+        try
+        {
+            var calculation = await _context.WeightBalanceCalculations
+                .FirstOrDefaultAsync(c => c.Id == calculationId && c.UserId == userId);
+
+            return calculation == null ? null : WeightBalanceCalculationMapper.MapToDto(calculation);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting W&B calculation {CalculationId} for user {UserId}", calculationId, userId);
+            throw;
+        }
+    }
+
+    public async Task<WeightBalanceCalculationDto?> GetCalculationForFlight(string userId, string flightId)
+    {
+        try
+        {
+            var calculation = await _context.WeightBalanceCalculations
+                .FirstOrDefaultAsync(c => c.FlightId == flightId && c.UserId == userId);
+
+            return calculation == null ? null : WeightBalanceCalculationMapper.MapToDto(calculation);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting W&B calculation for flight {FlightId} user {UserId}", flightId, userId);
+            throw;
+        }
+    }
+
+    public async Task<StandaloneCalculationStateDto?> GetLatestStandaloneState(string userId)
+    {
+        try
+        {
+            var calculation = await _context.WeightBalanceCalculations
+                .Where(c => c.UserId == userId && c.IsStandalone)
+                .OrderByDescending(c => c.CalculatedAt)
+                .FirstOrDefaultAsync();
+
+            return calculation == null ? null : WeightBalanceCalculationMapper.MapToStandaloneState(calculation);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting latest standalone W&B state for user {UserId}", userId);
+            throw;
+        }
+    }
+
+    public async Task DeleteCalculation(string userId, Guid calculationId)
+    {
+        try
+        {
+            var calculation = await _context.WeightBalanceCalculations
+                .FirstOrDefaultAsync(c => c.Id == calculationId && c.UserId == userId);
+
+            if (calculation == null)
+            {
+                throw new KeyNotFoundException($"W&B calculation not found with ID {calculationId}");
+            }
+
+            _context.WeightBalanceCalculations.Remove(calculation);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Deleted W&B calculation {CalculationId} for user {UserId}", calculationId, userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting W&B calculation {CalculationId} for user {UserId}", calculationId, userId);
+            throw;
+        }
     }
 }
