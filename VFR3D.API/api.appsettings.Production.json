@@ -1,4 +1,7 @@
 {
+  "KeyVault": {
+    "Url": "https://vfr3d-staging-key-vault.vault.azure.net/"
+  },
   "CloudStorage": {
     "AccountName": "rgvfr3dcentralustes98ad",
     "ChartSupplementsContainerName": "vfr3d-chart-supplements-centralus-test",
@@ -9,7 +12,6 @@
     "Host": "localhost",
     "Database": "vfr3d_development_database",
     "Username": "vfr3d_development_user",
-    "Password": "localdevpassword",
     "Port": 5432
   },
   "Logging": {
@@ -20,8 +22,8 @@
   },
   "AllowedHosts": "*",
   "NmsSettings": {
-    "BaseUrl": "https://api-staging.cgifederal-aim.com/nmsapi",
-    "AuthBaseUrl": "https://api-staging.cgifederal-aim.com",
+    "BaseUrl": "https://api-nms.aim.faa.gov/nmsapi",
+    "AuthBaseUrl": "https://api-nms.aim.faa.gov",
     "CacheDurationMinutes": 5,
     "DefaultRouteCorridorRadiusNm": 25,
     "RequestTimeoutSeconds": 30

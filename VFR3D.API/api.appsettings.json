@@ -1,36 +1,8 @@
 {
-  "CloudStorage": {
-    "AccountName": "rgvfr3dcentralustes98ad",
-    "AccountKey": "Vt8BpD/P9XkctUpuF31zQ89R7yBAfjyJyZ+HMmQdes2H1G/Xo0+ZlMKnp/hvvguzK57tljkGSEt1+ASteklMbQ==",
-    "ConnectionString": "DefaultEndpointsProtocol=https;AccountName=rgvfr3dcentralustes98ad;AccountKey=Vt8BpD/P9XkctUpuF31zQ89R7yBAfjyJyZ+HMmQdes2H1G/Xo0+ZlMKnp/hvvguzK57tljkGSEt1+ASteklMbQ==;EndpointSuffix=core.windows.net",
-    "ChartSupplementsContainerName": "vfr3d-chart-supplements-centralus-test",
-    "AirportDiagramsContainerName": "vfr3d-airport-diagrams-centralus-test",
-    "UseManagedIdentity": false
-  },
-  "Database": {
-    "Host": "localhost",
-    "Database": "vfr3d_development_database",
-    "Username": "vfr3d_development_user",
-    "Password": "localdevpassword",
-    "Port": 5432
-  },
   "Logging": {
     "LogLevel": {
       "Default": "Information",
       "Microsoft.AspNetCore": "Warning"
     }
-  },
-  "AllowedHosts": "*",
-  "ConnectionStrings": {
-    "DefaultConnection": "Host=azpg-vfr3d-test-db.postgres.database.azure.com;Database=postgres;Username=vfr3d_testing_user;Password=gbZQXQTgjrSiIzxIVLkvFm6dJOdvmfRD;Port=5432"
-  },
-  "NmsSettings": {
-    "BaseUrl": "https://api-staging.cgifederal-aim.com/nmsapi",
-    "AuthBaseUrl": "https://api-staging.cgifederal-aim.com",
-    "ClientId": "GP4riyd8KO5Oy9nRGeNdOgDIaQ4QPetymevYUkToDskAobI4",
-    "ClientSecret": "xycomGcpUNZkrh34Nua7Y8MTmOnDynAzwQqJPE1YeErLGI9NMzAZM9Q2D8WsD5Dw",
-    "CacheDurationMinutes": 5,
-    "DefaultRouteCorridorRadiusNm": 25,
-    "RequestTimeoutSeconds": 30
   }
 }

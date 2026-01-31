@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Azure.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,7 @@ using Npgsql;
 using NSwag;
 using NSwag.Generation.Processors.Security;
 using VFR3D.API.Authentication;
+using VFR3D.API.Configuration;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Repositories;
@@ -30,7 +32,25 @@ builder.Configuration
     .AddJsonFile($"api.appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
     .AddEnvironmentVariables();
 
-builder.Configuration.AddEnvironmentVariables();
+// Add Azure Key Vault for secrets
+var keyVaultUrl = builder.Configuration["KeyVault:Url"];
+if (!string.IsNullOrEmpty(keyVaultUrl))
+{
+    var credential = new DefaultAzureCredential();
+
+    // Map Key Vault secret names to configuration keys based on environment
+    var secretSuffix = builder.Environment.IsProduction() ? "prd" : "staging";
+    var secretMappings = new Dictionary<string, string>
+    {
+        { $"vfr3d-faa-nms-api-client-id-{secretSuffix}", "NmsSettings:ClientId" },
+        { $"vfr3d-faa-nms-api-client-secret-{secretSuffix}", "NmsSettings:ClientSecret" }
+    };
+
+    builder.Configuration.AddAzureKeyVault(
+        new Uri(keyVaultUrl),
+        credential,
+        new MappedKeyVaultSecretManager(secretMappings));
+}
 
 // Setup CORS
 builder.Services.AddCors(options =>
