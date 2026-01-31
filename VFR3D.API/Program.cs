@@ -28,8 +28,8 @@ bool isRunningInDocker = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_C
 
 builder.Configuration
     .SetBasePath(builder.Environment.ContentRootPath)
-    .AddJsonFile("api.appsettings.json", optional: false)
-    .AddJsonFile($"api.appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
+    .AddJsonFile("appsettings.json", optional: false)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
     .AddEnvironmentVariables();
 
 // Add Azure Key Vault for secrets

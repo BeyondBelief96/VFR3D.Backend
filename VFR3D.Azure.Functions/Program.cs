@@ -22,40 +22,14 @@ var builder = FunctionsApplication.CreateBuilder(args);
 builder.ConfigureFunctionsWebApplication();
 
 builder.Configuration
-    .SetBasePath(builder.Environment.ContentRootPath)
-    .AddUserSecrets<Program>(optional: true, reloadOnChange: true)
-    .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
+    .SetBasePath(Path.GetDirectoryName(typeof(Program).Assembly.Location)!)
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-    .AddEnvironmentVariables();
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables()
+    .AddUserSecrets<Program>(optional: true, reloadOnChange: true);
 
-// Register settings with explicit binding
-builder.Services.Configure<DatabaseSettings>(options =>
-{
-    options.Host = builder.Configuration["Database:Host"] ??
-                  builder.Configuration["Database__Host"] ??
-                  "localhost";
-
-    options.Database = builder.Configuration["Database:Database"] ??
-                          builder.Configuration["Database__Database"] ??
-                          "postgres";
-
-    options.Username = builder.Configuration["Database:Username"] ??
-                      builder.Configuration["Database__Username"] ??
-                      "postgres";
-
-    options.Password = builder.Configuration["Database:Password"] ??
-                      builder.Configuration["Database__Password"] ??
-                      string.Empty;
-
-    if (int.TryParse(builder.Configuration["Database:Port"] ?? builder.Configuration["Database__Port"], out int port))
-    {
-        options.Port = port;
-    }
-    else
-    {
-        options.Port = 5432;
-    }
-});
+// Register settings
+builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
 
 // Register services
 builder.Services.AddScoped<IFaaPublicationCycleService, FaaPublicationCycleService>();
