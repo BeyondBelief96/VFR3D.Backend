@@ -102,11 +102,91 @@ public class NotamService : INotamService
             throw new ArgumentNullException(nameof(request));
         }
 
-        if (request.AirportIdentifiers == null || request.AirportIdentifiers.Count == 0)
+        // RoutePoints takes precedence if provided; otherwise fall back to AirportIdentifiers
+        if (request.RoutePoints is { Count: > 0 })
         {
-            throw new ArgumentException("At least one airport identifier is required", nameof(request));
+            return await GetNotamsForRoutePointsAsync(request, ct);
         }
 
+        // Legacy mode: use AirportIdentifiers
+        if (request.AirportIdentifiers == null || request.AirportIdentifiers.Count == 0)
+        {
+            throw new ArgumentException("At least one airport identifier or route point is required", nameof(request));
+        }
+
+        return await GetNotamsForAirportIdentifiersAsync(request, ct);
+    }
+
+    private async Task<NotamResponseDto> GetNotamsForRoutePointsAsync(NotamQueryByRouteRequest request, CancellationToken ct)
+    {
+        ValidateRoutePoints(request.RoutePoints, request.CorridorRadiusNm);
+
+        _logger.LogInformation("Getting NOTAMs for route with {Count} route points", request.RoutePoints.Count);
+
+        var allNotams = new List<NotamDto>();
+        var seenIds = new HashSet<string>();
+        var routeDescriptions = new List<string>();
+
+        // Fetch NOTAMs for each route point in parallel
+        var tasks = request.RoutePoints
+            .Select(async (point, index) =>
+            {
+                try
+                {
+                    if (point.IsAirport)
+                    {
+                        var response = await GetNotamsForAirportAsync(point.AirportIdentifier!, ct);
+                        return (Index: index, Point: point, Notams: response.Notams, Error: (Exception?)null);
+                    }
+                    else
+                    {
+                        var radius = GetWaypointRadius(point, request.CorridorRadiusNm);
+                        var response = await GetNotamsByRadiusAsync(point.Latitude!.Value, point.Longitude!.Value, radius, ct);
+                        return (Index: index, Point: point, Notams: response.Notams, Error: (Exception?)null);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    var pointDesc = FormatRoutePointDescription(point);
+                    _logger.LogWarning(ex, "Failed to fetch NOTAMs for route point {PointDescription}", pointDesc);
+                    return (Index: index, Point: point, Notams: new List<NotamDto>(), Error: ex);
+                }
+            })
+            .ToList();
+
+        var results = await Task.WhenAll(tasks);
+
+        // Process results in original order
+        foreach (var result in results.OrderBy(r => r.Index))
+        {
+            routeDescriptions.Add(FormatRoutePointDescription(result.Point));
+
+            foreach (var notam in result.Notams)
+            {
+                var notamId = GetNotamUniqueId(notam);
+                if (!string.IsNullOrEmpty(notamId) && seenIds.Add(notamId))
+                {
+                    allNotams.Add(notam);
+                }
+                else if (string.IsNullOrEmpty(notamId))
+                {
+                    // If no ID, include it (can't deduplicate)
+                    allNotams.Add(notam);
+                }
+            }
+        }
+
+        return new NotamResponseDto
+        {
+            Notams = allNotams,
+            TotalCount = allNotams.Count,
+            RetrievedAt = DateTime.UtcNow,
+            QueryLocation = string.Join(" -> ", routeDescriptions)
+        };
+    }
+
+    private async Task<NotamResponseDto> GetNotamsForAirportIdentifiersAsync(NotamQueryByRouteRequest request, CancellationToken ct)
+    {
         _logger.LogInformation("Getting NOTAMs for route with {Count} airports", request.AirportIdentifiers.Count);
 
         var allNotams = new List<NotamDto>();
@@ -158,6 +238,83 @@ public class NotamService : INotamService
             RetrievedAt = DateTime.UtcNow,
             QueryLocation = routeDescription
         };
+    }
+
+    private void ValidateRoutePoints(List<RoutePointDto> routePoints, double? corridorRadiusNm)
+    {
+        for (var i = 0; i < routePoints.Count; i++)
+        {
+            var point = routePoints[i];
+
+            if (point.IsAirport)
+            {
+                // Airport validation - just needs a valid identifier
+                if (string.IsNullOrWhiteSpace(point.AirportIdentifier))
+                {
+                    throw new ArgumentException($"Route point {i + 1}: Airport identifier cannot be empty");
+                }
+            }
+            else
+            {
+                // Waypoint validation - needs valid lat/lon
+                if (!point.Latitude.HasValue || !point.Longitude.HasValue)
+                {
+                    throw new ArgumentException($"Route point {i + 1}: Waypoints require both latitude and longitude");
+                }
+
+                if (point.Latitude.Value < -90 || point.Latitude.Value > 90)
+                {
+                    throw new ArgumentException($"Route point {i + 1}: Latitude must be between -90 and 90 degrees");
+                }
+
+                if (point.Longitude.Value < -180 || point.Longitude.Value > 180)
+                {
+                    throw new ArgumentException($"Route point {i + 1}: Longitude must be between -180 and 180 degrees");
+                }
+
+                // Validate radius if specified on this point
+                if (point.RadiusNm.HasValue)
+                {
+                    if (point.RadiusNm.Value <= 0)
+                    {
+                        throw new ArgumentException($"Route point {i + 1}: Radius must be greater than 0");
+                    }
+
+                    if (point.RadiusNm.Value > 100)
+                    {
+                        throw new ArgumentException($"Route point {i + 1}: Radius cannot exceed 100 nautical miles");
+                    }
+                }
+            }
+        }
+    }
+
+    private double GetWaypointRadius(RoutePointDto point, double? corridorRadiusNm)
+    {
+        // Fallback chain: point.RadiusNm -> request.CorridorRadiusNm -> settings.DefaultRouteCorridorRadiusNm
+        return point.RadiusNm ?? corridorRadiusNm ?? _settings.DefaultRouteCorridorRadiusNm;
+    }
+
+    private static string FormatRoutePointDescription(RoutePointDto point)
+    {
+        if (point.IsAirport)
+        {
+            return point.AirportIdentifier!.ToUpperInvariant();
+        }
+
+        // For waypoints, use name if provided, otherwise format coordinates
+        if (!string.IsNullOrWhiteSpace(point.Name))
+        {
+            return point.Name;
+        }
+
+        // Format: "30.1234N, 97.5678W"
+        var lat = point.Latitude!.Value;
+        var lon = point.Longitude!.Value;
+        var latDir = lat >= 0 ? "N" : "S";
+        var lonDir = lon >= 0 ? "E" : "W";
+
+        return $"{Math.Abs(lat):F4}{latDir}, {Math.Abs(lon):F4}{lonDir}";
     }
 
     private static string? GetNotamUniqueId(NotamDto notam)
