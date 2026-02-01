@@ -4,7 +4,7 @@ services:
     container_name: vfr3d-db
     environment:
       - POSTGRES_USER=vfr3d_development_user
-      - POSTGRES_PASSWORD=localdevpassword
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=vfr3d_development_database
     ports:
       - "5432:5432"
@@ -31,15 +31,15 @@ services:
       - Database__Host=db
       - Database__Database=vfr3d_development_database
       - Database__Username=vfr3d_development_user
-      - Database__Password=localdevpassword
+      - Database__Password=${DB_PASSWORD}
       - Database__Port=5432
-      # Azure Blob Storage Settings (Using real Azure Storage)
-      - CloudStorage__ConnectionString=DefaultEndpointsProtocol=https;AccountName=rgvfr3dcentralustes98ad;AccountKey=Vt8BpD/P9XkctUpuF31zQ89R7yBAfjyJyZ+HMmQdes2H1G/Xo0+ZlMKnp/hvvguzK57tljkGSEt1+ASteklMbQ==;EndpointSuffix=core.windows.net
+      # Azure Blob Storage Settings
+      - CloudStorage__ConnectionString=${CLOUD_STORAGE_CONNECTION_STRING}
       - CloudStorage__ChartSupplementsContainerName=vfr3d-chart-supplements-centralus-test
       - CloudStorage__AirportDiagramsContainerName=vfr3d-airport-diagrams-centralus-test
       - CloudStorage__UseManagedIdentity=false
       # Stripe Settings
-      - StripeSettings__StripeSecretKey=sk_test_51PpD2EDdx3lXaRF74Y2c0ATwwxqkYEVytQlcJd0ekJI5yqZfAKYgDccTPK5FHkB3O8gRPh3XexWW8jaE0bBMwBVY00ByeCbkjD
+      - StripeSettings__StripeSecretKey=${STRIPE_SECRET_KEY}
       - StripeSettings__StripeMonthlySubscriptionPriceId=price_1PpMqiDdx3lXaRF7yPMTYOMW
       - StripeSettings__Domain=https://localhost:7014
       # NOAA API Settings
@@ -48,6 +48,14 @@ services:
       - Auth0Settings__Auth0ApiIdentifier=testAuth0ApiIdentifier
       - Auth0Settings__Auth0Domain=testAuth0Domain
       - Auth0Settings__RequireAuthenticationInDevelopment=false
+      # NMS API Settings
+      - NmsSettings__BaseUrl=https://api-staging.cgifederal-aim.com/nmsapi
+      - NmsSettings__AuthBaseUrl=https://api-staging.cgifederal-aim.com
+      - NmsSettings__ClientId=${NMS_CLIENT_ID}
+      - NmsSettings__ClientSecret=${NMS_CLIENT_SECRET}
+      - NmsSettings__CacheDurationMinutes=5
+      - NmsSettings__DefaultRouteCorridorRadiusNm=25
+      - NmsSettings__RequestTimeoutSeconds=30
     ports:
       - "7014:80"
     volumes:
@@ -65,7 +73,7 @@ services:
     command: >
       sh -c "find . -type d -name 'obj' -exec rm -rf {} + 2>/dev/null || true &&
              dotnet restore &&
-             dotnet ef database update --project VFR3D.Infrastructure --startup-project VFR3D.API --connection 'Host=db;Database=vfr3d_development_database;Username=vfr3d_development_user;Password=localdevpassword;Port=5432' &&
+             dotnet ef database update --project VFR3D.Infrastructure --startup-project VFR3D.API --connection 'Host=db;Database=vfr3d_development_database;Username=vfr3d_development_user;Password=${DB_PASSWORD};Port=5432' &&
              dotnet watch --project VFR3D.API run --urls=http://0.0.0.0:80"
 volumes:
   postgres_data:

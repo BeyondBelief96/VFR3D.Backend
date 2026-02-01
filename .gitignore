@@ -362,3 +362,6 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /docs/FAA NMS Docs/VFR3D.xlsx
+
+# Docker Compose local secrets
+.env
