@@ -32,6 +32,11 @@ public class CloudStorageSettings
     public string AirportDiagramsContainerName { get; set; } = "airport-diagrams";
 
     /// <summary>
+    /// Container name for user-uploaded aircraft documents.
+    /// </summary>
+    public string AircraftDocumentsContainerName { get; set; } = "aircraft-documents";
+
+    /// <summary>
     /// Use Azure Managed Identity for authentication instead of explicit credentials.
     /// Recommended for production environments.
     /// </summary>

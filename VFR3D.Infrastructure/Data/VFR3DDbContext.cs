@@ -51,6 +51,8 @@ namespace VFR3D.Infrastructure.Data
 
         public virtual DbSet<WeightBalanceCalculation> WeightBalanceCalculations => Set<WeightBalanceCalculation>();
 
+        public virtual DbSet<AircraftDocument> AircraftDocuments => Set<AircraftDocument>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

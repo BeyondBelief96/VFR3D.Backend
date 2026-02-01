@@ -57,6 +57,19 @@ public class CloudStorageInitializationService : ICloudStorageInitializationServ
                     _settings.AirportDiagramsContainerName);
             }
 
+            // Ensure aircraft documents container exists
+            if (!await _storageService.ContainerExistsAsync(_settings.AircraftDocumentsContainerName))
+            {
+                _logger.LogInformation("Creating aircraft documents container: {ContainerName}",
+                    _settings.AircraftDocumentsContainerName);
+                await _storageService.CreateContainerAsync(_settings.AircraftDocumentsContainerName);
+            }
+            else
+            {
+                _logger.LogInformation("Aircraft documents container already exists: {ContainerName}",
+                    _settings.AircraftDocumentsContainerName);
+            }
+
             _logger.LogInformation("Azure Blob Storage initialization completed successfully");
         }
         catch (Exception ex)

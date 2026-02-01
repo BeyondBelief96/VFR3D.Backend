@@ -78,4 +78,5 @@ public class Aircraft
     public virtual ICollection<AircraftPerformanceProfile> PerformanceProfiles { get; set; } = new List<AircraftPerformanceProfile>();
     public virtual ICollection<Flight> Flights { get; set; } = new List<Flight>();
     public virtual ICollection<WeightBalanceProfile> WeightBalanceProfiles { get; set; } = new List<WeightBalanceProfile>();
+    public virtual ICollection<AircraftDocument> Documents { get; set; } = new List<AircraftDocument>();
 }

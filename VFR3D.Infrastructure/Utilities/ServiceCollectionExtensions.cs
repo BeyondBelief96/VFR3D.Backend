@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using VFR3D.Infrastructure.Interfaces;
+using VFR3D.Infrastructure.Services;
 using VFR3D.Infrastructure.Services.CloudStorage;
 using VFR3D.Infrastructure.Settings;
 
@@ -21,6 +22,9 @@ public static class ServiceCollectionExtensions
 
         // Register initialization service
         services.AddScoped<ICloudStorageInitializationService, CloudStorageInitializationService>();
+
+        // Register aircraft document service
+        services.AddScoped<IAircraftDocumentService, AircraftDocumentService>();
 
         return services;
     }
