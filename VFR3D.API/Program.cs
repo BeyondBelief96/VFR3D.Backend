@@ -30,7 +30,8 @@ builder.Configuration
     .SetBasePath(builder.Environment.ContentRootPath)
     .AddJsonFile("appsettings.json", optional: false)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
-    .AddEnvironmentVariables();
+    .AddEnvironmentVariables()
+    .AddUserSecrets<Program>(optional: true, reloadOnChange: true);
 
 // Add Azure Key Vault for secrets
 var keyVaultUrl = builder.Configuration["KeyVault:Url"];
