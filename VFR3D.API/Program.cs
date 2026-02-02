@@ -212,6 +212,24 @@ builder.Services.AddHttpClient("NmsApi", (serviceProvider, client) =>
 
 var app = builder.Build();
 
+// Initialize Azure Blob Storage resources on startup
+using (var scope = app.Services.CreateScope())
+{
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var cloudStorageInitService = scope.ServiceProvider.GetRequiredService<ICloudStorageInitializationService>();
+
+    logger.LogInformation("Initializing Azure Blob Storage resources during startup...");
+    try
+    {
+        await cloudStorageInitService.InitializeAsync(CancellationToken.None);
+        logger.LogInformation("Azure Blob Storage resources initialized successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to initialize Azure Blob Storage resources");
+    }
+}
+
 app.UseCors("AllowedOrigins");
 
 if (app.Environment.IsDevelopment())
@@ -224,4 +242,4 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.Run();
+await app.RunAsync();

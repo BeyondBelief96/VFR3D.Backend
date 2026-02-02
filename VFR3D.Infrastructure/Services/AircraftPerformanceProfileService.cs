@@ -2,8 +2,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
+using VFR3D.Domain.Enums;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.AircraftPerformanceProfiles;
+using VFR3D.Infrastructure.Dtos.Mappers;
 using VFR3D.Infrastructure.Interfaces;
 
 namespace VFR3D.Infrastructure.Services;
@@ -28,36 +30,29 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
     {
         try
         {
-            // Check if a performance profile for this user already exists with the given name. 
+            // Check if a performance profile for this user already exists with the given name.
             var existingProfile = _context.AircraftPerformanceProfiles.Any(p => p.ProfileName == request.ProfileName && p.UserId == request.UserId);
             if (existingProfile)
             {
                 _logger.LogWarning($"Profile with name {request.ProfileName} already exists");
                 throw new DuplicateNameException($"Profile with name {request.ProfileName} already exists");
             }
-            
-            var profile = new AircraftPerformanceProfile
-            {
-                Id = Guid.NewGuid().ToString(),
-                UserId = request.UserId,
-                AircraftId = request.AircraftId,
-                ProfileName = request.ProfileName,
-                ClimbTrueAirspeed = request.ClimbTrueAirspeed,
-                CruiseTrueAirspeed = request.CruiseTrueAirspeed,
-                CruiseFuelBurn = request.CruiseFuelBurn,
-                ClimbFuelBurn = request.ClimbFuelBurn,
-                DescentFuelBurn = request.DescentFuelBurn,
-                ClimbFpm = request.ClimbFpm,
-                DescentFpm = request.DescentFpm,
-                DescentTrueAirspeed = request.DescentTrueAirspeed,
-                SttFuelGals = request.SttFuelGals,
-                FuelOnBoardGals = request.FuelOnBoardGals
-            };
+
+            // Get aircraft unit preferences if profile is linked to an aircraft
+            var (airspeedUnits, lengthUnits) = await GetAircraftUnits(request.AircraftId);
+
+            // Convert input values from user units to canonical units (knots/feet)
+            var profile = AircraftPerformanceProfileMapper.CreateFromRequest(
+                request.UserId,
+                request,
+                airspeedUnits,
+                lengthUnits);
 
             _context.AircraftPerformanceProfiles.Add(profile);
             await _context.SaveChangesAsync();
 
-            return MapToDto(profile);
+            // Return DTO in user units
+            return AircraftPerformanceProfileMapper.MapToDto(profile, airspeedUnits, lengthUnits);
         }
         catch (Exception ex)
         {
@@ -78,19 +73,11 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
                 throw new KeyNotFoundException($"Profile not found with ID {id}");
             }
 
-            // Update profile properties
-            profile.AircraftId = request.AircraftId;
-            profile.ProfileName = request.ProfileName;
-            profile.ClimbTrueAirspeed = request.ClimbTrueAirspeed;
-            profile.CruiseTrueAirspeed = request.CruiseTrueAirspeed;
-            profile.CruiseFuelBurn = request.CruiseFuelBurn;
-            profile.ClimbFuelBurn = request.ClimbFuelBurn;
-            profile.DescentFuelBurn = request.DescentFuelBurn;
-            profile.ClimbFpm = request.ClimbFpm;
-            profile.DescentFpm = request.DescentFpm;
-            profile.DescentTrueAirspeed = request.DescentTrueAirspeed;
-            profile.SttFuelGals = request.SttFuelGals;
-            profile.FuelOnBoardGals = request.FuelOnBoardGals;
+            // Get aircraft unit preferences if profile is linked to an aircraft
+            var (airspeedUnits, lengthUnits) = await GetAircraftUnits(request.AircraftId);
+
+            // Update profile properties with conversion from user units to canonical units
+            AircraftPerformanceProfileMapper.UpdateFromRequest(profile, request, airspeedUnits, lengthUnits);
 
             // Save profile changes
             await _context.SaveChangesAsync();
@@ -112,7 +99,8 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
             // Save flight changes
             await _context.SaveChangesAsync();
 
-            return MapToDto(profile);
+            // Return DTO in user units
+            return AircraftPerformanceProfileMapper.MapToDto(profile, airspeedUnits, lengthUnits);
         }
         catch (Exception ex)
         {
@@ -130,7 +118,26 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
                 .Where(p => p.UserId == userId)
                 .ToListAsync();
 
-            return profiles.Select(MapToDto).ToList();
+            // Fetch all aircraft for this user to get their unit preferences
+            var aircraftIds = profiles
+                .Where(p => p.AircraftId != null)
+                .Select(p => p.AircraftId!)
+                .Distinct()
+                .ToList();
+
+            var aircraftDict = await _context.Aircraft
+                .Where(a => aircraftIds.Contains(a.Id))
+                .ToDictionaryAsync(a => a.Id, a => (a.AirspeedUnits, a.LengthUnits));
+
+            return profiles.Select(p =>
+            {
+                if (p.AircraftId != null && aircraftDict.TryGetValue(p.AircraftId, out var units))
+                {
+                    return AircraftPerformanceProfileMapper.MapToDto(p, units.AirspeedUnits, units.LengthUnits);
+                }
+                // No linked aircraft - return in canonical units
+                return AircraftPerformanceProfileMapper.MapToDto(p);
+            }).ToList();
         }
         catch (Exception ex)
         {
@@ -171,24 +178,22 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
         }
     }
 
-    private static AircraftPerformanceProfileDto MapToDto(AircraftPerformanceProfile profile)
+    /// <summary>
+    /// Gets the unit preferences for an aircraft, or returns canonical units if no aircraft is specified.
+    /// </summary>
+    private async Task<(AirspeedUnits AirspeedUnits, LengthUnits LengthUnits)> GetAircraftUnits(string? aircraftId)
     {
-        return new AircraftPerformanceProfileDto
+        if (string.IsNullOrEmpty(aircraftId))
         {
-            Id = profile.Id,
-            UserId = profile.UserId,
-            AircraftId = profile.AircraftId,
-            ProfileName = profile.ProfileName,
-            ClimbTrueAirspeed = profile.ClimbTrueAirspeed,
-            CruiseTrueAirspeed = profile.CruiseTrueAirspeed,
-            CruiseFuelBurn = profile.CruiseFuelBurn,
-            ClimbFuelBurn = profile.ClimbFuelBurn,
-            DescentFuelBurn = profile.DescentFuelBurn,
-            ClimbFpm = profile.ClimbFpm,
-            DescentFpm = profile.DescentFpm,
-            DescentTrueAirspeed = profile.DescentTrueAirspeed,
-            SttFuelGals = profile.SttFuelGals,
-            FuelOnBoardGals = profile.FuelOnBoardGals
-        };
+            return (AirspeedUnits.Knots, LengthUnits.Feet);
+        }
+
+        var aircraft = await _context.Aircraft.FindAsync(aircraftId);
+        if (aircraft == null)
+        {
+            return (AirspeedUnits.Knots, LengthUnits.Feet);
+        }
+
+        return (aircraft.AirspeedUnits, aircraft.LengthUnits);
     }
 }

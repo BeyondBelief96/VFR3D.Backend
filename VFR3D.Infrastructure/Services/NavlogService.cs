@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
 using VFR3D.Domain.Enums;
+using VFR3D.Domain.Utilities.UnitConversions;
 using VFR3D.Infrastructure.Dtos.Navlog;
 using VFR3D.Infrastructure.Interfaces;
 
@@ -159,7 +160,7 @@ public class NavlogService : INavlogService
 
         return new BearingAndDistanceResponseDto
         {
-            Distance = inverseGeodesicResult.Distance / Constants.NauticalMile,
+            Distance = inverseGeodesicResult.Distance / DistanceConversion.MetersPerNauticalMile,
             TrueCourse = trueCourse,
             MagneticCourse = magneticCourse
         };
@@ -356,7 +357,7 @@ public class NavlogService : INavlogService
             LegEndPoint = endPoint,
             TrueCourse = NormalizeAzimuth(inverseGeodesicResult.Azimuth1),
             MagneticCourse = magneticCourse,
-            LegDistance = inverseGeodesicResult.Distance / Constants.NauticalMile,
+            LegDistance = inverseGeodesicResult.Distance / DistanceConversion.MetersPerNauticalMile,
             StartLegTime = previousLegEndTime
         };
 
@@ -607,7 +608,7 @@ public class NavlogService : INavlogService
 
         private WaypointDto FindPointAtDistance(WaypointDto startPoint, double distanceNauticalMiles, double trueCourse)
         {
-            var distanceMeters = (distanceNauticalMiles * Constants.NauticalMile);
+            var distanceMeters = (distanceNauticalMiles * DistanceConversion.MetersPerNauticalMile);
             var result = Geodesic.WGS84.Direct(
                 startPoint.Latitude,
                 startPoint.Longitude,

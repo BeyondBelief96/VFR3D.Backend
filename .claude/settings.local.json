@@ -18,7 +18,8 @@
       "Bash(dotnet package search:*)",
       "Bash(curl:*)",
       "Bash(taskkill:*)",
-      "Bash(dotnet user-secrets:*)"
+      "Bash(dotnet user-secrets:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

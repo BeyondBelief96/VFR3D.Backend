@@ -1,4 +1,6 @@
-﻿namespace VFR3D.Infrastructure.Dtos.AircraftPerformanceProfiles;
+﻿using VFR3D.Domain.Enums;
+
+namespace VFR3D.Infrastructure.Dtos.AircraftPerformanceProfiles;
 
 public record AircraftPerformanceProfileDto
 {
@@ -16,4 +18,14 @@ public record AircraftPerformanceProfileDto
     public int DescentTrueAirspeed { get; init; }
     public double SttFuelGals { get; init; }
     public double FuelOnBoardGals { get; init; }
+
+    /// <summary>
+    /// Indicates the airspeed units used for the values in this DTO.
+    /// </summary>
+    public AirspeedUnits AirspeedUnits { get; init; } = AirspeedUnits.Knots;
+
+    /// <summary>
+    /// Indicates the length units used for the values in this DTO.
+    /// </summary>
+    public LengthUnits LengthUnits { get; init; } = LengthUnits.Feet;
 }
