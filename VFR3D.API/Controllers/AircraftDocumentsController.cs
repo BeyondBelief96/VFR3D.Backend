@@ -13,7 +13,7 @@ public class AircraftDocumentsController(
     ILogger<AircraftDocumentsController> logger)
     : ControllerBase
 {
-    private const int MaxFileSizeBytes = 25 * 1024 * 1024; // 25 MB
+    private const int MaxFileSizeBytes = 100 * 1024 * 1024; // 100 MB
 
     /// <summary>
     /// Uploads a document for an aircraft
