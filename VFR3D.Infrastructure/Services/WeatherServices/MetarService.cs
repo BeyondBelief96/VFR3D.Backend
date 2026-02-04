@@ -46,7 +46,7 @@ namespace VFR3D.Infrastructure.Services.WeatherServices
                     if (airport == null)
                     {
                         _logger.LogWarning("Airport not found for identifier: {IcaoIdOrIdent}", icaoIdOrIdent);
-                        throw new ResourceNotFoundException($"Airport not found for ICAO code or identifier: {icaoIdOrIdent}");
+                        throw new AirportNotFoundException(icaoIdOrIdent);
                     }
 
                     var modifiedIdent = airport.StateCode switch
@@ -63,7 +63,7 @@ namespace VFR3D.Infrastructure.Services.WeatherServices
                 if (metar == null)
                 {
                     _logger.LogWarning("METAR not found for airport: {IcaoIdOrIdent}", icaoIdOrIdent);
-                    throw new ResourceNotFoundException($"METAR not found for airport with ICAO ID: {icaoIdOrIdent}");
+                    throw new MetarNotFoundException(icaoIdOrIdent);
                 }
 
                 _logger.LogInformation("Successfully retrieved METAR for airport: {IcaoIdOrIdent}", icaoIdOrIdent);

@@ -31,8 +31,7 @@ public class TafService : ITafService
 
             if (airport == null)
             {
-                throw new ResourceNotFoundException
-                    ($"Airport not found for ICAO code or identifier: {icaoCodeOrIdent}");
+                throw new AirportNotFoundException(icaoCodeOrIdent);
             }
 
             var modifiedIdent = airport.StateCode switch
@@ -47,7 +46,7 @@ public class TafService : ITafService
         
         if (taf == null)
         {
-            throw new ResourceNotFoundException($"TAF not found for airport with ICAO ID: {icaoCodeOrIdent}");
+            throw new TafNotFoundException(icaoCodeOrIdent);
         }
 
         return TafMapper.ToDto(taf);

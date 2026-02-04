@@ -7,6 +7,7 @@ using VFR3D.Domain.Enums;
 using VFR3D.Infrastructure.Dtos.Navlog;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Services;
+using VFR3D.Domain.Exceptions;
 using Xunit;
 
 namespace VFR3D.Tests.NavlogTests
@@ -88,12 +89,11 @@ namespace VFR3D.Tests.NavlogTests
                 Func<Task> act = async () => await _navlogService.CalculateNavlog(request);
 
                 // Assert
-                await act.Should().ThrowAsync<ArgumentException>()
-                    .WithMessage("At least two waypoints are required for navigation");
+                await act.Should().ThrowAsync<VFR3D.Domain.Exceptions.ValidationException>();
             }
 
             [Fact]
-            public async Task CalculateNavlog_ShouldThrowKeyNotFoundException_WhenProfileNotFound()
+            public async Task CalculateNavlog_ShouldThrowPerformanceProfileNotFoundException_WhenProfileNotFound()
             {
                 // Arrange
                 var request = new NavlogRequestDto
@@ -111,8 +111,7 @@ namespace VFR3D.Tests.NavlogTests
                 Func<Task> act = async () => await _navlogService.CalculateNavlog(request);
 
                 // Assert
-                await act.Should().ThrowAsync<KeyNotFoundException>()
-                    .WithMessage("Aircraft performance profile not found: non-existent-profile");
+                await act.Should().ThrowAsync<PerformanceProfileNotFoundException>();
             }
 
             [Fact]

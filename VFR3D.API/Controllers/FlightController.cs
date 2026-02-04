@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using VFR3D.API.Authentication;
+using VFR3D.API.Models;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Dtos.Flights;
 using VFR3D.Infrastructure.Interfaces;
 
@@ -8,9 +10,7 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class FlightController(
-    IFlightService flightService,
-    ILogger<FlightController> logger)
+public class FlightController(IFlightService flightService)
     : ControllerBase
 {
     /// <summary>
@@ -18,19 +18,10 @@ public class FlightController(
     /// </summary>
     [HttpGet("{userId}")]
     [ProducesResponseType(typeof(List<FlightDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<List<FlightDto>>> GetFlights(string userId)
     {
-        try
-        {
-            var flights = await flightService.GetFlights(userId);
-            return Ok(flights);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error getting flights for user {UserId}", userId);
-            return StatusCode(500, "An error occurred while retrieving flights");
-        }
+        var flights = await flightService.GetFlights(userId);
+        return Ok(flights);
     }
 
     /// <summary>
@@ -38,24 +29,11 @@ public class FlightController(
     /// </summary>
     [HttpGet("{userId}/{flightId}")]
     [ProducesResponseType(typeof(FlightDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<FlightDto>> GetFlight(string userId, string flightId)
     {
-        try
-        {
-            var flight = await flightService.GetFlight(userId, flightId);
-            return Ok(flight);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error getting flight {FlightId} for user {UserId}", flightId, userId);
-            return StatusCode(500, "An error occurred while retrieving the flight");
-        }
+        var flight = await flightService.GetFlight(userId, flightId);
+        return Ok(flight);
     }
 
     /// <summary>
@@ -63,26 +41,13 @@ public class FlightController(
     /// </summary>
     [HttpPost]
     [ProducesResponseType(typeof(FlightDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<FlightDto>> CreateFlight(
         string userId,
         [FromBody] CreateFlightRequestDto request)
     {
-        try
-        {
-            var flight = await flightService.CreateFlight(userId, request);
-            return Ok(flight);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error creating flight for user {UserId}", userId);
-            return StatusCode(500, "An error occurred while creating the flight");
-        }
+        var flight = await flightService.CreateFlight(userId, request);
+        return Ok(flight);
     }
 
     /// <summary>
@@ -90,26 +55,13 @@ public class FlightController(
     /// </summary>
     [HttpPost("roundtrip")]
     [ProducesResponseType(typeof((FlightDto Outbound, FlightDto Return)), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<(FlightDto Outbound, FlightDto Return)>> CreateRoundTripFlight(
         string userId,
         [FromBody] CreateRoundTripFlightRequestDto request)
     {
-        try
-        {
-            var (outbound, @return) = await flightService.CreateRoundTripFlight(userId, request);
-            return Ok(new { Outbound = outbound, Return = @return });
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error creating round trip flight for user {UserId}", userId);
-            return StatusCode(500, "An error occurred while creating the round trip flight");
-        }
+        var (outbound, @return) = await flightService.CreateRoundTripFlight(userId, request);
+        return Ok(new { Outbound = outbound, Return = @return });
     }
 
     /// <summary>
@@ -117,27 +69,14 @@ public class FlightController(
     /// </summary>
     [HttpPatch("{userId}/{flightId}")]
     [ProducesResponseType(typeof(FlightDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<FlightDto>> UpdateFlight(
         string userId,
         string flightId,
         [FromBody] UpdateFlightRequestDto request)
     {
-        try
-        {
-            var flight = await flightService.UpdateFlight(userId, flightId, request);
-            return Ok(flight);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error updating flight {FlightId} for user {UserId}", flightId, userId);
-            return StatusCode(500, "An error occurred while updating the flight");
-        }
+        var flight = await flightService.UpdateFlight(userId, flightId, request);
+        return Ok(flight);
     }
 
     /// <summary>
@@ -145,24 +84,11 @@ public class FlightController(
     /// </summary>
     [HttpDelete("{userId}/{flightId}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteFlight(string userId, string flightId)
     {
-        try
-        {
-            await flightService.DeleteFlight(userId, flightId);
-            return Ok();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error deleting flight {FlightId} for user {UserId}", flightId, userId);
-            return StatusCode(500, "An error occurred while deleting the flight");
-        }
+        await flightService.DeleteFlight(userId, flightId);
+        return Ok();
     }
 
     /// <summary>
@@ -170,24 +96,10 @@ public class FlightController(
     /// </summary>
     [HttpPost("[action]/{flightId}")]
     [ProducesResponseType(typeof(FlightDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<FlightDto>> RegenerateNavlog(string userId, string flightId)
     {
-        try
-        {
-            var flight = await flightService.RegenerateNavlog(userId, flightId);
-            return Ok(flight);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error regenerating navlog for flight {FlightId} for user {UserId}", 
-                flightId, userId);
-            return StatusCode(500, "An error occurred while regenerating the navlog");
-        }
+        var flight = await flightService.RegenerateNavlog(userId, flightId);
+        return Ok(flight);
     }
 }

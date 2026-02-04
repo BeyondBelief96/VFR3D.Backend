@@ -10,6 +10,7 @@ using NSwag;
 using NSwag.Generation.Processors.Security;
 using VFR3D.API.Authentication;
 using VFR3D.API.Configuration;
+using VFR3D.API.Middleware;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Repositories;
@@ -62,7 +63,7 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(
                     "http://localhost:5173",
                     "https://www.vfr3d.com",
-                    "https://vfr3d.netlify.app")
+                    "https://vfr3d-frontend.vercel.app")
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .AllowCredentials();
@@ -240,6 +241,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseCors("AllowedOrigins");
+app.UseGlobalExceptionHandling();
 
 if (app.Environment.IsDevelopment())
 {

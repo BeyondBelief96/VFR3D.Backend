@@ -1,8 +1,8 @@
-﻿using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
 using VFR3D.Domain.Enums;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.AircraftPerformanceProfiles;
 using VFR3D.Infrastructure.Dtos.Mappers;
@@ -35,7 +35,7 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
             if (existingProfile)
             {
                 _logger.LogWarning($"Profile with name {request.ProfileName} already exists");
-                throw new DuplicateNameException($"Profile with name {request.ProfileName} already exists");
+                throw new DuplicateProfileNameException("PerformanceProfile", request.ProfileName);
             }
 
             // Get aircraft unit preferences if profile is linked to an aircraft
@@ -70,7 +70,7 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
 
             if (profile == null)
             {
-                throw new KeyNotFoundException($"Profile not found with ID {id}");
+                throw new PerformanceProfileNotFoundException(id);
             }
 
             // Get aircraft unit preferences if profile is linked to an aircraft
@@ -156,7 +156,7 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
 
             if (hasFlights)
             {
-                throw new InvalidOperationException("Cannot delete profile as it is being used by existing flights");
+                throw new ResourceInUseException("PerformanceProfile", profileId, "it is being used by existing flights");
             }
 
             var profile = await _context.AircraftPerformanceProfiles
@@ -164,7 +164,7 @@ public class AircraftPerformanceProfileService : IAircraftPerformanceProfileServ
 
             if (profile == null)
             {
-                throw new KeyNotFoundException($"Profile not found with ID {profileId}");
+                throw new PerformanceProfileNotFoundException(profileId);
             }
 
             _context.AircraftPerformanceProfiles.Remove(profile);

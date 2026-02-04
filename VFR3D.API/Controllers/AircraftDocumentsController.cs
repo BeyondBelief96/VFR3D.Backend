@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using VFR3D.API.Authentication;
+using VFR3D.API.Models;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Dtos.AircraftDocuments;
 using VFR3D.Infrastructure.Interfaces;
 
@@ -8,9 +10,7 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/aircraft/{userId}/{aircraftId}/documents")]
 [ConditionalAuth]
-public class AircraftDocumentsController(
-    IAircraftDocumentService documentService,
-    ILogger<AircraftDocumentsController> logger)
+public class AircraftDocumentsController(IAircraftDocumentService documentService)
     : ControllerBase
 {
     private const int MaxFileSizeBytes = 100 * 1024 * 1024; // 100 MB
@@ -27,9 +27,8 @@ public class AircraftDocumentsController(
     /// <returns>The created document metadata</returns>
     [HttpPost]
     [ProducesResponseType(typeof(AircraftDocumentDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<AircraftDocumentDto>> UploadDocument(
         string userId,
         string aircraftId,
@@ -39,58 +38,34 @@ public class AircraftDocumentsController(
         [FromForm] string? description = null)
     {
         if (file == null || file.Length == 0)
-        {
-            return BadRequest("No file was uploaded");
-        }
+            throw new ValidationException("File", "No file was uploaded");
 
         if (file.Length > MaxFileSizeBytes)
-        {
-            return BadRequest($"File size exceeds the maximum allowed size of {MaxFileSizeBytes / 1024 / 1024} MB");
-        }
+            throw new ValidationException("File", $"File size exceeds the maximum allowed size of {MaxFileSizeBytes / 1024 / 1024} MB");
 
         if (string.IsNullOrWhiteSpace(displayName))
-        {
-            return BadRequest("Display name is required");
-        }
+            throw new ValidationException("DisplayName", "Display name is required");
 
         if (!Enum.TryParse<Domain.Enums.DocumentCategory>(category, true, out var documentCategory))
-        {
-            return BadRequest($"Invalid category. Valid values: {string.Join(", ", Enum.GetNames<Domain.Enums.DocumentCategory>())}");
-        }
+            throw new ValidationException("Category", $"Invalid category. Valid values: {string.Join(", ", Enum.GetNames<Domain.Enums.DocumentCategory>())}");
 
-        try
+        using var stream = file.OpenReadStream();
+        var request = new CreateAircraftDocumentRequest
         {
-            using var stream = file.OpenReadStream();
-            var request = new CreateAircraftDocumentRequest
-            {
-                DisplayName = displayName,
-                Description = description,
-                Category = documentCategory
-            };
+            DisplayName = displayName,
+            Description = description,
+            Category = documentCategory
+        };
 
-            var document = await documentService.UploadDocumentAsync(
-                userId,
-                aircraftId,
-                stream,
-                file.FileName,
-                file.ContentType,
-                request);
+        var document = await documentService.UploadDocumentAsync(
+            userId,
+            aircraftId,
+            stream,
+            file.FileName,
+            file.ContentType,
+            request);
 
-            return Ok(document);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error uploading document for aircraft {AircraftId} by user {UserId}", aircraftId, userId);
-            return StatusCode(500, "An error occurred while uploading the document");
-        }
+        return Ok(document);
     }
 
     /// <summary>
@@ -101,21 +76,12 @@ public class AircraftDocumentsController(
     /// <returns>List of documents</returns>
     [HttpGet]
     [ProducesResponseType(typeof(List<AircraftDocumentListDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<List<AircraftDocumentListDto>>> GetDocuments(
         string userId,
         string aircraftId)
     {
-        try
-        {
-            var documents = await documentService.GetDocumentsForAircraftAsync(userId, aircraftId);
-            return Ok(documents);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error getting documents for aircraft {AircraftId} by user {UserId}", aircraftId, userId);
-            return StatusCode(500, "An error occurred while retrieving documents");
-        }
+        var documents = await documentService.GetDocumentsForAircraftAsync(userId, aircraftId);
+        return Ok(documents);
     }
 
     /// <summary>
@@ -127,34 +93,21 @@ public class AircraftDocumentsController(
     /// <returns>The document metadata</returns>
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(AircraftDocumentDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<AircraftDocumentDto>> GetDocument(
         string userId,
         string aircraftId,
         string id)
     {
-        try
-        {
-            var document = await documentService.GetDocumentAsync(userId, id);
-            if (document == null)
-            {
-                return NotFound($"Document not found with ID {id}");
-            }
+        var document = await documentService.GetDocumentAsync(userId, id);
+        if (document == null)
+            throw new DocumentNotFoundException(id);
 
-            // Verify document belongs to the specified aircraft
-            if (document.AircraftId != aircraftId)
-            {
-                return NotFound($"Document not found with ID {id}");
-            }
+        // Verify document belongs to the specified aircraft
+        if (document.AircraftId != aircraftId)
+            throw new DocumentNotFoundException(aircraftId, id);
 
-            return Ok(document);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error getting document {DocumentId} for user {UserId}", id, userId);
-            return StatusCode(500, "An error occurred while retrieving the document");
-        }
+        return Ok(document);
     }
 
     /// <summary>
@@ -166,34 +119,19 @@ public class AircraftDocumentsController(
     /// <returns>A presigned URL for the document</returns>
     [HttpGet("{id}/url")]
     [ProducesResponseType(typeof(AircraftDocumentUrlDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<AircraftDocumentUrlDto>> GetDocumentUrl(
         string userId,
         string aircraftId,
         string id)
     {
-        try
-        {
-            // First verify document exists and belongs to the user/aircraft
-            var document = await documentService.GetDocumentAsync(userId, id);
-            if (document == null || document.AircraftId != aircraftId)
-            {
-                return NotFound($"Document not found with ID {id}");
-            }
+        // First verify document exists and belongs to the user/aircraft
+        var document = await documentService.GetDocumentAsync(userId, id);
+        if (document == null || document.AircraftId != aircraftId)
+            throw new DocumentNotFoundException(aircraftId, id);
 
-            var urlDto = await documentService.GetDocumentUrlAsync(userId, id);
-            return Ok(urlDto);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error getting URL for document {DocumentId} by user {UserId}", id, userId);
-            return StatusCode(500, "An error occurred while generating the document URL");
-        }
+        var urlDto = await documentService.GetDocumentUrlAsync(userId, id);
+        return Ok(urlDto);
     }
 
     /// <summary>
@@ -206,9 +144,8 @@ public class AircraftDocumentsController(
     /// <returns>The updated document metadata</returns>
     [HttpPatch("{id}")]
     [ProducesResponseType(typeof(AircraftDocumentDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<AircraftDocumentDto>> UpdateDocumentMetadata(
         string userId,
         string aircraftId,
@@ -216,31 +153,15 @@ public class AircraftDocumentsController(
         [FromBody] UpdateAircraftDocumentRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.DisplayName))
-        {
-            return BadRequest("Display name is required");
-        }
+            throw new ValidationException("DisplayName", "Display name is required");
 
-        try
-        {
-            // First verify document exists and belongs to the aircraft
-            var existingDocument = await documentService.GetDocumentAsync(userId, id);
-            if (existingDocument == null || existingDocument.AircraftId != aircraftId)
-            {
-                return NotFound($"Document not found with ID {id}");
-            }
+        // First verify document exists and belongs to the aircraft
+        var existingDocument = await documentService.GetDocumentAsync(userId, id);
+        if (existingDocument == null || existingDocument.AircraftId != aircraftId)
+            throw new DocumentNotFoundException(aircraftId, id);
 
-            var document = await documentService.UpdateDocumentMetadataAsync(userId, id, request);
-            return Ok(document);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error updating document {DocumentId} for user {UserId}", id, userId);
-            return StatusCode(500, "An error occurred while updating the document");
-        }
+        var document = await documentService.UpdateDocumentMetadataAsync(userId, id, request);
+        return Ok(document);
     }
 
     /// <summary>
@@ -253,9 +174,8 @@ public class AircraftDocumentsController(
     /// <returns>The updated document metadata</returns>
     [HttpPut("{id}")]
     [ProducesResponseType(typeof(AircraftDocumentDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<AircraftDocumentDto>> ReplaceDocument(
         string userId,
         string aircraftId,
@@ -263,47 +183,25 @@ public class AircraftDocumentsController(
         IFormFile file)
     {
         if (file == null || file.Length == 0)
-        {
-            return BadRequest("No file was uploaded");
-        }
+            throw new ValidationException("File", "No file was uploaded");
 
         if (file.Length > MaxFileSizeBytes)
-        {
-            return BadRequest($"File size exceeds the maximum allowed size of {MaxFileSizeBytes / 1024 / 1024} MB");
-        }
+            throw new ValidationException("File", $"File size exceeds the maximum allowed size of {MaxFileSizeBytes / 1024 / 1024} MB");
 
-        try
-        {
-            // First verify document exists and belongs to the aircraft
-            var existingDocument = await documentService.GetDocumentAsync(userId, id);
-            if (existingDocument == null || existingDocument.AircraftId != aircraftId)
-            {
-                return NotFound($"Document not found with ID {id}");
-            }
+        // First verify document exists and belongs to the aircraft
+        var existingDocument = await documentService.GetDocumentAsync(userId, id);
+        if (existingDocument == null || existingDocument.AircraftId != aircraftId)
+            throw new DocumentNotFoundException(aircraftId, id);
 
-            using var stream = file.OpenReadStream();
-            var document = await documentService.ReplaceDocumentAsync(
-                userId,
-                id,
-                stream,
-                file.FileName,
-                file.ContentType);
+        using var stream = file.OpenReadStream();
+        var document = await documentService.ReplaceDocumentAsync(
+            userId,
+            id,
+            stream,
+            file.FileName,
+            file.ContentType);
 
-            return Ok(document);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error replacing document {DocumentId} for user {UserId}", id, userId);
-            return StatusCode(500, "An error occurred while replacing the document");
-        }
+        return Ok(document);
     }
 
     /// <summary>
@@ -314,33 +212,18 @@ public class AircraftDocumentsController(
     /// <param name="id">The ID of the document to delete</param>
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteDocument(
         string userId,
         string aircraftId,
         string id)
     {
-        try
-        {
-            // First verify document exists and belongs to the aircraft
-            var existingDocument = await documentService.GetDocumentAsync(userId, id);
-            if (existingDocument == null || existingDocument.AircraftId != aircraftId)
-            {
-                return NotFound($"Document not found with ID {id}");
-            }
+        // First verify document exists and belongs to the aircraft
+        var existingDocument = await documentService.GetDocumentAsync(userId, id);
+        if (existingDocument == null || existingDocument.AircraftId != aircraftId)
+            throw new DocumentNotFoundException(aircraftId, id);
 
-            await documentService.DeleteDocumentAsync(userId, id);
-            return Ok();
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error deleting document {DocumentId} for user {UserId}", id, userId);
-            return StatusCode(500, "An error occurred while deleting the document");
-        }
+        await documentService.DeleteDocumentAsync(userId, id);
+        return Ok();
     }
 }

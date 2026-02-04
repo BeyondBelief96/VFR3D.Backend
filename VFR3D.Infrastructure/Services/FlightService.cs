@@ -1,7 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
 using VFR3D.Domain.Enums;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.Flights;
 using VFR3D.Infrastructure.Dtos.Mappers;
@@ -119,7 +120,7 @@ public class FlightService : IFlightService
 
             if (flight == null)
             {
-                throw new KeyNotFoundException($"Flight not found with ID {flightId}");
+                throw new FlightNotFoundException(userId, flightId);
             }
 
             // Handle aircraft and performance profile changes with validation
@@ -132,7 +133,7 @@ public class FlightService : IFlightService
 
                 if (newAircraft == null)
                 {
-                    throw new KeyNotFoundException($"Aircraft not found with ID {request.AircraftId}");
+                    throw new AircraftNotFoundException(userId, request.AircraftId);
                 }
 
                 if (request.AircraftPerformanceProfileId != null)
@@ -143,7 +144,7 @@ public class FlightService : IFlightService
 
                     if (!profileBelongsToAircraft)
                     {
-                        throw new InvalidOperationException(
+                        throw new ValidationException("AircraftPerformanceProfileId",
                             $"Performance profile {request.AircraftPerformanceProfileId} does not belong to aircraft {request.AircraftId}");
                     }
                 }
@@ -153,7 +154,7 @@ public class FlightService : IFlightService
                     var defaultProfile = newAircraft.PerformanceProfiles.FirstOrDefault();
                     if (defaultProfile == null)
                     {
-                        throw new InvalidOperationException(
+                        throw new ValidationException("AircraftId",
                             $"Aircraft {request.AircraftId} has no performance profiles. Please create a performance profile first.");
                     }
                     request.AircraftPerformanceProfileId = defaultProfile.Id;
@@ -167,13 +168,13 @@ public class FlightService : IFlightService
 
                 if (performanceProfile == null)
                 {
-                    throw new KeyNotFoundException($"Performance profile not found with ID {request.AircraftPerformanceProfileId}");
+                    throw new PerformanceProfileNotFoundException(request.AircraftPerformanceProfileId);
                 }
 
                 // If flight has an aircraft, validate profile belongs to it
                 if (flight.AircraftId != null && performanceProfile.AircraftId != flight.AircraftId)
                 {
-                    throw new InvalidOperationException(
+                    throw new ValidationException("AircraftPerformanceProfileId",
                         $"Performance profile {request.AircraftPerformanceProfileId} does not belong to the flight's aircraft {flight.AircraftId}");
                 }
             }
@@ -274,7 +275,7 @@ public class FlightService : IFlightService
 
             if (flight == null)
             {
-                throw new KeyNotFoundException($"Flight not found with ID {flightId}");
+                throw new FlightNotFoundException(userId, flightId);
             }
 
             return FlightMapper.MapToDto(flight);
@@ -295,7 +296,7 @@ public class FlightService : IFlightService
 
             if (flight == null)
             {
-                throw new KeyNotFoundException($"Flight not found with ID {flightId}");
+                throw new FlightNotFoundException(userId, flightId);
             }
 
             _context.Flights.Remove(flight);
@@ -322,7 +323,7 @@ public class FlightService : IFlightService
 
             if (flight == null)
             {
-                throw new KeyNotFoundException($"Flight not found with ID {flightId}");
+                throw new FlightNotFoundException(userId, flightId);
             }
 
             var navlogRequest = new NavlogRequestDto

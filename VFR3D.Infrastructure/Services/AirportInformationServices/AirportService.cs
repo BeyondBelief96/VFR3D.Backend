@@ -61,8 +61,7 @@ namespace VFR3D.Infrastructure.Services
 
                 if (airport == null)
                 {
-                    throw new ResourceNotFoundException(
-                        $"Airport not found for ICAO code or identifier: {icaoCodeOrIdent}");
+                    throw new AirportNotFoundException(icaoCodeOrIdent);
                 }
 
                 return AirportMapper.ToDto(airport);

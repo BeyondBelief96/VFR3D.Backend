@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using VFR3D.API.Authentication;
+using VFR3D.API.Models;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Dtos;
 using VFR3D.Infrastructure.Interfaces;
 
@@ -8,9 +10,7 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class ObstacleController(
-    IObstacleService obstacleService,
-    ILogger<ObstacleController> logger)
+public class ObstacleController(IObstacleService obstacleService)
     : ControllerBase
 {
     /// <summary>
@@ -24,7 +24,6 @@ public class ObstacleController(
     /// <returns>List of obstacles sorted by height AMSL descending</returns>
     [HttpGet("search")]
     [ProducesResponseType(typeof(IEnumerable<ObstacleDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<ObstacleDto>>> SearchNearby(
         [FromQuery] decimal lat,
         [FromQuery] decimal lon,
@@ -32,17 +31,9 @@ public class ObstacleController(
         [FromQuery] int? minHeightAgl = null,
         [FromQuery] int limit = 100)
     {
-        try
-        {
-            limit = Math.Min(limit, 500);
-            var obstacles = await obstacleService.SearchNearby(lat, lon, radiusNm, minHeightAgl, limit);
-            return Ok(obstacles);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error searching obstacles near ({Lat}, {Lon})", lat, lon);
-            return StatusCode(500, "An error occurred while searching for obstacles");
-        }
+        limit = Math.Min(limit, 500);
+        var obstacles = await obstacleService.SearchNearby(lat, lon, radiusNm, minHeightAgl, limit);
+        return Ok(obstacles);
     }
 
     /// <summary>
@@ -54,23 +45,14 @@ public class ObstacleController(
     /// <returns>List of obstacles in the state sorted by height AMSL descending</returns>
     [HttpGet("state/{stateCode}")]
     [ProducesResponseType(typeof(IEnumerable<ObstacleDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<ObstacleDto>>> GetByState(
         string stateCode,
         [FromQuery] int? minHeightAgl = null,
         [FromQuery] int limit = 1000)
     {
-        try
-        {
-            limit = Math.Min(limit, 5000);
-            var obstacles = await obstacleService.GetByState(stateCode, minHeightAgl, limit);
-            return Ok(obstacles);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error getting obstacles for state: {StateCode}", stateCode);
-            return StatusCode(500, "An error occurred while retrieving obstacles");
-        }
+        limit = Math.Min(limit, 5000);
+        var obstacles = await obstacleService.GetByState(stateCode, minHeightAgl, limit);
+        return Ok(obstacles);
     }
 
     /// <summary>
@@ -80,24 +62,15 @@ public class ObstacleController(
     /// <returns>Obstacle details</returns>
     [HttpGet("{oasNumber}")]
     [ProducesResponseType(typeof(ObstacleDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<ObstacleDto>> GetByOasNumber(string oasNumber)
     {
-        try
+        var obstacle = await obstacleService.GetByOasNumber(oasNumber);
+        if (obstacle == null)
         {
-            var obstacle = await obstacleService.GetByOasNumber(oasNumber);
-            if (obstacle == null)
-            {
-                return NotFound($"Obstacle not found: {oasNumber}");
-            }
-            return Ok(obstacle);
+            throw new NotFoundException("Obstacle", oasNumber);
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error getting obstacle: {OasNumber}", oasNumber);
-            return StatusCode(500, "An error occurred while retrieving the obstacle");
-        }
+        return Ok(obstacle);
     }
 
     /// <summary>
@@ -107,30 +80,21 @@ public class ObstacleController(
     /// <returns>List of obstacles sorted by height AMSL descending</returns>
     [HttpPost("by-oas-numbers")]
     [ProducesResponseType(typeof(IEnumerable<ObstacleDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<IEnumerable<ObstacleDto>>> GetByOasNumbers([FromBody] List<string> oasNumbers)
     {
-        try
+        if (oasNumbers == null || oasNumbers.Count == 0)
         {
-            if (oasNumbers == null || oasNumbers.Count == 0)
-            {
-                return BadRequest("At least one OAS number is required");
-            }
-
-            if (oasNumbers.Count > 1000)
-            {
-                return BadRequest("Maximum of 1000 OAS numbers allowed per request");
-            }
-
-            var obstacles = await obstacleService.GetByOasNumbers(oasNumbers);
-            return Ok(obstacles);
+            throw new ValidationException("oasNumbers", "At least one OAS number is required");
         }
-        catch (Exception ex)
+
+        if (oasNumbers.Count > 1000)
         {
-            logger.LogError(ex, "Error getting obstacles by OAS numbers");
-            return StatusCode(500, "An error occurred while retrieving obstacles");
+            throw new ValidationException("oasNumbers", "Maximum of 1000 OAS numbers allowed per request");
         }
+
+        var obstacles = await obstacleService.GetByOasNumbers(oasNumbers);
+        return Ok(obstacles);
     }
 
     /// <summary>
@@ -145,7 +109,6 @@ public class ObstacleController(
     /// <returns>List of obstacles in the bounding box sorted by height AMSL descending</returns>
     [HttpGet("bbox")]
     [ProducesResponseType(typeof(IEnumerable<ObstacleDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<ObstacleDto>>> GetByBoundingBox(
         [FromQuery] decimal minLat,
         [FromQuery] decimal maxLat,
@@ -154,16 +117,8 @@ public class ObstacleController(
         [FromQuery] int? minHeightAgl = null,
         [FromQuery] int limit = 1000)
     {
-        try
-        {
-            limit = Math.Min(limit, 5000);
-            var obstacles = await obstacleService.GetByBoundingBox(minLat, maxLat, minLon, maxLon, minHeightAgl, limit);
-            return Ok(obstacles);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error getting obstacles in bounding box");
-            return StatusCode(500, "An error occurred while retrieving obstacles");
-        }
+        limit = Math.Min(limit, 5000);
+        var obstacles = await obstacleService.GetByBoundingBox(minLat, maxLat, minLon, maxLon, minHeightAgl, limit);
+        return Ok(obstacles);
     }
 }

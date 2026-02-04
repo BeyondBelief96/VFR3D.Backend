@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using VFR3D.API.Authentication;
+using VFR3D.API.Models;
 using VFR3D.Domain.Enums;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Dtos;
 using VFR3D.Infrastructure.Interfaces;
 
@@ -9,7 +11,7 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetController> logger)
+public class GAirmetController(IGAirmetService gairmetService)
     : ControllerBase
 {
     /// <summary>
@@ -17,22 +19,12 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// </summary>
     /// <returns>List of all G-AIRMETs</returns>
     /// <response code="200">Returns the list of G-AIRMETs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetAllGAirmets()
     {
-        try
-        {
-            var gairmets = await gairmetService.GetAllGAirmets();
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving all G-AIRMETs");
-            return StatusCode(500, "An error occurred while retrieving G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetAllGAirmets();
+        return Ok(gairmets);
     }
 
     /// <summary>
@@ -42,28 +34,18 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// <returns>List of G-AIRMETs for the specified product type</returns>
     /// <response code="200">Returns the list of G-AIRMETs</response>
     /// <response code="400">If the product type is invalid</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("{product}")]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetGAirmetsByProduct(string product)
     {
-        try
+        if (!Enum.TryParse<GAirmetProduct>(product, ignoreCase: true, out var productEnum))
         {
-            if (!Enum.TryParse<GAirmetProduct>(product, ignoreCase: true, out var productEnum))
-            {
-                return BadRequest($"Invalid product type '{product}'. Valid values are: SIERRA, TANGO, ZULU");
-            }
+            throw new ValidationException("product", $"Invalid product type '{product}'. Valid values are: SIERRA, TANGO, ZULU");
+        }
 
-            var gairmets = await gairmetService.GetGAirmetsByProduct(productEnum);
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving G-AIRMETs for product {Product}", product);
-            return StatusCode(500, "An error occurred while retrieving G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetGAirmetsByProduct(productEnum);
+        return Ok(gairmets);
     }
 
     /// <summary>
@@ -71,22 +53,12 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// </summary>
     /// <returns>List of SIERRA G-AIRMETs</returns>
     /// <response code="200">Returns the list of SIERRA G-AIRMETs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("sierra")]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetSierraGAirmets()
     {
-        try
-        {
-            var gairmets = await gairmetService.GetGAirmetsByProduct(GAirmetProduct.SIERRA);
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving SIERRA G-AIRMETs");
-            return StatusCode(500, "An error occurred while retrieving SIERRA G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetGAirmetsByProduct(GAirmetProduct.SIERRA);
+        return Ok(gairmets);
     }
 
     /// <summary>
@@ -94,22 +66,12 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// </summary>
     /// <returns>List of TANGO G-AIRMETs</returns>
     /// <response code="200">Returns the list of TANGO G-AIRMETs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("tango")]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetTangoGAirmets()
     {
-        try
-        {
-            var gairmets = await gairmetService.GetGAirmetsByProduct(GAirmetProduct.TANGO);
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving TANGO G-AIRMETs");
-            return StatusCode(500, "An error occurred while retrieving TANGO G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetGAirmetsByProduct(GAirmetProduct.TANGO);
+        return Ok(gairmets);
     }
 
     /// <summary>
@@ -117,22 +79,12 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// </summary>
     /// <returns>List of ZULU G-AIRMETs</returns>
     /// <response code="200">Returns the list of ZULU G-AIRMETs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("zulu")]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetZuluGAirmets()
     {
-        try
-        {
-            var gairmets = await gairmetService.GetGAirmetsByProduct(GAirmetProduct.ZULU);
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving ZULU G-AIRMETs");
-            return StatusCode(500, "An error occurred while retrieving ZULU G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetGAirmetsByProduct(GAirmetProduct.ZULU);
+        return Ok(gairmets);
     }
 
     // ==================== Hazard Type Endpoints ====================
@@ -144,28 +96,18 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// <returns>List of G-AIRMETs for the specified hazard type</returns>
     /// <response code="200">Returns the list of G-AIRMETs</response>
     /// <response code="400">If the hazard type is invalid</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("hazard/{hazardType}")]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetGAirmetsByHazardType(string hazardType)
     {
-        try
+        if (!Enum.TryParse<GAirmetHazardType>(hazardType, ignoreCase: true, out var hazardTypeEnum))
         {
-            if (!Enum.TryParse<GAirmetHazardType>(hazardType, ignoreCase: true, out var hazardTypeEnum))
-            {
-                return BadRequest($"Invalid hazard type '{hazardType}'. Valid values are: MT_OBSC, IFR, TURB_LO, TURB_HI, LLWS, SFC_WIND, ICE, FZLVL, M_FZLVL");
-            }
+            throw new ValidationException("hazardType", $"Invalid hazard type '{hazardType}'. Valid values are: MT_OBSC, IFR, TURB_LO, TURB_HI, LLWS, SFC_WIND, ICE, FZLVL, M_FZLVL");
+        }
 
-            var gairmets = await gairmetService.GetGAirmetsByHazardType(hazardTypeEnum);
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving G-AIRMETs for hazard type {HazardType}", hazardType);
-            return StatusCode(500, "An error occurred while retrieving G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetGAirmetsByHazardType(hazardTypeEnum);
+        return Ok(gairmets);
     }
 
     // SIERRA Hazard Types
@@ -175,22 +117,12 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// </summary>
     /// <returns>List of Mountain Obscuration G-AIRMETs</returns>
     /// <response code="200">Returns the list of MT_OBSC G-AIRMETs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("hazard/mt-obsc")]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetMtObscGAirmets()
     {
-        try
-        {
-            var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.MT_OBSC);
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving MT_OBSC G-AIRMETs");
-            return StatusCode(500, "An error occurred while retrieving MT_OBSC G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.MT_OBSC);
+        return Ok(gairmets);
     }
 
     /// <summary>
@@ -198,22 +130,12 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// </summary>
     /// <returns>List of IFR G-AIRMETs</returns>
     /// <response code="200">Returns the list of IFR G-AIRMETs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("hazard/ifr")]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetIfrGAirmets()
     {
-        try
-        {
-            var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.IFR);
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving IFR G-AIRMETs");
-            return StatusCode(500, "An error occurred while retrieving IFR G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.IFR);
+        return Ok(gairmets);
     }
 
     // TANGO Hazard Types
@@ -223,22 +145,12 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// </summary>
     /// <returns>List of low-level turbulence G-AIRMETs</returns>
     /// <response code="200">Returns the list of TURB-LO G-AIRMETs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("hazard/turb-lo")]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetTurbLoGAirmets()
     {
-        try
-        {
-            var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.TURB_LO);
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving TURB-LO G-AIRMETs");
-            return StatusCode(500, "An error occurred while retrieving TURB-LO G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.TURB_LO);
+        return Ok(gairmets);
     }
 
     /// <summary>
@@ -246,22 +158,12 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// </summary>
     /// <returns>List of high-level turbulence G-AIRMETs</returns>
     /// <response code="200">Returns the list of TURB-HI G-AIRMETs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("hazard/turb-hi")]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetTurbHiGAirmets()
     {
-        try
-        {
-            var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.TURB_HI);
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving TURB-HI G-AIRMETs");
-            return StatusCode(500, "An error occurred while retrieving TURB-HI G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.TURB_HI);
+        return Ok(gairmets);
     }
 
     /// <summary>
@@ -269,22 +171,12 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// </summary>
     /// <returns>List of low-level wind shear G-AIRMETs</returns>
     /// <response code="200">Returns the list of LLWS G-AIRMETs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("hazard/llws")]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetLlwsGAirmets()
     {
-        try
-        {
-            var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.LLWS);
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving LLWS G-AIRMETs");
-            return StatusCode(500, "An error occurred while retrieving LLWS G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.LLWS);
+        return Ok(gairmets);
     }
 
     /// <summary>
@@ -292,22 +184,12 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// </summary>
     /// <returns>List of surface wind G-AIRMETs</returns>
     /// <response code="200">Returns the list of SFC_WIND G-AIRMETs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("hazard/sfc-wind")]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetSfcWindGAirmets()
     {
-        try
-        {
-            var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.SFC_WIND);
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving SFC_WIND G-AIRMETs");
-            return StatusCode(500, "An error occurred while retrieving SFC_WIND G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.SFC_WIND);
+        return Ok(gairmets);
     }
 
     // ZULU Hazard Types
@@ -317,22 +199,12 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// </summary>
     /// <returns>List of icing G-AIRMETs</returns>
     /// <response code="200">Returns the list of ICE G-AIRMETs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("hazard/ice")]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetIceGAirmets()
     {
-        try
-        {
-            var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.ICE);
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving ICE G-AIRMETs");
-            return StatusCode(500, "An error occurred while retrieving ICE G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.ICE);
+        return Ok(gairmets);
     }
 
     /// <summary>
@@ -340,22 +212,12 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// </summary>
     /// <returns>List of freezing level G-AIRMETs</returns>
     /// <response code="200">Returns the list of FZLVL G-AIRMETs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("hazard/fzlvl")]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetFzlvlGAirmets()
     {
-        try
-        {
-            var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.FZLVL);
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving FZLVL G-AIRMETs");
-            return StatusCode(500, "An error occurred while retrieving FZLVL G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.FZLVL);
+        return Ok(gairmets);
     }
 
     /// <summary>
@@ -363,21 +225,11 @@ public class GAirmetController(IGAirmetService gairmetService, ILogger<GAirmetCo
     /// </summary>
     /// <returns>List of multiple freezing level G-AIRMETs</returns>
     /// <response code="200">Returns the list of M_FZLVL G-AIRMETs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("hazard/m-fzlvl")]
     [ProducesResponseType(typeof(IEnumerable<GAirmetDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<GAirmetDto>>> GetMFzlvlGAirmets()
     {
-        try
-        {
-            var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.M_FZLVL);
-            return Ok(gairmets);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving M_FZLVL G-AIRMETs");
-            return StatusCode(500, "An error occurred while retrieving M_FZLVL G-AIRMETs");
-        }
+        var gairmets = await gairmetService.GetGAirmetsByHazardType(GAirmetHazardType.M_FZLVL);
+        return Ok(gairmets);
     }
 }

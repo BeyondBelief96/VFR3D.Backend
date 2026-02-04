@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using VFR3D.API.Authentication;
+using VFR3D.API.Models;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Dtos.Notam;
 using VFR3D.Infrastructure.Interfaces;
 
@@ -8,7 +10,7 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class NotamController(INotamService notamService, ILogger<NotamController> logger)
+public class NotamController(INotamService notamService)
     : ControllerBase
 {
     /// <summary>
@@ -18,34 +20,20 @@ public class NotamController(INotamService notamService, ILogger<NotamController
     /// <returns>NOTAMs for the specified airport</returns>
     /// <response code="200">Returns the NOTAMs</response>
     /// <response code="400">If the identifier is invalid</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("{icaoCodeOrIdent}")]
     [ProducesResponseType(typeof(NotamResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<NotamResponseDto>> GetNotamsForAirport(
         string icaoCodeOrIdent,
         CancellationToken ct)
     {
-        try
+        if (string.IsNullOrWhiteSpace(icaoCodeOrIdent))
         {
-            if (string.IsNullOrWhiteSpace(icaoCodeOrIdent))
-            {
-                return BadRequest("Airport identifier is required");
-            }
+            throw new ValidationException("icaoCodeOrIdent", "Airport identifier is required");
+        }
 
-            var result = await notamService.GetNotamsForAirportAsync(icaoCodeOrIdent, ct);
-            return Ok(result);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving NOTAMs for airport {Identifier}", icaoCodeOrIdent);
-            return StatusCode(500, "An error occurred while retrieving NOTAMs");
-        }
+        var result = await notamService.GetNotamsForAirportAsync(icaoCodeOrIdent, ct);
+        return Ok(result);
     }
 
     /// <summary>
@@ -57,46 +45,32 @@ public class NotamController(INotamService notamService, ILogger<NotamController
     /// <returns>NOTAMs within the specified radius</returns>
     /// <response code="200">Returns the NOTAMs</response>
     /// <response code="400">If parameters are invalid</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("radius")]
     [ProducesResponseType(typeof(NotamResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<NotamResponseDto>> GetNotamsByRadius(
         [FromQuery] double latitude,
         [FromQuery] double longitude,
         [FromQuery] double radiusNm,
         CancellationToken ct)
     {
-        try
+        if (latitude < -90 || latitude > 90)
         {
-            if (latitude < -90 || latitude > 90)
-            {
-                return BadRequest("Latitude must be between -90 and 90 degrees");
-            }
-
-            if (longitude < -180 || longitude > 180)
-            {
-                return BadRequest("Longitude must be between -180 and 180 degrees");
-            }
-
-            if (radiusNm <= 0 || radiusNm > 100)
-            {
-                return BadRequest("Radius must be between 0 and 100 nautical miles");
-            }
-
-            var result = await notamService.GetNotamsByRadiusAsync(latitude, longitude, radiusNm, ct);
-            return Ok(result);
+            throw new ValidationException("latitude", "Latitude must be between -90 and 90 degrees");
         }
-        catch (ArgumentOutOfRangeException ex)
+
+        if (longitude < -180 || longitude > 180)
         {
-            return BadRequest(ex.Message);
+            throw new ValidationException("longitude", "Longitude must be between -180 and 180 degrees");
         }
-        catch (Exception ex)
+
+        if (radiusNm <= 0 || radiusNm > 100)
         {
-            logger.LogError(ex, "Error retrieving NOTAMs for radius query at {Lat}, {Lon}", latitude, longitude);
-            return StatusCode(500, "An error occurred while retrieving NOTAMs");
+            throw new ValidationException("radiusNm", "Radius must be between 0 and 100 nautical miles");
         }
+
+        var result = await notamService.GetNotamsByRadiusAsync(latitude, longitude, radiusNm, ct);
+        return Ok(result);
     }
 
     /// <summary>
@@ -126,55 +100,37 @@ public class NotamController(INotamService notamService, ILogger<NotamController
     /// </remarks>
     /// <response code="200">Returns the NOTAMs</response>
     /// <response code="400">If the request is invalid</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpPost("route")]
     [ProducesResponseType(typeof(NotamResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<NotamResponseDto>> GetNotamsForRoute(
         [FromBody] NotamQueryByRouteRequest request,
         CancellationToken ct)
     {
-        try
+        if (request == null)
         {
-            if (request == null)
-            {
-                return BadRequest("Request body is required");
-            }
-
-            var hasRoutePoints = request.RoutePoints is { Count: > 0 };
-            var hasAirportIdentifiers = request.AirportIdentifiers is { Count: > 0 };
-
-            if (!hasRoutePoints && !hasAirportIdentifiers)
-            {
-                return BadRequest("At least one airport identifier or route point is required");
-            }
-
-            // Validate route points if provided
-            if (hasRoutePoints)
-            {
-                var validationError = ValidateRoutePoints(request.RoutePoints);
-                if (validationError != null)
-                {
-                    return BadRequest(validationError);
-                }
-            }
-
-            var result = await notamService.GetNotamsForRouteAsync(request, ct);
-            return Ok(result);
+            throw new ValidationException("request", "Request body is required");
         }
-        catch (ArgumentException ex)
+
+        var hasRoutePoints = request.RoutePoints is { Count: > 0 };
+        var hasAirportIdentifiers = request.AirportIdentifiers is { Count: > 0 };
+
+        if (!hasRoutePoints && !hasAirportIdentifiers)
         {
-            return BadRequest(ex.Message);
+            throw new ValidationException("request", "At least one airport identifier or route point is required");
         }
-        catch (Exception ex)
+
+        // Validate route points if provided
+        if (hasRoutePoints)
         {
-            logger.LogError(ex, "Error retrieving NOTAMs for route query");
-            return StatusCode(500, "An error occurred while retrieving NOTAMs");
+            ValidateRoutePoints(request.RoutePoints);
         }
+
+        var result = await notamService.GetNotamsForRouteAsync(request, ct);
+        return Ok(result);
     }
 
-    private static string? ValidateRoutePoints(List<RoutePointDto> routePoints)
+    private static void ValidateRoutePoints(List<RoutePointDto> routePoints)
     {
         for (var i = 0; i < routePoints.Count; i++)
         {
@@ -187,7 +143,8 @@ public class NotamController(INotamService notamService, ILogger<NotamController
             // Each point must be either an airport OR a waypoint with coordinates
             if (!hasAirportId && !hasCoordinates)
             {
-                return $"Route point {pointNumber}: Must specify either an airport identifier or latitude/longitude coordinates";
+                throw new ValidationException($"routePoints[{i}]",
+                    $"Route point {pointNumber}: Must specify either an airport identifier or latitude/longitude coordinates");
             }
 
             // Validate coordinates if this is a waypoint
@@ -195,26 +152,28 @@ public class NotamController(INotamService notamService, ILogger<NotamController
             {
                 if (!point.Latitude.HasValue || !point.Longitude.HasValue)
                 {
-                    return $"Route point {pointNumber}: Waypoints require both latitude and longitude";
+                    throw new ValidationException($"routePoints[{i}]",
+                        $"Route point {pointNumber}: Waypoints require both latitude and longitude");
                 }
 
                 if (point.Latitude.Value < -90 || point.Latitude.Value > 90)
                 {
-                    return $"Route point {pointNumber}: Latitude must be between -90 and 90 degrees";
+                    throw new ValidationException($"routePoints[{i}].latitude",
+                        $"Route point {pointNumber}: Latitude must be between -90 and 90 degrees");
                 }
 
                 if (point.Longitude.Value < -180 || point.Longitude.Value > 180)
                 {
-                    return $"Route point {pointNumber}: Longitude must be between -180 and 180 degrees";
+                    throw new ValidationException($"routePoints[{i}].longitude",
+                        $"Route point {pointNumber}: Longitude must be between -180 and 180 degrees");
                 }
 
                 if (point.RadiusNm.HasValue && (point.RadiusNm.Value <= 0 || point.RadiusNm.Value > 100))
                 {
-                    return $"Route point {pointNumber}: Radius must be between 0 and 100 nautical miles";
+                    throw new ValidationException($"routePoints[{i}].radiusNm",
+                        $"Route point {pointNumber}: Radius must be between 0 and 100 nautical miles");
                 }
             }
         }
-
-        return null;
     }
 }

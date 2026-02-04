@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.AircraftDocuments;
 using VFR3D.Infrastructure.Dtos.Mappers;
@@ -54,7 +55,7 @@ public class AircraftDocumentService : IAircraftDocumentService
         // Validate content type
         if (!AllowedContentTypes.Contains(contentType))
         {
-            throw new ArgumentException($"File type '{contentType}' is not allowed. Allowed types: PDF, images (JPEG, PNG, GIF, WebP), and Office documents (DOC, DOCX, XLS, XLSX).");
+            throw new ValidationException("contentType", $"File type '{contentType}' is not allowed. Allowed types: PDF, images (JPEG, PNG, GIF, WebP), and Office documents (DOC, DOCX, XLS, XLSX).");
         }
 
         // Validate aircraft ownership
@@ -63,7 +64,7 @@ public class AircraftDocumentService : IAircraftDocumentService
 
         if (aircraft == null)
         {
-            throw new KeyNotFoundException($"Aircraft not found with ID {aircraftId}");
+            throw new AircraftNotFoundException(userId, aircraftId);
         }
 
         // Generate document ID and blob path
@@ -137,7 +138,7 @@ public class AircraftDocumentService : IAircraftDocumentService
 
         if (document == null)
         {
-            throw new KeyNotFoundException($"Document not found with ID {documentId}");
+            throw new DocumentNotFoundException(documentId);
         }
 
         var url = await _storageService.GeneratePresignedUrlAsync(
@@ -163,7 +164,7 @@ public class AircraftDocumentService : IAircraftDocumentService
 
         if (document == null)
         {
-            throw new KeyNotFoundException($"Document not found with ID {documentId}");
+            throw new DocumentNotFoundException(documentId);
         }
 
         document.DisplayName = request.DisplayName;
@@ -190,7 +191,7 @@ public class AircraftDocumentService : IAircraftDocumentService
         // Validate content type
         if (!AllowedContentTypes.Contains(contentType))
         {
-            throw new ArgumentException($"File type '{contentType}' is not allowed. Allowed types: PDF, images (JPEG, PNG, GIF, WebP), and Office documents (DOC, DOCX, XLS, XLSX).");
+            throw new ValidationException("contentType", $"File type '{contentType}' is not allowed. Allowed types: PDF, images (JPEG, PNG, GIF, WebP), and Office documents (DOC, DOCX, XLS, XLSX).");
         }
 
         var document = await _context.AircraftDocuments
@@ -198,7 +199,7 @@ public class AircraftDocumentService : IAircraftDocumentService
 
         if (document == null)
         {
-            throw new KeyNotFoundException($"Document not found with ID {documentId}");
+            throw new DocumentNotFoundException(documentId);
         }
 
         var oldBlobName = document.BlobName;
@@ -262,7 +263,7 @@ public class AircraftDocumentService : IAircraftDocumentService
 
         if (document == null)
         {
-            throw new KeyNotFoundException($"Document not found with ID {documentId}");
+            throw new DocumentNotFoundException(documentId);
         }
 
         try

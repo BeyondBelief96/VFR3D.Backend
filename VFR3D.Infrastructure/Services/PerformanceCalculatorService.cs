@@ -41,8 +41,7 @@ public class PerformanceCalculatorService : IPerformanceCalculatorService
 
         if (airport == null)
         {
-            throw new ResourceNotFoundException(
-                $"Airport not found for ICAO code or identifier: {icaoCodeOrIdent}");
+            throw new AirportNotFoundException(icaoCodeOrIdent);
         }
 
         // Get METAR data
@@ -51,7 +50,7 @@ public class PerformanceCalculatorService : IPerformanceCalculatorService
         // Validate METAR has required wind data
         if (metar.WindSpeedKt == null)
         {
-            throw new InvalidDataException("METAR missing wind speed data");
+            throw new WeatherDataMissingException("wind speed", icaoCodeOrIdent);
         }
 
         // Get runways for this airport
@@ -178,13 +177,12 @@ public class PerformanceCalculatorService : IPerformanceCalculatorService
 
         if (airport == null)
         {
-            throw new ResourceNotFoundException(
-                $"Airport not found for ICAO code or identifier: {icaoCodeOrIdent}");
+            throw new AirportNotFoundException(icaoCodeOrIdent);
         }
 
         if (airport.Elev == null)
         {
-            throw new InvalidDataException("Airport missing elevation data");
+            throw new InvalidPerformanceDataException($"Airport {icaoCodeOrIdent} is missing elevation data");
         }
 
         // Get METAR data
@@ -202,7 +200,7 @@ public class PerformanceCalculatorService : IPerformanceCalculatorService
         }
         else
         {
-            throw new InvalidDataException("METAR missing temperature data and no override provided");
+            throw new WeatherDataMissingException("temperature", $"{icaoCodeOrIdent} (no override provided)");
         }
 
         // Get altimeter (with optional override)
@@ -217,7 +215,7 @@ public class PerformanceCalculatorService : IPerformanceCalculatorService
         }
         else
         {
-            throw new InvalidDataException("METAR missing altimeter data and no override provided");
+            throw new WeatherDataMissingException("altimeter", $"{icaoCodeOrIdent} (no override provided)");
         }
 
         var result = CalculateDensityAltitudeInternal(

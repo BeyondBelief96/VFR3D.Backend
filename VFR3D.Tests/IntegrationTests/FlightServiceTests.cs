@@ -10,6 +10,7 @@ using VFR3D.Infrastructure.Dtos.Flights;
 using VFR3D.Infrastructure.Dtos.Navlog;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Services;
+using VFR3D.Domain.Exceptions;
 using Xunit;
 
 namespace VFR3D.Tests.IntegrationTests
@@ -284,7 +285,7 @@ namespace VFR3D.Tests.IntegrationTests
             var nonExistentFlightId = Guid.NewGuid().ToString();
 
             // Act & Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            await Assert.ThrowsAsync<FlightNotFoundException>(() =>
                 _flightService!.GetFlight(userId, nonExistentFlightId));
         }
 
@@ -318,7 +319,7 @@ namespace VFR3D.Tests.IntegrationTests
             await DbContext.SaveChangesAsync();
 
             // Act & Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            await Assert.ThrowsAsync<FlightNotFoundException>(() =>
                 _flightService!.GetFlight(userId, flightId));
         }
 
@@ -424,7 +425,7 @@ namespace VFR3D.Tests.IntegrationTests
             };
 
             // Act & Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            await Assert.ThrowsAsync<FlightNotFoundException>(() =>
                 _flightService!.UpdateFlight(userId, nonExistentFlightId, updateRequest));
         }
 
@@ -472,7 +473,7 @@ namespace VFR3D.Tests.IntegrationTests
             var nonExistentFlightId = Guid.NewGuid().ToString();
 
             // Act & Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            await Assert.ThrowsAsync<FlightNotFoundException>(() =>
                 _flightService!.DeleteFlight(userId, nonExistentFlightId));
         }
 
@@ -506,7 +507,7 @@ namespace VFR3D.Tests.IntegrationTests
             await DbContext.SaveChangesAsync();
 
             // Act & Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            await Assert.ThrowsAsync<FlightNotFoundException>(() =>
                 _flightService!.DeleteFlight(userId, flightId));
         }
 
@@ -648,7 +649,7 @@ namespace VFR3D.Tests.IntegrationTests
             var nonExistentFlightId = Guid.NewGuid().ToString();
 
             // Act & Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            await Assert.ThrowsAsync<FlightNotFoundException>(() =>
                 _flightService!.RegenerateNavlog(userId, nonExistentFlightId));
         }
 

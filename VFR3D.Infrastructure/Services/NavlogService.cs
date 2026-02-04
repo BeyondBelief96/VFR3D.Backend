@@ -1,8 +1,8 @@
-﻿using GeographicLib;
-using Microsoft.EntityFrameworkCore;
+using GeographicLib;
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
 using VFR3D.Domain.Enums;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Domain.Utilities.UnitConversions;
 using VFR3D.Infrastructure.Dtos.Navlog;
 using VFR3D.Infrastructure.Interfaces;
@@ -43,12 +43,11 @@ public class NavlogService : INavlogService
 
             if (request.Waypoints.Count < 2)
             {
-                throw new ArgumentException("At least two waypoints are required for navigation");
+                throw new ValidationException("Waypoints", "At least two waypoints are required for navigation");
             }
 
             var performanceProfile = await _aircraftPerformanceProfileRepository.GetByIdAsync(request.AircraftPerformanceProfileId)
-                                     ?? throw new KeyNotFoundException(
-                                         $"Aircraft performance profile not found: {request.AircraftPerformanceProfileId}");
+                                     ?? throw new PerformanceProfileNotFoundException(request.AircraftPerformanceProfileId);
 
             var waypointsWithClimbAndDescent = AddClimbAndDescentWaypoints(
                 request.Waypoints,

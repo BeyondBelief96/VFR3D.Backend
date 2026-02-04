@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using VFR3D.API.Authentication;
+using VFR3D.API.Models;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Dtos.Navlog;
 using VFR3D.Infrastructure.Interfaces;
 
@@ -8,9 +10,7 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class NavlogController(
-    INavlogService navlogService,
-    ILogger<NavlogController> logger)
+public class NavlogController(INavlogService navlogService)
     : ControllerBase
 {
     /// <summary>
@@ -21,35 +21,14 @@ public class NavlogController(
     /// <response code="200">Returns the calculated navigation log</response>
     /// <response code="400">If the request data is invalid</response>
     /// <response code="404">If the aircraft performance profile is not found</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpPost("[action]")]
     [ProducesResponseType(typeof(NavlogResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<NavlogResponseDto>> CalculateNavlog([FromBody] NavlogRequestDto request)
     {
-        try
-        {
-            logger.LogInformation("Calculating navlog for {WaypointCount} waypoints", request.Waypoints.Count);
-            var response = await navlogService.CalculateNavlog(request);
-            return Ok(response);
-        }
-        catch (ArgumentException ex)
-        {
-            logger.LogWarning(ex, "Invalid navlog request data");
-            return BadRequest(ex.Message);
-        }
-        catch (KeyNotFoundException ex)
-        {
-            logger.LogWarning(ex, "Aircraft performance profile not found");
-            return NotFound(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error calculating navlog");
-            return StatusCode(500, "An error occurred while calculating the navigation log");
-        }
+        var response = await navlogService.CalculateNavlog(request);
+        return Ok(response);
     }
 
     /// <summary>
@@ -59,30 +38,14 @@ public class NavlogController(
     /// <returns>True course, magnetic course, and distance between the points</returns>
     /// <response code="200">Returns the bearing and distance calculation</response>
     /// <response code="400">If the request data is invalid</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpPost("[action]")]
     [ProducesResponseType(typeof(BearingAndDistanceResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<BearingAndDistanceResponseDto>> CalculateBearingAndDistance(
         [FromBody] BearingAndDistanceRequestDto request)
     {
-        try
-        {
-            logger.LogInformation("Calculating bearing and distance between points");
-            var response = await navlogService.CalculateBearingAndDistance(request);
-            return Ok(response);
-        }
-        catch (ArgumentException ex)
-        {
-            logger.LogWarning(ex, "Invalid bearing and distance request data");
-            return BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error calculating bearing and distance");
-            return StatusCode(500, "An error occurred while calculating bearing and distance");
-        }
+        var response = await navlogService.CalculateBearingAndDistance(request);
+        return Ok(response);
     }
 
     /// <summary>
@@ -92,28 +55,15 @@ public class NavlogController(
     /// <returns>Winds aloft data for the specified forecast period</returns>
     /// <response code="200">Returns the winds aloft data</response>
     /// <response code="400">If the forecast period is invalid</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("[action]/{forecast}")]
     [ProducesResponseType(typeof(WindsAloftDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<WindsAloftDto>> GetWindsAloftData(int forecast)
     {
-        try
-        {
-            if (forecast != 6 && forecast != 12 && forecast != 24)
-            {
-                return BadRequest("Forecast period must be 6, 12, or 24 hours");
-            }
+        if (forecast != 6 && forecast != 12 && forecast != 24)
+            throw new ValidationException("Forecast", "Forecast period must be 6, 12, or 24 hours");
 
-            logger.LogInformation("Getting winds aloft data for {Forecast} hour forecast", forecast);
-            var response = await navlogService.GetWindsAloftData(forecast);
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error getting winds aloft data");
-            return StatusCode(500, "An error occurred while retrieving winds aloft data");
-        }
+        var response = await navlogService.GetWindsAloftData(forecast);
+        return Ok(response);
     }
 }

@@ -9,6 +9,7 @@ using VFR3D.Domain.ValueObjects.WeightBalance;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.WeightBalance;
 using VFR3D.Infrastructure.Services;
+using VFR3D.Domain.Exceptions;
 using Xunit;
 
 namespace VFR3D.Tests.WeightAndBalanceTests;
@@ -672,8 +673,7 @@ public class WeightBalanceCalculationTests
         Func<Task> act = async () => await _service.Calculate(TestUserId, profile.Id, request);
 
         // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*envelope*");
+        await act.Should().ThrowAsync<ValidationException>();
     }
 
     [Fact]
@@ -692,7 +692,7 @@ public class WeightBalanceCalculationTests
         Func<Task> act = async () => await _service.Calculate(TestUserId, nonExistentProfileId, request);
 
         // Assert
-        await act.Should().ThrowAsync<KeyNotFoundException>();
+        await act.Should().ThrowAsync<WeightBalanceProfileNotFoundException>();
     }
 
     #endregion

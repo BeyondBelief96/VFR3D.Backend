@@ -1,6 +1,6 @@
-using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.Aircraft;
 using VFR3D.Infrastructure.Dtos.Mappers;
@@ -31,7 +31,7 @@ public class AircraftService : IAircraftService
             {
                 _logger.LogWarning("Aircraft with tail number {TailNumber} already exists for user {UserId}",
                     request.TailNumber, userId);
-                throw new DuplicateNameException($"Aircraft with tail number {request.TailNumber} already exists");
+                throw new DuplicateTailNumberException(request.TailNumber);
             }
 
             var aircraft = AircraftMapper.CreateFromRequest(userId, request);
@@ -57,7 +57,7 @@ public class AircraftService : IAircraftService
 
             if (aircraft == null)
             {
-                throw new KeyNotFoundException($"Aircraft not found with ID {id}");
+                throw new AircraftNotFoundException(userId, id);
             }
 
             // Check for duplicate tail number if it changed
@@ -70,7 +70,7 @@ public class AircraftService : IAircraftService
                 {
                     _logger.LogWarning("Aircraft with tail number {TailNumber} already exists for user {UserId}",
                         request.TailNumber, userId);
-                    throw new DuplicateNameException($"Aircraft with tail number {request.TailNumber} already exists");
+                    throw new DuplicateTailNumberException(request.TailNumber);
                 }
             }
 
@@ -132,13 +132,13 @@ public class AircraftService : IAircraftService
 
             if (aircraft == null)
             {
-                throw new KeyNotFoundException($"Aircraft not found with ID {id}");
+                throw new AircraftNotFoundException(userId, id);
             }
 
             // Check if aircraft has flights directly linked to it
             if (aircraft.Flights.Any())
             {
-                throw new InvalidOperationException("Cannot delete aircraft as it is being used by existing flights");
+                throw new ResourceInUseException("Aircraft", id, "it is being used by existing flights");
             }
 
             // Check if any of the aircraft's performance profiles have flights linked to them
@@ -150,7 +150,7 @@ public class AircraftService : IAircraftService
 
                 if (hasFlightsUsingProfiles)
                 {
-                    throw new InvalidOperationException("Cannot delete aircraft as its performance profiles are being used by existing flights");
+                    throw new ResourceInUseException("Aircraft", id, "its performance profiles are being used by existing flights");
                 }
             }
 

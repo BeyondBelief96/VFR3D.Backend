@@ -1,7 +1,7 @@
-using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Enums;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Domain.ValueObjects.WeightBalance;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.Mappers;
@@ -34,7 +34,7 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
             {
                 _logger.LogWarning("W&B profile with name {ProfileName} already exists for user {UserId}",
                     request.ProfileName, userId);
-                throw new DuplicateNameException($"Weight & Balance profile with name '{request.ProfileName}' already exists");
+                throw new DuplicateProfileNameException("WeightBalanceProfile", request.ProfileName);
             }
 
             // Verify aircraft exists if provided
@@ -45,7 +45,7 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
 
                 if (!aircraftExists)
                 {
-                    throw new KeyNotFoundException($"Aircraft not found with ID {request.AircraftId}");
+                    throw new AircraftNotFoundException(request.AircraftId);
                 }
             }
 
@@ -122,7 +122,7 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
 
             if (profile == null)
             {
-                throw new KeyNotFoundException($"W&B profile not found with ID {profileId}");
+                throw new WeightBalanceProfileNotFoundException(profileId.ToString());
             }
 
             // Check for duplicate profile name if it changed
@@ -135,7 +135,7 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
                 {
                     _logger.LogWarning("W&B profile with name {ProfileName} already exists for user {UserId}",
                         request.ProfileName, userId);
-                    throw new DuplicateNameException($"Weight & Balance profile with name '{request.ProfileName}' already exists");
+                    throw new DuplicateProfileNameException("WeightBalanceProfile", request.ProfileName);
                 }
             }
 
@@ -147,7 +147,7 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
 
                 if (!aircraftExists)
                 {
-                    throw new KeyNotFoundException($"Aircraft not found with ID {request.AircraftId}");
+                    throw new AircraftNotFoundException(request.AircraftId);
                 }
             }
 
@@ -172,7 +172,7 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
 
             if (profile == null)
             {
-                throw new KeyNotFoundException($"W&B profile not found with ID {profileId}");
+                throw new WeightBalanceProfileNotFoundException(profileId.ToString());
             }
 
             _context.WeightBalanceProfiles.Remove(profile);
@@ -194,7 +194,7 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
 
             if (profile == null)
             {
-                throw new KeyNotFoundException($"W&B profile not found with ID {profileId}");
+                throw new WeightBalanceProfileNotFoundException(profileId.ToString());
             }
 
             // Select envelope (use specified or first)
@@ -204,7 +204,7 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
 
             if (envelope == null)
             {
-                throw new InvalidOperationException("No CG envelope found for calculation");
+                throw new ValidationException("EnvelopeId", "No CG envelope found for calculation");
             }
 
             var warnings = new List<string>();
@@ -586,7 +586,7 @@ public class WeightBalanceProfileService : IWeightBalanceProfileService
 
             if (calculation == null)
             {
-                throw new KeyNotFoundException($"W&B calculation not found with ID {calculationId}");
+                throw new NotFoundException("WeightBalanceCalculation", calculationId);
             }
 
             _context.WeightBalanceCalculations.Remove(calculation);
