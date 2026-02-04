@@ -40,6 +40,13 @@ namespace VFR3D.Azure.Functions.Functions
 
                 if (await _publicationService.ShouldRunUpdateAsync(PublicationType.NasrSubscription_Airport, currentDate))
                 {
+                    // Check if this is first-time initialization (staggered startup - Airport runs first, no delay)
+                    var publicationCycle = await _publicationService.GetPublicationCycleAsync(PublicationType.NasrSubscription_Airport);
+                    if (publicationCycle?.LastSuccessfulUpdate.HasValue != true)
+                    {
+                        _logger.LogInformation("First-time initialization detected for Airport data (no delay - runs first)");
+                    }
+
                     _logger.LogInformation("Starting airport data update process");
 
                     // Process airports first (APT_BASE.csv, APT_ATT.csv, APT_CON.csv)

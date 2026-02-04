@@ -67,7 +67,7 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
         npgsqlOptions =>
         {
             npgsqlOptions.EnableRetryOnFailure(3);
-            npgsqlOptions.CommandTimeout(30);
+            npgsqlOptions.CommandTimeout(300); // 5 minutes for heavy NASR data operations
             npgsqlOptions.UseNetTopologySuite();
         });
 
