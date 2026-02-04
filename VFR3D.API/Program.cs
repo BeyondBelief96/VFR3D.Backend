@@ -194,7 +194,6 @@ builder.Services.AddScoped<IAircraftService, AircraftService>();
 builder.Services.AddScoped<IWeightBalanceProfileService, WeightBalanceProfileService>();
 builder.Services.AddScoped<IPerformanceCalculatorService, PerformanceCalculatorService>();
 builder.Services.AddScoped<IFlightService, FlightService>();
-builder.Services.AddScoped<IStripeService, StripeService>();
 builder.Services.AddScoped<ConditionalAuthHandler>();
 
 // NOTAM Services
