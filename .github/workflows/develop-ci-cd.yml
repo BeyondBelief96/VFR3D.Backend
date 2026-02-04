@@ -186,6 +186,10 @@ jobs:
           path: .
         continue-on-error: false
 
+      - name: Stop Functions App
+        if: steps.functions_check.outputs.deploy_functions == 'true'
+        run: az functionapp stop --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.FUNCTION_APP_NAME }}
+
       - name: Deploy Functions
         if: steps.functions_check.outputs.deploy_functions == 'true'
         run: |
@@ -193,8 +197,13 @@ jobs:
             az functionapp deployment source config-zip \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --name ${{ env.FUNCTION_APP_NAME }} \
-              --src functionapp.zip
+              --src functionapp.zip \
+              --timeout 3000
           else
             echo "functionapp.zip not found, cannot deploy Functions"
             exit 1
           fi
+
+      - name: Start Functions App
+        if: steps.functions_check.outputs.deploy_functions == 'true'
+        run: az functionapp start --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.FUNCTION_APP_NAME }}
