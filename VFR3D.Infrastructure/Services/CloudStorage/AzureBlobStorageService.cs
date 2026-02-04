@@ -166,6 +166,58 @@ public class AzureBlobStorageService : ICloudStorageService
         }
     }
 
+    public async Task UploadBlobsAsync(string containerName, IEnumerable<(string BlobName, byte[] Content, string ContentType)> blobs, int maxConcurrency = 10)
+    {
+        var blobsList = blobs.ToList();
+        if (blobsList.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+            var totalUploaded = 0;
+
+            // Use SemaphoreSlim to limit concurrency
+            using var semaphore = new SemaphoreSlim(maxConcurrency);
+            var uploadTasks = blobsList.Select(async blob =>
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    var blobClient = containerClient.GetBlobClient(blob.BlobName);
+                    var blobHttpHeaders = new BlobHttpHeaders
+                    {
+                        ContentType = blob.ContentType
+                    };
+
+                    using var stream = new MemoryStream(blob.Content);
+                    await blobClient.UploadAsync(stream, new BlobUploadOptions
+                    {
+                        HttpHeaders = blobHttpHeaders
+                    });
+
+                    Interlocked.Increment(ref totalUploaded);
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            await Task.WhenAll(uploadTasks);
+
+            _logger.LogInformation("Uploaded {Count} blobs to container: {ContainerName}",
+                totalUploaded, containerName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uploading blobs to container: {ContainerName}", containerName);
+            throw;
+        }
+    }
+
     public async Task DeleteBlobAsync(string containerName, string blobName)
     {
         try

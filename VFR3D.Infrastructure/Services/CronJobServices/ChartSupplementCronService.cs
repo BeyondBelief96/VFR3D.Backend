@@ -145,36 +145,37 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
 
                 // Group existing supplements by AirportCode only
                 var existingLookup = existingSupplements
-                    .ToLookup(x => x.AirportCode);
+                    .ToDictionary(x => x.AirportCode!, x => x);
+
+                var newSupplements = new List<ChartSupplement>();
 
                 foreach (var supplement in batch)
                 {
                     // Look for an existing record with the same AirportCode
-                    var existingMatch = existingLookup[supplement.AirportCode].FirstOrDefault();
-
-                    if (existingMatch != null)
+                    if (existingLookup.TryGetValue(supplement.AirportCode!, out var existingMatch))
                     {
-                        // Update existing record including FileName for new editions
-                        await _dbContext.ChartSupplements
-                            .Where(cs => cs.Id == existingMatch.Id)
-                            .ExecuteUpdateAsync(s => s
-                                .SetProperty(b => b.AirportName, supplement.AirportName)
-                                .SetProperty(b => b.AirportCity, supplement.AirportCity)
-                                .SetProperty(b => b.FileName, supplement.FileName),
-                                cancellationToken);
+                        // Update existing record via change tracking (batched on SaveChanges)
+                        existingMatch.AirportName = supplement.AirportName;
+                        existingMatch.AirportCity = supplement.AirportCity;
+                        existingMatch.FileName = supplement.FileName;
                     }
                     else
                     {
-                        // This is a new airport
-                        await _dbContext.ChartSupplements.AddAsync(supplement, cancellationToken);
+                        newSupplements.Add(supplement);
                     }
+                }
+
+                // Batch add new supplements
+                if (newSupplements.Count > 0)
+                {
+                    await _dbContext.ChartSupplements.AddRangeAsync(newSupplements, cancellationToken);
                 }
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
 
                 _logger.LogInformation(
-                    "Processed airport batch: {Count} supplements processed",
-                    batch.Count);
+                    "Processed airport batch: {Count} supplements ({NewCount} new, {UpdatedCount} updated)",
+                    batch.Count, newSupplements.Count, batch.Count - newSupplements.Count);
             }
         }
 
@@ -192,36 +193,37 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
 
                 // Group existing supplements by NavigationalAidName only
                 var existingLookup = existingSupplements
-                    .ToLookup(x => x.NavigationalAidName);
+                    .ToDictionary(x => x.NavigationalAidName!, x => x);
+
+                var newSupplements = new List<ChartSupplement>();
 
                 foreach (var supplement in batch)
                 {
                     // Look for an existing record with the same NavigationalAidName
-                    var existingMatch = existingLookup[supplement.NavigationalAidName].FirstOrDefault();
-
-                    if (existingMatch != null)
+                    if (existingLookup.TryGetValue(supplement.NavigationalAidName!, out var existingMatch))
                     {
-                        // Update existing record including FileName for new editions
-                        await _dbContext.ChartSupplements
-                            .Where(cs => cs.Id == existingMatch.Id)
-                            .ExecuteUpdateAsync(s => s
-                                .SetProperty(b => b.AirportName, supplement.AirportName)
-                                .SetProperty(b => b.AirportCity, supplement.AirportCity)
-                                .SetProperty(b => b.FileName, supplement.FileName),
-                                cancellationToken);
+                        // Update existing record via change tracking (batched on SaveChanges)
+                        existingMatch.AirportName = supplement.AirportName;
+                        existingMatch.AirportCity = supplement.AirportCity;
+                        existingMatch.FileName = supplement.FileName;
                     }
                     else
                     {
-                        // This is a new navaid
-                        await _dbContext.ChartSupplements.AddAsync(supplement, cancellationToken);
+                        newSupplements.Add(supplement);
                     }
+                }
+
+                // Batch add new supplements
+                if (newSupplements.Count > 0)
+                {
+                    await _dbContext.ChartSupplements.AddRangeAsync(newSupplements, cancellationToken);
                 }
 
                 await _dbContext.SaveChangesAsync(cancellationToken);
 
                 _logger.LogInformation(
-                    "Processed navaid batch: {Count} supplements processed",
-                    batch.Count);
+                    "Processed navaid batch: {Count} supplements ({NewCount} new, {UpdatedCount} updated)",
+                    batch.Count, newSupplements.Count, batch.Count - newSupplements.Count);
             }
         }
 
@@ -249,6 +251,10 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
                 throw;
             }
 
+            // Collect blobs to delete and blobs to upload
+            var blobsToDelete = new List<string>();
+            var blobs = new List<(string BlobName, byte[] Content, string ContentType)>();
+
             foreach (var pdfEntry in pdfEntries)
             {
                 try
@@ -257,30 +263,33 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
 
                     if (existingObjects.TryGetValue(baseName, out var existingKey))
                     {
-                        _logger.LogInformation(
-                            "Found existing chart supplement {ExistingKey}, updating to new edition {NewKey}",
-                            existingKey,
-                            pdfEntry.Name);
-
-                        await _cloudStorageService.DeleteBlobAsync(containerName, existingKey);
-                        _logger.LogDebug("Deleted old edition {OldKey}", existingKey);
+                        blobsToDelete.Add(existingKey);
                     }
 
                     using var pdfStream = pdfEntry.Open();
                     using var memoryStream = new MemoryStream();
                     await pdfStream.CopyToAsync(memoryStream, cancellationToken);
-                    memoryStream.Position = 0;
-
-                    await _cloudStorageService.UploadBlobAsync(containerName, pdfEntry.Name, memoryStream, "application/pdf");
-                    _logger.LogDebug("Uploaded {Action} PDF {FileName} to storage",
-                        existingObjects.ContainsKey(baseName) ? "updated" : "new",
-                        pdfEntry.Name);
+                    blobs.Add((pdfEntry.Name, memoryStream.ToArray(), "application/pdf"));
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error processing PDF {FileName}", pdfEntry.Name);
+                    _logger.LogError(ex, "Error reading PDF {FileName}", pdfEntry.Name);
                     throw;
                 }
+            }
+
+            // Batch delete old editions
+            if (blobsToDelete.Count > 0)
+            {
+                _logger.LogInformation("Deleting {Count} old chart supplement editions", blobsToDelete.Count);
+                await _cloudStorageService.DeleteBlobsAsync(containerName, blobsToDelete);
+            }
+
+            // Batch upload new files
+            if (blobs.Count > 0)
+            {
+                _logger.LogInformation("Uploading {Count} chart supplements to storage", blobs.Count);
+                await _cloudStorageService.UploadBlobsAsync(containerName, blobs);
             }
         }
 

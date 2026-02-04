@@ -10,7 +10,7 @@
         },
         "applicationInsights": {
             "samplingSettings": {
-                "isEnabled": false
+                "isEnabled": true
             },
             "enableLiveMetricsFilters": true
         }

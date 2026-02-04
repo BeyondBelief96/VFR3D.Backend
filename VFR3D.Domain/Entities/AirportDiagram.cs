@@ -20,6 +20,10 @@ namespace VFR3D.Domain.Entities
         public string? AirportIdent { get; set; }
 
         [MaxLength(100)]
-        public string? FileName { get; set; }
+        public string? ChartName { get; set; }
+
+        [Required]
+        [MaxLength(100)]
+        public string FileName { get; set; } = string.Empty;
     }
 }

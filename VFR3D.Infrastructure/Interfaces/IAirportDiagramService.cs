@@ -4,5 +4,5 @@ namespace VFR3D.Infrastructure.Interfaces;
 
 public interface IAirportDiagramService
 {
-    Task<AirportDiagramUrlDto> GetAirportDiagramUrlByAirportCode(string airportCode);
+    Task<AirportDiagramsResponseDto> GetAirportDiagramsByAirportCode(string airportCode);
 }

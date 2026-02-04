@@ -29,39 +29,55 @@ public class AirportDiagramService : IAirportDiagramService
             ?? throw new InvalidOperationException("CloudStorage:AirportDiagramsContainerName not configured");
     }
 
-    public async Task<AirportDiagramUrlDto> GetAirportDiagramUrlByAirportCode(string airportCode)
+    public async Task<AirportDiagramsResponseDto> GetAirportDiagramsByAirportCode(string airportCode)
     {
-        var airportDiagram = await _context.AirportDiagrams
-            .FirstOrDefaultAsync(d => d.IcaoIdent == airportCode.ToUpper() || 
-                                    d.AirportIdent == airportCode.ToUpper());
+        var upperCode = airportCode.ToUpper();
+        var airportDiagrams = await _context.AirportDiagrams
+            .Where(d => d.IcaoIdent == upperCode || d.AirportIdent == upperCode)
+            .ToListAsync();
 
-        if (airportDiagram == null)
+        if (airportDiagrams.Count == 0)
         {
-            throw new ResourceNotFoundException($"Airport diagram not found for airport with code: {airportCode}");
+            throw new ResourceNotFoundException($"Airport diagrams not found for airport with code: {airportCode}");
         }
 
-        if (string.IsNullOrEmpty(airportDiagram.FileName))
-        {
-            throw new ResourceNotFoundException($"No diagram file found for airport with code: {airportCode}");
-        }
+        var firstDiagram = airportDiagrams.First();
+        var diagrams = new List<AirportDiagramDto>();
 
-        try
+        foreach (var diagram in airportDiagrams)
         {
-            var transformedFileName = airportDiagram.FileName.ToUpper();
-            var presignedUrl = await _cloudStorageService.GeneratePresignedUrlAsync(
-                _containerName,
-                transformedFileName,
-                TimeSpan.FromHours(1));
-
-            return new AirportDiagramUrlDto
+            try
             {
-                PdfUrl = presignedUrl
-            };
+                var transformedFileName = diagram.FileName.ToUpper();
+                var presignedUrl = await _cloudStorageService.GeneratePresignedUrlAsync(
+                    _containerName,
+                    transformedFileName,
+                    TimeSpan.FromHours(1));
+
+                diagrams.Add(new AirportDiagramDto
+                {
+                    ChartName = diagram.ChartName ?? "AIRPORT DIAGRAM",
+                    PdfUrl = presignedUrl
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating pre-signed URL for airport diagram: {FileName}", diagram.FileName);
+                // Continue with other diagrams even if one fails
+            }
         }
-        catch (Exception ex)
+
+        if (diagrams.Count == 0)
         {
-            _logger.LogError(ex, "Error generating pre-signed URL for airport diagram: {AirportCode}", airportCode);
-            throw;
+            throw new ResourceNotFoundException($"Could not generate URLs for airport diagrams: {airportCode}");
         }
+
+        return new AirportDiagramsResponseDto
+        {
+            AirportName = firstDiagram.AirportName,
+            IcaoIdent = firstDiagram.IcaoIdent,
+            AirportIdent = firstDiagram.AirportIdent,
+            Diagrams = diagrams
+        };
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.IO.Compression;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using VFR3D.Domain.Entities;
 using VFR3D.Infrastructure.Data;
@@ -81,7 +82,10 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
                         await ParseAndStoreXmlDataAsync(xmlContent, cancellationToken);
                     }
 
-                    var pdfEntries = zipArchive.Entries.Where(e => e.Name.Contains("AD.PDF"));
+                    // Match airport diagram PDFs: 5-digit code + "AD" + optional variant + ".PDF"
+                    // Examples: 00500AD.PDF, 00500ADROGERSLAKEBED.PDF, 00500ADROSAMONDLAKEBED.PDF
+                    var airportDiagramPattern = new Regex(@"^\d{5}AD.*\.PDF$", RegexOptions.IgnoreCase);
+                    var pdfEntries = zipArchive.Entries.Where(e => airportDiagramPattern.IsMatch(e.Name));
                     await UploadPdfsToStorageAsync(pdfEntries, cancellationToken);
                 }
 
@@ -124,15 +128,21 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
 
             try
             {
+                // Collect all PDFs into memory for batch upload
+                var blobs = new List<(string BlobName, byte[] Content, string ContentType)>();
+
                 foreach (var pdfEntry in pdfEntries)
                 {
                     using var pdfStream = pdfEntry.Open();
                     using var memoryStream = new MemoryStream();
                     await pdfStream.CopyToAsync(memoryStream, cancellationToken);
-                    memoryStream.Position = 0;
+                    blobs.Add((pdfEntry.Name, memoryStream.ToArray(), "application/pdf"));
+                }
 
-                    await _cloudStorageService.UploadBlobAsync(containerName, pdfEntry.Name, memoryStream, "application/pdf");
-                    _logger.LogDebug("Uploaded airport diagram {FileName} to storage", pdfEntry.Name);
+                if (blobs.Count > 0)
+                {
+                    _logger.LogInformation("Uploading {Count} airport diagrams to storage", blobs.Count);
+                    await _cloudStorageService.UploadBlobsAsync(containerName, blobs);
                 }
             }
             catch (Exception ex)
@@ -144,6 +154,8 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
 
         private async Task ParseAndStoreXmlDataAsync(string xmlContent, CancellationToken cancellationToken)
         {
+            const int batchSize = 1000;
+
             var doc = XDocument.Parse(xmlContent);
             var diagrams = doc.Descendants("airport_name")
             .SelectMany(airport => airport.Elements("record")
@@ -153,33 +165,59 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
                 AirportName = airport.Attribute("ID")?.Value ?? "",
                 IcaoIdent = airport.Attribute("icao_ident")?.Value,
                 AirportIdent = airport.Attribute("apt_ident")?.Value,
-                FileName = record.Element("pdf_name")?.Value
+                ChartName = record.Element("chart_name")?.Value,
+                FileName = record.Element("pdf_name")?.Value ?? ""
             }))
-            .Where(diagram => diagram.AirportName != null &&
-                   diagram.FileName != null)
+            .Where(diagram => !string.IsNullOrEmpty(diagram.AirportName) &&
+                   !string.IsNullOrEmpty(diagram.FileName))
             .ToList();
 
-            foreach (var diagram in diagrams)
+            _logger.LogInformation("Processing {Count} airport diagrams from XML", diagrams.Count);
+
+            for (int i = 0; i < diagrams.Count; i += batchSize)
             {
-                var existingDiagram = await _dbContext.AirportDiagrams
-                    .FirstOrDefaultAsync(d =>
-                        d.IcaoIdent == diagram.IcaoIdent ||
-                        d.AirportIdent == diagram.AirportIdent,
-                        cancellationToken);
+                var batch = diagrams.Skip(i).Take(batchSize).ToList();
 
-                if (existingDiagram != null)
+                // Get all filenames for this batch
+                var fileNames = batch.Select(d => d.FileName).ToList();
+
+                // Get existing records for this batch by filename (unique identifier)
+                var existingDiagrams = await _dbContext.AirportDiagrams
+                    .Where(d => fileNames.Contains(d.FileName))
+                    .ToListAsync(cancellationToken);
+
+                // Create lookup by filename
+                var existingByFileName = existingDiagrams.ToDictionary(d => d.FileName, d => d);
+
+                var newDiagrams = new List<AirportDiagram>();
+
+                foreach (var diagram in batch)
                 {
-                    existingDiagram.AirportName = diagram.AirportName;
-                    existingDiagram.FileName = diagram.FileName;
-                    _dbContext.AirportDiagrams.Update(existingDiagram);
+                    if (existingByFileName.TryGetValue(diagram.FileName, out var existingDiagram))
+                    {
+                        // Update existing record
+                        existingDiagram.AirportName = diagram.AirportName;
+                        existingDiagram.IcaoIdent = diagram.IcaoIdent;
+                        existingDiagram.AirportIdent = diagram.AirportIdent;
+                        existingDiagram.ChartName = diagram.ChartName;
+                    }
+                    else
+                    {
+                        newDiagrams.Add(diagram);
+                    }
                 }
-                else
+
+                // Batch add new diagrams
+                if (newDiagrams.Count > 0)
                 {
-                    await _dbContext.AirportDiagrams.AddAsync(diagram, cancellationToken);
+                    await _dbContext.AirportDiagrams.AddRangeAsync(newDiagrams, cancellationToken);
                 }
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation("Processed airport diagram batch: {Count} diagrams ({NewCount} new, {UpdatedCount} updated)",
+                    batch.Count, newDiagrams.Count, batch.Count - newDiagrams.Count);
             }
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
         }
     }
 }

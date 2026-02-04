@@ -26,13 +26,20 @@ namespace VFR3D.Infrastructure.Data.Configurations
                 .HasColumnName("airport_ident")
                 .HasMaxLength(4);
 
+            builder.Property(e => e.ChartName)
+                .HasColumnName("chart_name")
+                .HasMaxLength(100);
+
             builder.Property(e => e.FileName)
                 .HasColumnName("file_name")
+                .IsRequired()
                 .HasMaxLength(100);
 
             // Add indexes
             builder.HasIndex(e => e.IcaoIdent);
             builder.HasIndex(e => e.AirportIdent);
+            builder.HasIndex(e => e.FileName)
+                .IsUnique();
         }
     }
 }

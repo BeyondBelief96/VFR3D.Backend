@@ -24,6 +24,14 @@ public interface ICloudStorageService
     Task UploadBlobAsync(string containerName, string blobName, Stream content, string contentType);
 
     /// <summary>
+    /// Uploads multiple blobs in parallel with controlled concurrency.
+    /// </summary>
+    /// <param name="containerName">The container/bucket name</param>
+    /// <param name="blobs">Collection of blobs to upload (name, content bytes, content type)</param>
+    /// <param name="maxConcurrency">Maximum number of concurrent uploads (default: 10)</param>
+    Task UploadBlobsAsync(string containerName, IEnumerable<(string BlobName, byte[] Content, string ContentType)> blobs, int maxConcurrency = 10);
+
+    /// <summary>
     /// Deletes a single blob from the container.
     /// </summary>
     /// <param name="containerName">The container/bucket name</param>
