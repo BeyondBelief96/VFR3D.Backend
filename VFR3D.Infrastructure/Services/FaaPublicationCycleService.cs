@@ -38,6 +38,12 @@ namespace VFR3D.Infrastructure.Services
                 return false;
             }
 
+            // If there has never been a successful update, we should run the update.
+            if (publicationCycle.LastSuccessfulUpdate == null)
+            {
+                return true;
+            }
+
             var daysSinceKnownValidDate = (currentDate - publicationCycle.KnownValidDate).TotalDays;
             var completeCycles = Math.Floor(daysSinceKnownValidDate / publicationCycle.CycleLengthDays);
             var mostRecentCycleDate = publicationCycle.KnownValidDate.AddDays(completeCycles * publicationCycle.CycleLengthDays);
