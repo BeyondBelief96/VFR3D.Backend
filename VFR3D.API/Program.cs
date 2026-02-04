@@ -74,9 +74,19 @@ builder.Services.AddCors(options =>
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
-if (builder.Environment.IsProduction())
+if (!builder.Environment.IsDevelopment())
 {
     builder.Logging.AddAzureWebAppDiagnostics();
+
+    // Add Application Insights if connection string is configured
+    var appInsightsConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+    if (!string.IsNullOrEmpty(appInsightsConnectionString))
+    {
+        builder.Services.AddApplicationInsightsTelemetry(options =>
+        {
+            options.ConnectionString = appInsightsConnectionString;
+        });
+    }
 }
 
 builder.Services.Configure<AzureFileLoggerOptions>(options =>
@@ -194,7 +204,6 @@ builder.Services.AddScoped<IAircraftService, AircraftService>();
 builder.Services.AddScoped<IWeightBalanceProfileService, WeightBalanceProfileService>();
 builder.Services.AddScoped<IPerformanceCalculatorService, PerformanceCalculatorService>();
 builder.Services.AddScoped<IFlightService, FlightService>();
-builder.Services.AddScoped<IStripeService, StripeService>();
 builder.Services.AddScoped<ConditionalAuthHandler>();
 
 // NOTAM Services
