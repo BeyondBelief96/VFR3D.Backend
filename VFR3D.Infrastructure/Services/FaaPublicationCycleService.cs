@@ -39,7 +39,7 @@ namespace VFR3D.Infrastructure.Services
             }
 
             // If there has never been a successful update, we should run the update.
-            if (publicationCycle.LastSuccessfulUpdate == null)
+            if (!publicationCycle.LastSuccessfulUpdate.HasValue)
             {
                 return true;
             }
