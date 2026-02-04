@@ -2,6 +2,11 @@
 {
     public class DatabaseSettings
     {
+        /// <summary>
+        /// Full connection string. If provided, this takes precedence over individual properties.
+        /// </summary>
+        public string? ConnectionString { get; set; }
+
         public string Host { get; set; } = string.Empty;
         public string Database { get; set; } = string.Empty;
         public string Username { get; set; } = string.Empty;
@@ -11,6 +16,12 @@
 
         public string GetConnectionString()
         {
+            // If a full connection string is provided, use it directly
+            if (!string.IsNullOrWhiteSpace(ConnectionString))
+            {
+                return ConnectionString;
+            }
+
             if (Host.StartsWith("postgresql://"))
             {
                     var uri = new Uri(Host);
