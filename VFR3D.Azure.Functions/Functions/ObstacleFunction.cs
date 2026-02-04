@@ -33,14 +33,6 @@ public class ObstacleFunction
 
             if (await _publicationService.ShouldRunUpdateAsync(PublicationType.Obstacles, currentDate))
             {
-                // Check if this is first-time initialization (staggered startup - 30 minute delay)
-                var publicationCycle = await _publicationService.GetPublicationCycleAsync(PublicationType.Obstacles);
-                if (publicationCycle?.LastSuccessfulUpdate.HasValue != true)
-                {
-                    _logger.LogInformation("First-time initialization detected for Obstacle data, waiting 30 minutes for staggered startup");
-                    await Task.Delay(TimeSpan.FromMinutes(30), cancellationToken);
-                }
-
                 _logger.LogInformation("Starting obstacle data update process");
                 await _obstacleService.DownloadAndProcessObstaclesAsync(cancellationToken);
                 await _publicationService.UpdateLastSuccessfulRunAsync(PublicationType.Obstacles, currentDate);

@@ -33,14 +33,6 @@ namespace VFR3D.Azure.Functions.Functions
 
                 if (await _publicationService.ShouldRunUpdateAsync(PublicationType.AirportDiagram, currentDate))
                 {
-                    // Check if this is first-time initialization (staggered startup - 25 minute delay)
-                    var publicationCycle = await _publicationService.GetPublicationCycleAsync(PublicationType.AirportDiagram);
-                    if (publicationCycle?.LastSuccessfulUpdate.HasValue != true)
-                    {
-                        _logger.LogInformation("First-time initialization detected for Airport Diagram data, waiting 25 minutes for staggered startup");
-                        await Task.Delay(TimeSpan.FromMinutes(25), cancellationToken);
-                    }
-
                     _logger.LogInformation("Starting airport diagram update process");
                     await _airportDiagramService.DownloadAndProcessAirportDiagramsAsync(cancellationToken);
                     await _publicationService.UpdateLastSuccessfulRunAsync(PublicationType.AirportDiagram, currentDate);

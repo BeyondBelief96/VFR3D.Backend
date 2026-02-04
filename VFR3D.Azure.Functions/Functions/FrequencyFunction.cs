@@ -34,14 +34,6 @@ namespace VFR3D.Azure.Functions.Functions
 
                 if (await _publicationService.ShouldRunUpdateAsync(PublicationType.NasrSubscription_Frequencies, currentDate))
                 {
-                    // Check if this is first-time initialization (staggered startup - 5 minute delay)
-                    var publicationCycle = await _publicationService.GetPublicationCycleAsync(PublicationType.NasrSubscription_Frequencies);
-                    if (publicationCycle?.LastSuccessfulUpdate.HasValue != true)
-                    {
-                        _logger.LogInformation("First-time initialization detected for Frequency data, waiting 5 minutes for staggered startup");
-                        await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
-                    }
-
                     _logger.LogInformation("Starting frequency data update process");
                     await _frequencyService.DownloadAndProcessDataAsync(cancellationToken);
                     await _publicationService.UpdateLastSuccessfulRunAsync(PublicationType.NasrSubscription_Frequencies, currentDate);

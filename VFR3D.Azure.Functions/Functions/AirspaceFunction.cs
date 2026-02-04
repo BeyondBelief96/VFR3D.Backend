@@ -34,14 +34,6 @@ namespace VFR3D.Azure.Functions.Functions
 
                 if (await _publicationService.ShouldRunUpdateAsync(PublicationType.Airspaces, currentDate))
                 {
-                    // Check if this is first-time initialization (staggered startup - 10 minute delay)
-                    var publicationCycle = await _publicationService.GetPublicationCycleAsync(PublicationType.Airspaces);
-                    if (publicationCycle?.LastSuccessfulUpdate.HasValue != true)
-                    {
-                        _logger.LogInformation("First-time initialization detected for Airspace data, waiting 10 minutes for staggered startup");
-                        await Task.Delay(TimeSpan.FromMinutes(10), cancellationToken);
-                    }
-
                     _logger.LogInformation("Starting airspace update process");
                     await _airspaceService.UpdateAirspacesAsync(cancellationToken);
                     await _publicationService.UpdateLastSuccessfulRunAsync(PublicationType.Airspaces, currentDate);

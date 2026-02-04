@@ -33,14 +33,6 @@ namespace VFR3D.Azure.Functions.Functions
 
                 if (await _publicationService.ShouldRunUpdateAsync(PublicationType.ChartSupplement, currentDate))
                 {
-                    // Check if this is first-time initialization (staggered startup - 20 minute delay)
-                    var publicationCycle = await _publicationService.GetPublicationCycleAsync(PublicationType.ChartSupplement);
-                    if (publicationCycle?.LastSuccessfulUpdate.HasValue != true)
-                    {
-                        _logger.LogInformation("First-time initialization detected for Chart Supplement data, waiting 20 minutes for staggered startup");
-                        await Task.Delay(TimeSpan.FromMinutes(20), cancellationToken);
-                    }
-
                     _logger.LogInformation("Starting chart supplement update process");
                     await _chartSupplementService.DownloadAndProcessChartSupplementsAsync(cancellationToken);
                     await _publicationService.UpdateLastSuccessfulRunAsync(PublicationType.ChartSupplement, currentDate);

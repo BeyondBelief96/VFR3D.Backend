@@ -28,6 +28,14 @@ builder.Configuration
     .AddEnvironmentVariables()
     .AddUserSecrets<Program>(optional: true, reloadOnChange: true);
 
+// Add Application Insights early - before other service registrations
+builder.Services
+    .AddApplicationInsightsTelemetryWorkerService()
+    .ConfigureFunctionsApplicationInsights();
+
+// Configure logging to ensure logs go to Application Insights
+builder.Logging.AddApplicationInsights();
+
 // Register settings
 builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
 
@@ -78,15 +86,12 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
     }
 });
 
-// Add Application Insights
-builder.Services
-    .AddApplicationInsightsTelemetryWorkerService()
-    .ConfigureFunctionsApplicationInsights();
+// Build the application
+var app = builder.Build();
 
-// Get required services for initialization
-var serviceProvider = builder.Services.BuildServiceProvider();
-var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
-var cloudStorageInitService = serviceProvider.GetRequiredService<ICloudStorageInitializationService>();
+// Get required services for initialization using the built app's service provider
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+var cloudStorageInitService = app.Services.GetRequiredService<ICloudStorageInitializationService>();
 
 // Initialize Azure Blob Storage resources on startup
 logger.LogInformation("Initializing Azure Blob Storage resources during startup...");
@@ -104,7 +109,7 @@ catch (Exception ex)
 logger.LogInformation("Initializing database data...");
 try
 {
-    using (var scope = serviceProvider.CreateScope())
+    using (var scope = app.Services.CreateScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<VFR3DDbContext>();
         DbInitializer.InitializeAsync(dbContext, logger).GetAwaiter().GetResult();
@@ -116,4 +121,4 @@ catch (Exception ex)
     logger.LogError(ex, "Failed to initialize database data");
 }
 
-builder.Build().Run();
+app.Run();
