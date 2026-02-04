@@ -63,7 +63,7 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(
                     "http://localhost:5173",
                     "https://www.vfr3d.com",
-                    "https://vfr3d-frontend-git-develop-beyondbelief96s-projects.vercel.app/aircraft")
+                    "https://vfr3d-frontend-git-develop-beyondbelief96s-projects.vercel.app")
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .AllowCredentials();
