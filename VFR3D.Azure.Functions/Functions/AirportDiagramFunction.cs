@@ -22,7 +22,7 @@ namespace VFR3D.Azure.Functions.Functions
         }
 
         [Function("AirportDiagramFunction")]
-        public async Task Run([TimerTrigger("0 0 5 * * *", RunOnStartup = true)] TimerInfo myTimer, FunctionContext context)
+        public async Task Run([TimerTrigger("0 0 5 * * *")] TimerInfo myTimer, FunctionContext context)
         {
             _logger.LogInformation($"Airport Diagram Function executed at: {DateTime.UtcNow}");
             var cancellationToken = context.CancellationToken;

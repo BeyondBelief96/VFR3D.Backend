@@ -22,7 +22,7 @@ public class ObstacleFunction
     }
 
     [Function("ObstacleFunction")]
-    public async Task Run([TimerTrigger("0 0 6 * * *", RunOnStartup = true)] TimerInfo myTimer, FunctionContext context)
+    public async Task Run([TimerTrigger("0 0 6 * * *")] TimerInfo myTimer, FunctionContext context)
     {
         _logger.LogInformation("Obstacle Function executed at: {Time}", DateTime.UtcNow);
         var cancellationToken = context.CancellationToken;

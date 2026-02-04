@@ -89,15 +89,18 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 // Build the application
 var app = builder.Build();
 
-// Get required services for initialization using the built app's service provider
+// Get logger from root provider (singletons are fine)
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
-var cloudStorageInitService = app.Services.GetRequiredService<ICloudStorageInitializationService>();
 
-// Initialize Azure Blob Storage resources on startup
+// Initialize Azure Blob Storage resources on startup (scoped service - needs scope)
 logger.LogInformation("Initializing Azure Blob Storage resources during startup...");
 try
 {
-    cloudStorageInitService.InitializeAsync(CancellationToken.None).GetAwaiter().GetResult();
+    using (var scope = app.Services.CreateScope())
+    {
+        var cloudStorageInitService = scope.ServiceProvider.GetRequiredService<ICloudStorageInitializationService>();
+        cloudStorageInitService.InitializeAsync(CancellationToken.None).GetAwaiter().GetResult();
+    }
     logger.LogInformation("Azure Blob Storage resources initialized successfully");
 }
 catch (Exception ex)
@@ -105,7 +108,7 @@ catch (Exception ex)
     logger.LogError(ex, "Failed to initialize Azure Blob Storage resources");
 }
 
-// Database seeding
+// Database seeding (scoped service - needs scope)
 logger.LogInformation("Initializing database data...");
 try
 {

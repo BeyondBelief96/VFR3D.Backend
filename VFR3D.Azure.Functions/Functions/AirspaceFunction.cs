@@ -23,7 +23,7 @@ namespace VFR3D.Azure.Functions.Functions
         }
 
         [Function("AirspaceFunction")]
-        public async Task Run([TimerTrigger("0 0 2 * * *", RunOnStartup = true)] TimerInfo myTimer, FunctionContext context)
+        public async Task Run([TimerTrigger("0 0 2 * * *")] TimerInfo myTimer, FunctionContext context)
         {
             _logger.LogInformation($"Airspace Function executed at: {DateTime.UtcNow}");
             var cancellationToken = context.CancellationToken;
