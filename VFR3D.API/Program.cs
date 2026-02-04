@@ -74,9 +74,19 @@ builder.Services.AddCors(options =>
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
-if (builder.Environment.IsProduction())
+if (!builder.Environment.IsDevelopment())
 {
     builder.Logging.AddAzureWebAppDiagnostics();
+
+    // Add Application Insights if connection string is configured
+    var appInsightsConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+    if (!string.IsNullOrEmpty(appInsightsConnectionString))
+    {
+        builder.Services.AddApplicationInsightsTelemetry(options =>
+        {
+            options.ConnectionString = appInsightsConnectionString;
+        });
+    }
 }
 
 builder.Services.Configure<AzureFileLoggerOptions>(options =>
