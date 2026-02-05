@@ -269,7 +269,7 @@ public class ObstacleService : IObstacleService
         if (cruisingAltitude.HasValue)
         {
             var minThreatHeight = cruisingAltitude.Value - AltitudeMarginFeet;
-            query = query.Where(o => o.HeightAmsl >= minThreatHeight);
+            query = query.Where(o => o.HeightAgl >= minThreatHeight);
         }
 
         return await query
