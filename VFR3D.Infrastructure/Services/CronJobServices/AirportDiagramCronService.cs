@@ -124,26 +124,38 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
 
         private async Task UploadPdfsToStorageAsync(IEnumerable<ZipArchiveEntry> pdfEntries, CancellationToken cancellationToken)
         {
+            const int batchSize = 50; // Process 50 PDFs at a time to avoid memory issues
             var containerName = _cloudStorageSettings.AirportDiagramsContainerName;
 
             try
             {
-                // Collect all PDFs into memory for batch upload
-                var blobs = new List<(string BlobName, byte[] Content, string ContentType)>();
+                var entriesList = pdfEntries.ToList();
+                var totalCount = entriesList.Count;
+                var uploadedCount = 0;
 
-                foreach (var pdfEntry in pdfEntries)
+                for (int i = 0; i < totalCount; i += batchSize)
                 {
-                    using var pdfStream = pdfEntry.Open();
-                    using var memoryStream = new MemoryStream();
-                    await pdfStream.CopyToAsync(memoryStream, cancellationToken);
-                    blobs.Add((pdfEntry.Name, memoryStream.ToArray(), "application/pdf"));
+                    var batch = entriesList.Skip(i).Take(batchSize).ToList();
+                    var blobs = new List<(string BlobName, byte[] Content, string ContentType)>();
+
+                    foreach (var pdfEntry in batch)
+                    {
+                        using var pdfStream = pdfEntry.Open();
+                        using var memoryStream = new MemoryStream();
+                        await pdfStream.CopyToAsync(memoryStream, cancellationToken);
+                        blobs.Add((pdfEntry.Name, memoryStream.ToArray(), "application/pdf"));
+                    }
+
+                    if (blobs.Count > 0)
+                    {
+                        await _cloudStorageService.UploadBlobsAsync(containerName, blobs);
+                        uploadedCount += blobs.Count;
+                        _logger.LogInformation("Uploaded batch of {BatchCount} airport diagrams ({UploadedCount}/{TotalCount})",
+                            blobs.Count, uploadedCount, totalCount);
+                    }
                 }
 
-                if (blobs.Count > 0)
-                {
-                    _logger.LogInformation("Uploading {Count} airport diagrams to storage", blobs.Count);
-                    await _cloudStorageService.UploadBlobsAsync(containerName, blobs);
-                }
+                _logger.LogInformation("Completed uploading {Count} airport diagrams to storage", uploadedCount);
             }
             catch (Exception ex)
             {

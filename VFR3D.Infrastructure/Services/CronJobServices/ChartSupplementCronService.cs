@@ -229,6 +229,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
 
         private async Task UploadPdfsToStorageAsync(IEnumerable<ZipArchiveEntry> pdfEntries, CancellationToken cancellationToken)
         {
+            const int batchSize = 50; // Process 50 PDFs at a time to avoid memory issues
             var containerName = _cloudStorageSettings.ChartSupplementsContainerName;
             var existingObjects = new Dictionary<string, string>();
 
@@ -251,30 +252,18 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
                 throw;
             }
 
-            // Collect blobs to delete and blobs to upload
+            var entriesList = pdfEntries.ToList();
+            var totalCount = entriesList.Count;
+            var uploadedCount = 0;
+
+            // Collect all blobs to delete first (just tracking names, not content)
             var blobsToDelete = new List<string>();
-            var blobs = new List<(string BlobName, byte[] Content, string ContentType)>();
-
-            foreach (var pdfEntry in pdfEntries)
+            foreach (var pdfEntry in entriesList)
             {
-                try
+                var baseName = ExtractBaseName(pdfEntry.Name);
+                if (existingObjects.TryGetValue(baseName, out var existingKey))
                 {
-                    var baseName = ExtractBaseName(pdfEntry.Name);
-
-                    if (existingObjects.TryGetValue(baseName, out var existingKey))
-                    {
-                        blobsToDelete.Add(existingKey);
-                    }
-
-                    using var pdfStream = pdfEntry.Open();
-                    using var memoryStream = new MemoryStream();
-                    await pdfStream.CopyToAsync(memoryStream, cancellationToken);
-                    blobs.Add((pdfEntry.Name, memoryStream.ToArray(), "application/pdf"));
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error reading PDF {FileName}", pdfEntry.Name);
-                    throw;
+                    blobsToDelete.Add(existingKey);
                 }
             }
 
@@ -285,12 +274,38 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
                 await _cloudStorageService.DeleteBlobsAsync(containerName, blobsToDelete);
             }
 
-            // Batch upload new files
-            if (blobs.Count > 0)
+            // Process uploads in batches to avoid memory issues
+            for (int i = 0; i < totalCount; i += batchSize)
             {
-                _logger.LogInformation("Uploading {Count} chart supplements to storage", blobs.Count);
-                await _cloudStorageService.UploadBlobsAsync(containerName, blobs);
+                var batch = entriesList.Skip(i).Take(batchSize).ToList();
+                var blobs = new List<(string BlobName, byte[] Content, string ContentType)>();
+
+                foreach (var pdfEntry in batch)
+                {
+                    try
+                    {
+                        using var pdfStream = pdfEntry.Open();
+                        using var memoryStream = new MemoryStream();
+                        await pdfStream.CopyToAsync(memoryStream, cancellationToken);
+                        blobs.Add((pdfEntry.Name, memoryStream.ToArray(), "application/pdf"));
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error reading PDF {FileName}", pdfEntry.Name);
+                        throw;
+                    }
+                }
+
+                if (blobs.Count > 0)
+                {
+                    await _cloudStorageService.UploadBlobsAsync(containerName, blobs);
+                    uploadedCount += blobs.Count;
+                    _logger.LogInformation("Uploaded batch of {BatchCount} chart supplements ({UploadedCount}/{TotalCount})",
+                        blobs.Count, uploadedCount, totalCount);
+                }
             }
+
+            _logger.LogInformation("Completed uploading {Count} chart supplements to storage", uploadedCount);
         }
 
         private static string ExtractBaseName(string chartSupplementFileName)
