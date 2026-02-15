@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
-using VFR3D.Domain.Enums;
 using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.Flights;
@@ -14,16 +13,16 @@ namespace VFR3D.Infrastructure.Services;
 public class FlightService : IFlightService
 {
     private readonly VFR3DDbContext _context;
-    private readonly INavlogService _navlogService;
+    private readonly IPreflightApiClient _preflightApiClient;
     private readonly ILogger<FlightService> _logger;
 
     public FlightService(
         VFR3DDbContext context,
-        INavlogService navlogService,
+        IPreflightApiClient preflightApiClient,
         ILogger<FlightService> logger)
     {
         _context = context;
-        _navlogService = navlogService;
+        _preflightApiClient = preflightApiClient;
         _logger = logger;
     }
 
@@ -33,66 +32,46 @@ public class FlightService : IFlightService
         {
             _logger.LogInformation("Creating flight for user {UserId}", userId);
 
-            var navlogResponse = await _navlogService.CalculateNavlog(new NavlogRequestDto
+            var performanceProfile = await _context.AircraftPerformanceProfiles
+                .FirstOrDefaultAsync(p => p.Id == request.AircraftPerformanceProfileId && p.UserId == userId);
+
+            if (performanceProfile == null)
+            {
+                throw new PerformanceProfileNotFoundException(request.AircraftPerformanceProfileId);
+            }
+
+            var navlogRequest = new NavlogRequestDto
             {
                 TimeOfDeparture = request.DepartureTime,
                 Waypoints = request.Waypoints,
                 PlannedCruisingAltitude = request.PlannedCruisingAltitude,
                 AircraftPerformanceProfileId = request.AircraftPerformanceProfileId
-            });
+            };
 
-            var stateCodesAlongRoute = await GetStateCodesAlongRoute(request.Waypoints);
+            var navlogResponse = await _preflightApiClient.CalculateNavlogAsync(
+                navlogRequest,
+                MapToPerformanceData(performanceProfile));
 
             var flight = FlightMapper.CreateFromRequest(userId, request);
 
             // Auto-populate AircraftId from PerformanceProfile if not specified
-            if (string.IsNullOrEmpty(flight.AircraftId))
+            if (string.IsNullOrEmpty(flight.AircraftId) && performanceProfile.AircraftId != null)
             {
-                var performanceProfile = await _context.AircraftPerformanceProfiles
-                    .FirstOrDefaultAsync(p => p.Id == request.AircraftPerformanceProfileId && p.UserId == userId);
-
-                if (performanceProfile?.AircraftId != null)
-                {
-                    flight.AircraftId = performanceProfile.AircraftId;
-                }
+                flight.AircraftId = performanceProfile.AircraftId;
             }
-        
+
             // Add navigation calculation results
             flight.TotalRouteDistance = navlogResponse.TotalRouteDistance;
             flight.TotalRouteTimeHours = navlogResponse.TotalRouteTimeHours;
             flight.TotalFuelUsed = navlogResponse.TotalFuelUsed;
             flight.AverageWindComponent = navlogResponse.AverageWindComponent;
-            flight.StateCodesAlongRoute = stateCodesAlongRoute;
+            flight.StateCodesAlongRoute = new List<string>();
             flight.Legs = navlogResponse.Legs.Select(NavlogLegMapper.MapToEntity).ToList();
 
-            // Persist airspace IDs and relations
+            // Persist airspace IDs (string lists only, no FK relationships)
             flight.AirspaceGlobalIds = navlogResponse.AirspaceGlobalIds?.ToList() ?? new List<string>();
             flight.SpecialUseAirspaceGlobalIds = navlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? new List<string>();
             flight.ObstacleOasNumbers = navlogResponse.ObstacleOasNumbers?.ToList() ?? new List<string>();
-
-            if (flight.AirspaceGlobalIds.Count > 0)
-            {
-                var relatedAirspaces = await _context.Airspaces
-                    .Where(a => flight.AirspaceGlobalIds.Contains(a.GlobalId))
-                    .ToListAsync();
-                flight.Airspaces = relatedAirspaces;
-            }
-
-            if (flight.SpecialUseAirspaceGlobalIds.Count > 0)
-            {
-                var relatedSuas = await _context.SpecialUseAirspaces
-                    .Where(s => flight.SpecialUseAirspaceGlobalIds.Contains(s.GlobalId))
-                    .ToListAsync();
-                flight.SpecialUseAirspaces = relatedSuas;
-            }
-
-            if (flight.ObstacleOasNumbers.Count > 0)
-            {
-                var relatedObstacles = await _context.Obstacles
-                    .Where(o => flight.ObstacleOasNumbers.Contains(o.OasNumber))
-                    .ToListAsync();
-                flight.Obstacles = relatedObstacles;
-            }
 
             _context.Flights.Add(flight);
             await _context.SaveChangesAsync();
@@ -113,9 +92,6 @@ public class FlightService : IFlightService
             var flight = await _context.Flights
                 .Include(f => f.AircraftPerformanceProfile)
                 .Include(f => f.Aircraft)
-                .Include(f => f.Airspaces)
-                .Include(f => f.SpecialUseAirspaces)
-                .Include(f => f.Obstacles)
                 .FirstOrDefaultAsync(f => f.Id == flightId && f.Auth0UserId == userId);
 
             if (flight == null)
@@ -181,14 +157,25 @@ public class FlightService : IFlightService
 
             FlightMapper.UpdateFromRequest(flight, request);
 
-            // Always recalculate navlog to ensure it's current
-            var navlogResponse = await _navlogService.CalculateNavlog(new NavlogRequestDto
+            // Load the performance profile for navlog calculation
+            var profile = await _context.AircraftPerformanceProfiles
+                .FirstOrDefaultAsync(p => p.Id == flight.AircraftPerformanceId && p.UserId == userId);
+
+            if (profile == null)
             {
-                TimeOfDeparture = flight.DepartureTime,
-                Waypoints = flight.Waypoints.Select(WaypointMapper.MapToDto).ToList(),
-                PlannedCruisingAltitude = flight.PlannedCruisingAltitude,
-                AircraftPerformanceProfileId = flight.AircraftPerformanceId
-            });
+                throw new PerformanceProfileNotFoundException(flight.AircraftPerformanceId);
+            }
+
+            // Always recalculate navlog to ensure it's current
+            var navlogResponse = await _preflightApiClient.CalculateNavlogAsync(
+                new NavlogRequestDto
+                {
+                    TimeOfDeparture = flight.DepartureTime,
+                    Waypoints = flight.Waypoints.Select(WaypointMapper.MapToDto).ToList(),
+                    PlannedCruisingAltitude = flight.PlannedCruisingAltitude,
+                    AircraftPerformanceProfileId = flight.AircraftPerformanceId
+                },
+                MapToPerformanceData(profile));
 
             flight.TotalRouteDistance = navlogResponse.TotalRouteDistance;
             flight.TotalRouteTimeHours = navlogResponse.TotalRouteTimeHours;
@@ -196,44 +183,10 @@ public class FlightService : IFlightService
             flight.AverageWindComponent = navlogResponse.AverageWindComponent;
             flight.Legs = navlogResponse.Legs.Select(NavlogLegMapper.MapToEntity).ToList();
 
-            // Update airspace IDs and relations
+            // Update airspace IDs
             flight.AirspaceGlobalIds = navlogResponse.AirspaceGlobalIds?.ToList() ?? new List<string>();
             flight.SpecialUseAirspaceGlobalIds = navlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? new List<string>();
             flight.ObstacleOasNumbers = navlogResponse.ObstacleOasNumbers?.ToList() ?? new List<string>();
-
-            // Clear existing relations before setting (EF will manage join table diffs)
-            flight.Airspaces.Clear();
-            flight.SpecialUseAirspaces.Clear();
-            flight.Obstacles.Clear();
-
-            if (flight.AirspaceGlobalIds.Count > 0)
-            {
-                var relatedAirspaces = await _context.Airspaces
-                    .Where(a => flight.AirspaceGlobalIds.Contains(a.GlobalId))
-                    .ToListAsync();
-                foreach (var a in relatedAirspaces) flight.Airspaces.Add(a);
-            }
-
-            if (flight.SpecialUseAirspaceGlobalIds.Count > 0)
-            {
-                var relatedSuas = await _context.SpecialUseAirspaces
-                    .Where(s => flight.SpecialUseAirspaceGlobalIds.Contains(s.GlobalId))
-                    .ToListAsync();
-                foreach (var s in relatedSuas) flight.SpecialUseAirspaces.Add(s);
-            }
-
-            if (flight.ObstacleOasNumbers.Count > 0)
-            {
-                var relatedObstacles = await _context.Obstacles
-                    .Where(o => flight.ObstacleOasNumbers.Contains(o.OasNumber))
-                    .ToListAsync();
-                foreach (var o in relatedObstacles) flight.Obstacles.Add(o);
-            }
-
-            if (request.Waypoints != null)
-            {
-                flight.StateCodesAlongRoute = await GetStateCodesAlongRoute(request.Waypoints);
-            }
 
             await _context.SaveChangesAsync();
             return await GetFlight(userId, flightId);
@@ -316,9 +269,6 @@ public class FlightService : IFlightService
             var flight = await _context.Flights
                 .Include(f => f.AircraftPerformanceProfile)
                 .Include(f => f.Aircraft)
-                .Include(f => f.Airspaces)
-                .Include(f => f.SpecialUseAirspaces)
-                .Include(f => f.Obstacles)
                 .FirstOrDefaultAsync(f => f.Id == flightId && f.Auth0UserId == userId);
 
             if (flight == null)
@@ -326,15 +276,23 @@ public class FlightService : IFlightService
                 throw new FlightNotFoundException(userId, flightId);
             }
 
-            var navlogRequest = new NavlogRequestDto
-            {
-                TimeOfDeparture = flight.DepartureTime,
-                Waypoints = flight.Waypoints.Select(WaypointMapper.MapToDto).ToList(),
-                PlannedCruisingAltitude = flight.PlannedCruisingAltitude,
-                AircraftPerformanceProfileId = flight.AircraftPerformanceId
-            };
+            var profile = await _context.AircraftPerformanceProfiles
+                .FirstOrDefaultAsync(p => p.Id == flight.AircraftPerformanceId);
 
-            var updatedNavlogResponse = await _navlogService.CalculateNavlog(navlogRequest);
+            if (profile == null)
+            {
+                throw new PerformanceProfileNotFoundException(flight.AircraftPerformanceId);
+            }
+
+            var updatedNavlogResponse = await _preflightApiClient.CalculateNavlogAsync(
+                new NavlogRequestDto
+                {
+                    TimeOfDeparture = flight.DepartureTime,
+                    Waypoints = flight.Waypoints.Select(WaypointMapper.MapToDto).ToList(),
+                    PlannedCruisingAltitude = flight.PlannedCruisingAltitude,
+                    AircraftPerformanceProfileId = flight.AircraftPerformanceId
+                },
+                MapToPerformanceData(profile));
 
             flight.TotalRouteDistance = updatedNavlogResponse.TotalRouteDistance;
             flight.TotalRouteTimeHours = updatedNavlogResponse.TotalRouteTimeHours;
@@ -342,38 +300,10 @@ public class FlightService : IFlightService
             flight.AverageWindComponent = updatedNavlogResponse.AverageWindComponent;
             flight.Legs = updatedNavlogResponse.Legs.Select(NavlogLegMapper.MapToEntity).ToList();
 
-            // Update airspace IDs and relations
+            // Update airspace IDs
             flight.AirspaceGlobalIds = updatedNavlogResponse.AirspaceGlobalIds?.ToList() ?? new List<string>();
             flight.SpecialUseAirspaceGlobalIds = updatedNavlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? new List<string>();
             flight.ObstacleOasNumbers = updatedNavlogResponse.ObstacleOasNumbers?.ToList() ?? new List<string>();
-
-            flight.Airspaces.Clear();
-            flight.SpecialUseAirspaces.Clear();
-            flight.Obstacles.Clear();
-
-            if (flight.AirspaceGlobalIds.Count > 0)
-            {
-                var relatedAirspaces = await _context.Airspaces
-                    .Where(a => flight.AirspaceGlobalIds.Contains(a.GlobalId))
-                    .ToListAsync();
-                foreach (var a in relatedAirspaces) flight.Airspaces.Add(a);
-            }
-
-            if (flight.SpecialUseAirspaceGlobalIds.Count > 0)
-            {
-                var relatedSuas = await _context.SpecialUseAirspaces
-                    .Where(s => flight.SpecialUseAirspaceGlobalIds.Contains(s.GlobalId))
-                    .ToListAsync();
-                foreach (var s in relatedSuas) flight.SpecialUseAirspaces.Add(s);
-            }
-
-            if (flight.ObstacleOasNumbers.Count > 0)
-            {
-                var relatedObstacles = await _context.Obstacles
-                    .Where(o => flight.ObstacleOasNumbers.Contains(o.OasNumber))
-                    .ToListAsync();
-                foreach (var o in relatedObstacles) flight.Obstacles.Add(o);
-            }
 
             await _context.SaveChangesAsync();
 
@@ -393,6 +323,16 @@ public class FlightService : IFlightService
         {
             _logger.LogInformation("Creating round trip flight for user {UserId}", userId);
 
+            var performanceProfile = await _context.AircraftPerformanceProfiles
+                .FirstOrDefaultAsync(p => p.Id == request.AircraftPerformanceProfileId && p.UserId == userId);
+
+            if (performanceProfile == null)
+            {
+                throw new PerformanceProfileNotFoundException(request.AircraftPerformanceProfileId);
+            }
+
+            var performanceData = MapToPerformanceData(performanceProfile);
+
             // Create outbound flight
             var outboundRequest = new CreateFlightRequestDto
             {
@@ -406,44 +346,45 @@ public class FlightService : IFlightService
             var outboundFlight = FlightMapper.CreateFromRequest(userId, outboundRequest);
 
             // Create return flight with reversed waypoints
+            var returnWaypoints = request.Waypoints.AsEnumerable().Reverse().ToList();
             var returnRequest = new CreateFlightRequestDto
             {
                 Name = request.ReturnName,
                 DepartureTime = request.ReturnDepartureTime,
                 PlannedCruisingAltitude = request.PlannedCruisingAltitude,
-                Waypoints = request.Waypoints.AsEnumerable().Reverse().ToList(),
+                Waypoints = returnWaypoints,
                 AircraftPerformanceProfileId = request.AircraftPerformanceProfileId
             };
 
             var returnFlight = FlightMapper.CreateFromRequest(userId, returnRequest);
 
             // Calculate navlogs for both flights
-            var outboundNavlogResponse = await _navlogService.CalculateNavlog(new NavlogRequestDto
-            {
-                TimeOfDeparture = outboundFlight.DepartureTime,
-                Waypoints = request.Waypoints,
-                PlannedCruisingAltitude = request.PlannedCruisingAltitude,
-                AircraftPerformanceProfileId = request.AircraftPerformanceProfileId
-            });
+            var outboundNavlogResponse = await _preflightApiClient.CalculateNavlogAsync(
+                new NavlogRequestDto
+                {
+                    TimeOfDeparture = outboundFlight.DepartureTime,
+                    Waypoints = request.Waypoints,
+                    PlannedCruisingAltitude = request.PlannedCruisingAltitude,
+                    AircraftPerformanceProfileId = request.AircraftPerformanceProfileId
+                },
+                performanceData);
 
-            var returnNavlogResponse = await _navlogService.CalculateNavlog(new NavlogRequestDto
-            {
-                TimeOfDeparture = returnFlight.DepartureTime,
-                Waypoints = returnRequest.Waypoints,
-                PlannedCruisingAltitude = request.PlannedCruisingAltitude,
-                AircraftPerformanceProfileId = request.AircraftPerformanceProfileId
-            });
-
-            // Get state codes for each route
-            var outboundStateCodes = await GetStateCodesAlongRoute(outboundRequest.Waypoints);
-            var returnStateCodes = await GetStateCodesAlongRoute(returnRequest.Waypoints);
+            var returnNavlogResponse = await _preflightApiClient.CalculateNavlogAsync(
+                new NavlogRequestDto
+                {
+                    TimeOfDeparture = returnFlight.DepartureTime,
+                    Waypoints = returnWaypoints,
+                    PlannedCruisingAltitude = request.PlannedCruisingAltitude,
+                    AircraftPerformanceProfileId = request.AircraftPerformanceProfileId
+                },
+                performanceData);
 
             // Set navigation data for outbound flight
             outboundFlight.TotalRouteDistance = outboundNavlogResponse.TotalRouteDistance;
             outboundFlight.TotalRouteTimeHours = outboundNavlogResponse.TotalRouteTimeHours;
             outboundFlight.TotalFuelUsed = outboundNavlogResponse.TotalFuelUsed;
             outboundFlight.AverageWindComponent = outboundNavlogResponse.AverageWindComponent;
-            outboundFlight.StateCodesAlongRoute = outboundStateCodes;
+            outboundFlight.StateCodesAlongRoute = new List<string>();
             outboundFlight.Legs = outboundNavlogResponse.Legs.Select(NavlogLegMapper.MapToEntity).ToList();
             outboundFlight.AirspaceGlobalIds = outboundNavlogResponse.AirspaceGlobalIds?.ToList() ?? [];
             outboundFlight.SpecialUseAirspaceGlobalIds = outboundNavlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? [];
@@ -454,7 +395,7 @@ public class FlightService : IFlightService
             returnFlight.TotalRouteTimeHours = returnNavlogResponse.TotalRouteTimeHours;
             returnFlight.TotalFuelUsed = returnNavlogResponse.TotalFuelUsed;
             returnFlight.AverageWindComponent = returnNavlogResponse.AverageWindComponent;
-            returnFlight.StateCodesAlongRoute = returnStateCodes;
+            returnFlight.StateCodesAlongRoute = new List<string>();
             returnFlight.Legs = returnNavlogResponse.Legs.Select(NavlogLegMapper.MapToEntity).ToList();
             returnFlight.AirspaceGlobalIds = returnNavlogResponse.AirspaceGlobalIds?.ToList() ?? [];
             returnFlight.SpecialUseAirspaceGlobalIds = returnNavlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? [];
@@ -463,10 +404,6 @@ public class FlightService : IFlightService
             // Link the flights to each other
             outboundFlight.RelatedFlightId = returnFlight.Id;
             returnFlight.RelatedFlightId = outboundFlight.Id;
-
-            // Process airspace relationships for both flights
-            await ProcessAirspaceRelationships(outboundFlight);
-            await ProcessAirspaceRelationships(returnFlight);
 
             // Save both flights
             _context.Flights.Add(outboundFlight);
@@ -482,54 +419,20 @@ public class FlightService : IFlightService
         }
     }
 
-    // Helper method to reduce code duplication
-    private async Task ProcessAirspaceRelationships(Flight flight)
+    private static NavlogPerformanceDataDto MapToPerformanceData(AircraftPerformanceProfile profile)
     {
-        if (flight.AirspaceGlobalIds?.Count > 0)
+        return new NavlogPerformanceDataDto
         {
-            var relatedAirspaces = await _context.Airspaces
-                .Where(a => flight.AirspaceGlobalIds.Contains(a.GlobalId))
-                .ToListAsync();
-            flight.Airspaces = relatedAirspaces;
-        }
-
-        if (flight.SpecialUseAirspaceGlobalIds?.Count > 0)
-        {
-            var relatedSuas = await _context.SpecialUseAirspaces
-                .Where(s => flight.SpecialUseAirspaceGlobalIds.Contains(s.GlobalId))
-                .ToListAsync();
-            flight.SpecialUseAirspaces = relatedSuas;
-        }
-
-        if (flight.ObstacleOasNumbers?.Count > 0)
-        {
-            var relatedObstacles = await _context.Obstacles
-                .Where(o => flight.ObstacleOasNumbers.Contains(o.OasNumber))
-                .ToListAsync();
-            flight.Obstacles = relatedObstacles;
-        }
-    }
-
-    private async Task<List<string>> GetStateCodesAlongRoute(List<WaypointDto> waypoints)
-    {
-        var stateCodes = new HashSet<string>();
-
-        foreach (var waypoint in waypoints)
-        {
-            if (waypoint.WaypointType == WaypointType.Airport)
-            {
-                var airport = await _context.Airports
-                    .FirstOrDefaultAsync(a => 
-                        a.IcaoId == waypoint.Name || 
-                        a.ArptId == waypoint.Name);
-
-                if (airport?.StateCode != null)
-                {
-                    stateCodes.Add(airport.StateCode);
-                }
-            }
-        }
-
-        return stateCodes.ToList();
+            ClimbTrueAirspeed = profile.ClimbTrueAirspeed,
+            CruiseTrueAirspeed = profile.CruiseTrueAirspeed,
+            DescentTrueAirspeed = profile.DescentTrueAirspeed,
+            ClimbFpm = profile.ClimbFpm,
+            DescentFpm = profile.DescentFpm,
+            ClimbFuelBurn = profile.ClimbFuelBurn,
+            CruiseFuelBurn = profile.CruiseFuelBurn,
+            DescentFuelBurn = profile.DescentFuelBurn,
+            SttFuelGals = profile.SttFuelGals,
+            FuelOnBoardGals = profile.FuelOnBoardGals
+        };
     }
 }

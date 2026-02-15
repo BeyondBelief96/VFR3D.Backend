@@ -35,27 +35,18 @@ services:
       - Database__Port=5432
       # Azure Blob Storage Settings
       - CloudStorage__ConnectionString=${CLOUD_STORAGE_CONNECTION_STRING}
-      - CloudStorage__ChartSupplementsContainerName=vfr3d-chart-supplements-centralus-test
-      - CloudStorage__AirportDiagramsContainerName=vfr3d-airport-diagrams-centralus-test
       - CloudStorage__UseManagedIdentity=false
       # Stripe Settings
       - StripeSettings__StripeSecretKey=${STRIPE_SECRET_KEY}
       - StripeSettings__StripeMonthlySubscriptionPriceId=price_1PpMqiDdx3lXaRF7yPMTYOMW
       - StripeSettings__Domain=https://localhost:7014
-      # NOAA API Settings
-      - NOAASettings__NOAAApiKey=zNEw7
       # Auth0 Settings
       - Auth0Settings__Auth0ApiIdentifier=testAuth0ApiIdentifier
       - Auth0Settings__Auth0Domain=testAuth0Domain
       - Auth0Settings__RequireAuthenticationInDevelopment=false
-      # NMS API Settings
-      - NmsSettings__BaseUrl=https://api-staging.cgifederal-aim.com/nmsapi
-      - NmsSettings__AuthBaseUrl=https://api-staging.cgifederal-aim.com
-      - NmsSettings__ClientId=${NMS_CLIENT_ID}
-      - NmsSettings__ClientSecret=${NMS_CLIENT_SECRET}
-      - NmsSettings__CacheDurationMinutes=5
-      - NmsSettings__DefaultRouteCorridorRadiusNm=25
-      - NmsSettings__RequestTimeoutSeconds=30
+      # Preflight API Settings
+      - PreflightApi__BaseUrl=${PREFLIGHT_API_BASE_URL:-http://localhost:5000}
+      - PreflightApi__ApiKey=${PREFLIGHT_API_KEY}
     ports:
       - "7014:80"
     volumes:
@@ -68,8 +59,6 @@ services:
       - /app/VFR3D.API/obj
       - /app/VFR3D.Tests/bin
       - /app/VFR3D.Tests/obj
-      - /app/VFR3D.Azure.Functions/bin
-      - /app/VFR3D.Azure.Functions/obj
     command: >
       sh -c "find . -type d -name 'obj' -exec rm -rf {} + 2>/dev/null || true &&
              dotnet restore &&

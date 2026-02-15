@@ -5,7 +5,7 @@ using VFR3D.Domain.ValueObjects.Flights;
 namespace VFR3D.Domain.Entities
 {
     /// <summary>
-    /// A flight represents a single flight plan for a given user, represented by a set of waypoints, a departure time, and a cruising altitude. 
+    /// A flight represents a single flight plan for a given user, represented by a set of waypoints, a departure time, and a cruising altitude.
     /// </summary>
     [Table("flights")]
     public class Flight
@@ -76,12 +76,6 @@ namespace VFR3D.Domain.Entities
         public virtual Aircraft? Aircraft { get; set; }
 
         public virtual AircraftPerformanceProfile? AircraftPerformanceProfile { get; set; }
-
-        public virtual ICollection<Airspace> Airspaces { get; set; } = new HashSet<Airspace>();
-
-        public virtual ICollection<SpecialUseAirspace> SpecialUseAirspaces { get; set; } = new HashSet<SpecialUseAirspace>();
-
-        public virtual ICollection<Obstacle> Obstacles { get; set; } = new HashSet<Obstacle>();
 
         public virtual WeightBalanceCalculation? WeightBalanceCalculation { get; set; }
     }
