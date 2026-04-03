@@ -1,4 +1,4 @@
-﻿using Bogus;
+using Bogus;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -17,7 +17,7 @@ namespace VFR3D.Tests.IntegrationTests
 {
     public class FlightServiceTests : PostgreSqlTestBase
     {
-        private INavlogService? _mockNavlogService;
+        private IPreflightApiClient? _mockPreflightApiClient;
         private ILogger<FlightService>? _mockLogger;
         private FlightService? _flightService;
 
@@ -57,37 +57,8 @@ namespace VFR3D.Tests.IntegrationTests
             await base.InitializeAsync();
 
             _mockLogger = Substitute.For<ILogger<FlightService>>();
-            _mockNavlogService = Substitute.For<INavlogService>();
-            _flightService = new FlightService(DbContext, _mockNavlogService, _mockLogger);
-        }
-
-        protected override async Task SeedDatabaseAsync()
-        {
-            // Seed airports for state code lookup
-            var airports = new[]
-            {
-                new Airport
-                {
-                    SiteNo = "1234",
-                    ArptId = "LAX",
-                    IcaoId = "KLAX",
-                    StateCode = "CA",
-                    LatDecimal = 33.9425m,
-                    LongDecimal = -118.4081m
-                },
-                new Airport
-                {
-                    SiteNo = "5678",
-                    ArptId = "SAN",
-                    IcaoId = "KSAN",
-                    StateCode = "CA",
-                    LatDecimal = 32.7336m,
-                    LongDecimal = -117.1897m
-                }
-            };
-
-            DbContext.Airports.AddRange(airports);
-            await DbContext.SaveChangesAsync();
+            _mockPreflightApiClient = Substitute.For<IPreflightApiClient>();
+            _flightService = new FlightService(DbContext, _mockPreflightApiClient, _mockLogger);
         }
 
         [Fact]
@@ -125,7 +96,7 @@ namespace VFR3D.Tests.IntegrationTests
                 AircraftPerformanceProfileId = profile.Id
             };
 
-            // Setup mock NavlogService
+            // Setup mock PreflightApiClient
             var mockNavlogResponse = new NavlogResponseDto
             {
                 TotalRouteDistance = _faker.Random.Double(50, 300),
@@ -156,7 +127,9 @@ namespace VFR3D.Tests.IntegrationTests
                 }
             };
 
-            _mockNavlogService?.CalculateNavlog(Arg.Any<NavlogRequestDto>()).Returns(mockNavlogResponse);
+            _mockPreflightApiClient!
+                .CalculateNavlogAsync(Arg.Any<NavlogRequestDto>(), Arg.Any<NavlogPerformanceDataDto>())
+                .Returns(mockNavlogResponse);
 
             // Act
             var result = await _flightService!.CreateFlight(userId, request);
@@ -175,7 +148,6 @@ namespace VFR3D.Tests.IntegrationTests
                 result.TotalFuelUsed.Should().Be(mockNavlogResponse.TotalFuelUsed);
                 result.AverageWindComponent.Should().Be(mockNavlogResponse.AverageWindComponent);
                 result.Legs.Should().HaveCount(1);
-                result.StateCodesAlongRoute.Should().Contain("CA");
 
                 // Verify the flight was saved to the database
                 var savedFlight = await DbContext.Flights.FirstOrDefaultAsync(f => f.Id == result.Id);
@@ -238,7 +210,7 @@ namespace VFR3D.Tests.IntegrationTests
             result.Should().HaveCount(3);
             result.All(f => f.Auth0UserId == userId).Should().BeTrue();
         }
-        
+
         [Fact]
         public async Task GetFlight_ShouldReturnFlight_WhenFlightExists()
         {
@@ -367,7 +339,7 @@ namespace VFR3D.Tests.IntegrationTests
         }
             };
 
-            // Setup mock NavlogService for the recalculation
+            // Setup mock PreflightApiClient for the recalculation
             var mockNavlogResponse = new NavlogResponseDto
             {
                 TotalRouteDistance = 150.5,
@@ -381,12 +353,13 @@ namespace VFR3D.Tests.IntegrationTests
                 LegStartPoint = updateRequest.Waypoints[0],
                 LegEndPoint = updateRequest.Waypoints[1],
                 LegDistance = 150.5,
-                // Add other properties as needed
             }
         }
             };
 
-            _mockNavlogService!.CalculateNavlog(Arg.Any<NavlogRequestDto>()).Returns(mockNavlogResponse);
+            _mockPreflightApiClient!
+                .CalculateNavlogAsync(Arg.Any<NavlogRequestDto>(), Arg.Any<NavlogPerformanceDataDto>())
+                .Returns(mockNavlogResponse);
 
             // Act
             var result = await _flightService!.UpdateFlight(userId, flightId, updateRequest);
@@ -403,8 +376,9 @@ namespace VFR3D.Tests.IntegrationTests
             result.TotalFuelUsed.Should().Be(mockNavlogResponse.TotalFuelUsed);
             result.AverageWindComponent.Should().Be(mockNavlogResponse.AverageWindComponent);
 
-            // Verify NavlogService was called
-            await _mockNavlogService!.Received(1).CalculateNavlog(Arg.Any<NavlogRequestDto>());
+            // Verify PreflightApiClient was called
+            await _mockPreflightApiClient!.Received(1)
+                .CalculateNavlogAsync(Arg.Any<NavlogRequestDto>(), Arg.Any<NavlogPerformanceDataDto>());
 
             // Verify the database was updated
             var updatedFlight = await DbContext.Flights.FindAsync(flightId);
@@ -614,7 +588,8 @@ namespace VFR3D.Tests.IntegrationTests
         }
             };
 
-            _mockNavlogService!.CalculateNavlog(Arg.Any<NavlogRequestDto>())
+            _mockPreflightApiClient!
+                .CalculateNavlogAsync(Arg.Any<NavlogRequestDto>(), Arg.Any<NavlogPerformanceDataDto>())
                 .Returns(updatedNavlogResponse);
 
             // Act
@@ -629,11 +604,13 @@ namespace VFR3D.Tests.IntegrationTests
             result.AverageWindComponent.Should().Be(updatedNavlogResponse.AverageWindComponent);
             result.Legs.Should().HaveCount(1);
 
-            // Verify NavlogService was called with correct parameters
-            await _mockNavlogService!.Received(1).CalculateNavlog(Arg.Is<NavlogRequestDto>(
-                req => req.TimeOfDeparture == flight.DepartureTime &&
-                       req.PlannedCruisingAltitude == flight.PlannedCruisingAltitude &&
-                       req.AircraftPerformanceProfileId == flight.AircraftPerformanceId));
+            // Verify PreflightApiClient was called with correct parameters
+            await _mockPreflightApiClient!.Received(1).CalculateNavlogAsync(
+                Arg.Is<NavlogRequestDto>(
+                    req => req.TimeOfDeparture == flight.DepartureTime &&
+                           req.PlannedCruisingAltitude == flight.PlannedCruisingAltitude &&
+                           req.AircraftPerformanceProfileId == flight.AircraftPerformanceId),
+                Arg.Any<NavlogPerformanceDataDto>());
 
             // Verify the database was updated
             var updatedFlight = await DbContext.Flights.FindAsync(flightId);

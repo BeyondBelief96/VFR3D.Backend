@@ -1,5 +1,4 @@
 ﻿using VFR3D.Domain.Enums;
-using VFR3D.Infrastructure.Enums;
 
 namespace VFR3D.Infrastructure.Dtos.Navlog;
 

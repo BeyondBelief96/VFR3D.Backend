@@ -19,7 +19,16 @@
       "Bash(curl:*)",
       "Bash(taskkill:*)",
       "Bash(dotnet user-secrets:*)",
+<<<<<<< Updated upstream
       "Bash(find:*)"
+=======
+      "Bash(find:*)",
+      "Bash(xargs basename:*)",
+      "Bash(ls:*)",
+      "Bash(done)",
+      "Bash(dotnet restore:*)",
+      "WebFetch(domain:preflightapi.io)"
+>>>>>>> Stashed changes
     ],
     "deny": [],
     "ask": []
