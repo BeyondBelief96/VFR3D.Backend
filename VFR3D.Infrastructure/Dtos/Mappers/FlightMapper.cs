@@ -16,6 +16,7 @@ public static class FlightMapper
             PlannedCruisingAltitude = flight.PlannedCruisingAltitude,
             Waypoints = flight.Waypoints.Select(WaypointMapper.MapToDto).ToList(),
             AircraftPerformanceId = flight.AircraftPerformanceId,
+            AircraftId = flight.AircraftId,
             TotalRouteDistance = flight.TotalRouteDistance,
             TotalRouteTimeHours = flight.TotalRouteTimeHours,
             TotalFuelUsed = flight.TotalFuelUsed,
@@ -24,8 +25,12 @@ public static class FlightMapper
             StateCodesAlongRoute = flight.StateCodesAlongRoute,
             AirspaceGlobalIds = flight.AirspaceGlobalIds ?? new List<string>(),
             SpecialUseAirspaceGlobalIds = flight.SpecialUseAirspaceGlobalIds ?? new List<string>(),
-            AircraftPerformanceProfile = flight.AircraftPerformanceProfile != null 
+            ObstacleOasNumbers = flight.ObstacleOasNumbers ?? new List<string>(),
+            AircraftPerformanceProfile = flight.AircraftPerformanceProfile != null
                 ? AircraftPerformanceProfileMapper.MapToDto(flight.AircraftPerformanceProfile)
+                : null,
+            Aircraft = flight.Aircraft != null
+                ? AircraftMapper.MapToDto(flight.Aircraft, includeProfiles: false)
                 : null,
             RelatedFlightId = flight.RelatedFlightId
         };
@@ -50,6 +55,7 @@ public static class FlightMapper
             StateCodesAlongRoute = dto.StateCodesAlongRoute,
             AirspaceGlobalIds = dto.AirspaceGlobalIds ?? new List<string>(),
             SpecialUseAirspaceGlobalIds = dto.SpecialUseAirspaceGlobalIds ?? new List<string>(),
+            ObstacleOasNumbers = dto.ObstacleOasNumbers ?? new List<string>(),
             RelatedFlightId = dto.RelatedFlightId,
         };
     }
@@ -64,6 +70,7 @@ public static class FlightMapper
             DepartureTime = request.DepartureTime,
             PlannedCruisingAltitude = request.PlannedCruisingAltitude,
             AircraftPerformanceId = request.AircraftPerformanceProfileId,
+            AircraftId = request.AircraftId,
             Waypoints = request.Waypoints.Select(WaypointMapper.MapToEntity).ToList(),
         };
     }
@@ -72,16 +79,19 @@ public static class FlightMapper
     {
         if (request.Name != null)
             flight.Name = request.Name;
-            
+
         if (request.DepartureTime.HasValue)
             flight.DepartureTime = request.DepartureTime.Value;
-            
+
         if (request.PlannedCruisingAltitude.HasValue)
             flight.PlannedCruisingAltitude = request.PlannedCruisingAltitude.Value;
-            
+
         if (request.AircraftPerformanceProfileId != null)
             flight.AircraftPerformanceId = request.AircraftPerformanceProfileId;
-            
+
+        if (request.AircraftId != null)
+            flight.AircraftId = request.AircraftId;
+
         if (request.Waypoints != null)
             flight.Waypoints = request.Waypoints.Select(WaypointMapper.MapToEntity).ToList();
     }

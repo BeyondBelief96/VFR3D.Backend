@@ -1,7 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
 using VFR3D.Domain.Enums;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos.Flights;
 using VFR3D.Infrastructure.Dtos.Mappers;
@@ -43,6 +44,18 @@ public class FlightService : IFlightService
             var stateCodesAlongRoute = await GetStateCodesAlongRoute(request.Waypoints);
 
             var flight = FlightMapper.CreateFromRequest(userId, request);
+
+            // Auto-populate AircraftId from PerformanceProfile if not specified
+            if (string.IsNullOrEmpty(flight.AircraftId))
+            {
+                var performanceProfile = await _context.AircraftPerformanceProfiles
+                    .FirstOrDefaultAsync(p => p.Id == request.AircraftPerformanceProfileId && p.UserId == userId);
+
+                if (performanceProfile?.AircraftId != null)
+                {
+                    flight.AircraftId = performanceProfile.AircraftId;
+                }
+            }
         
             // Add navigation calculation results
             flight.TotalRouteDistance = navlogResponse.TotalRouteDistance;
@@ -55,6 +68,7 @@ public class FlightService : IFlightService
             // Persist airspace IDs and relations
             flight.AirspaceGlobalIds = navlogResponse.AirspaceGlobalIds?.ToList() ?? new List<string>();
             flight.SpecialUseAirspaceGlobalIds = navlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? new List<string>();
+            flight.ObstacleOasNumbers = navlogResponse.ObstacleOasNumbers?.ToList() ?? new List<string>();
 
             if (flight.AirspaceGlobalIds.Count > 0)
             {
@@ -70,6 +84,14 @@ public class FlightService : IFlightService
                     .Where(s => flight.SpecialUseAirspaceGlobalIds.Contains(s.GlobalId))
                     .ToListAsync();
                 flight.SpecialUseAirspaces = relatedSuas;
+            }
+
+            if (flight.ObstacleOasNumbers.Count > 0)
+            {
+                var relatedObstacles = await _context.Obstacles
+                    .Where(o => flight.ObstacleOasNumbers.Contains(o.OasNumber))
+                    .ToListAsync();
+                flight.Obstacles = relatedObstacles;
             }
 
             _context.Flights.Add(flight);
@@ -90,61 +112,127 @@ public class FlightService : IFlightService
         {
             var flight = await _context.Flights
                 .Include(f => f.AircraftPerformanceProfile)
+                .Include(f => f.Aircraft)
+                .Include(f => f.Airspaces)
+                .Include(f => f.SpecialUseAirspaces)
+                .Include(f => f.Obstacles)
                 .FirstOrDefaultAsync(f => f.Id == flightId && f.Auth0UserId == userId);
 
             if (flight == null)
             {
-                throw new KeyNotFoundException($"Flight not found with ID {flightId}");
+                throw new FlightNotFoundException(userId, flightId);
+            }
+
+            // Handle aircraft and performance profile changes with validation
+            if (request.AircraftId != null)
+            {
+                // Aircraft is being changed
+                var newAircraft = await _context.Aircraft
+                    .Include(a => a.PerformanceProfiles)
+                    .FirstOrDefaultAsync(a => a.Id == request.AircraftId && a.UserId == userId);
+
+                if (newAircraft == null)
+                {
+                    throw new AircraftNotFoundException(userId, request.AircraftId);
+                }
+
+                if (request.AircraftPerformanceProfileId != null)
+                {
+                    // Validate the specified profile belongs to the new aircraft
+                    var profileBelongsToAircraft = newAircraft.PerformanceProfiles
+                        .Any(p => p.Id == request.AircraftPerformanceProfileId);
+
+                    if (!profileBelongsToAircraft)
+                    {
+                        throw new ValidationException("AircraftPerformanceProfileId",
+                            $"Performance profile {request.AircraftPerformanceProfileId} does not belong to aircraft {request.AircraftId}");
+                    }
+                }
+                else
+                {
+                    // No profile specified - use the first available profile from the new aircraft
+                    var defaultProfile = newAircraft.PerformanceProfiles.FirstOrDefault();
+                    if (defaultProfile == null)
+                    {
+                        throw new ValidationException("AircraftId",
+                            $"Aircraft {request.AircraftId} has no performance profiles. Please create a performance profile first.");
+                    }
+                    request.AircraftPerformanceProfileId = defaultProfile.Id;
+                }
+            }
+            else if (request.AircraftPerformanceProfileId != null)
+            {
+                // Only performance profile is being changed - validate it belongs to the current aircraft
+                var performanceProfile = await _context.AircraftPerformanceProfiles
+                    .FirstOrDefaultAsync(p => p.Id == request.AircraftPerformanceProfileId && p.UserId == userId);
+
+                if (performanceProfile == null)
+                {
+                    throw new PerformanceProfileNotFoundException(request.AircraftPerformanceProfileId);
+                }
+
+                // If flight has an aircraft, validate profile belongs to it
+                if (flight.AircraftId != null && performanceProfile.AircraftId != flight.AircraftId)
+                {
+                    throw new ValidationException("AircraftPerformanceProfileId",
+                        $"Performance profile {request.AircraftPerformanceProfileId} does not belong to the flight's aircraft {flight.AircraftId}");
+                }
             }
 
             FlightMapper.UpdateFromRequest(flight, request);
 
-            // Recalculate navlog if needed
-            if (request.DepartureTime.HasValue || request.PlannedCruisingAltitude.HasValue || 
-                request.Waypoints != null || request.AircraftPerformanceProfileId != null)
+            // Always recalculate navlog to ensure it's current
+            var navlogResponse = await _navlogService.CalculateNavlog(new NavlogRequestDto
             {
-                var navlogResponse = await _navlogService.CalculateNavlog(new NavlogRequestDto
-                {
-                    TimeOfDeparture = flight.DepartureTime,
-                    Waypoints = flight.Waypoints.Select(WaypointMapper.MapToDto).ToList(),
-                    PlannedCruisingAltitude = flight.PlannedCruisingAltitude,
-                    AircraftPerformanceProfileId = flight.AircraftPerformanceId
-                });
+                TimeOfDeparture = flight.DepartureTime,
+                Waypoints = flight.Waypoints.Select(WaypointMapper.MapToDto).ToList(),
+                PlannedCruisingAltitude = flight.PlannedCruisingAltitude,
+                AircraftPerformanceProfileId = flight.AircraftPerformanceId
+            });
 
-                flight.TotalRouteDistance = navlogResponse.TotalRouteDistance;
-                flight.TotalRouteTimeHours = navlogResponse.TotalRouteTimeHours;
-                flight.TotalFuelUsed = navlogResponse.TotalFuelUsed;
-                flight.AverageWindComponent = navlogResponse.AverageWindComponent;
-                flight.Legs = navlogResponse.Legs.Select(NavlogLegMapper.MapToEntity).ToList();
+            flight.TotalRouteDistance = navlogResponse.TotalRouteDistance;
+            flight.TotalRouteTimeHours = navlogResponse.TotalRouteTimeHours;
+            flight.TotalFuelUsed = navlogResponse.TotalFuelUsed;
+            flight.AverageWindComponent = navlogResponse.AverageWindComponent;
+            flight.Legs = navlogResponse.Legs.Select(NavlogLegMapper.MapToEntity).ToList();
 
-                // Update airspace IDs and relations
-                flight.AirspaceGlobalIds = navlogResponse.AirspaceGlobalIds?.ToList() ?? new List<string>();
-                flight.SpecialUseAirspaceGlobalIds = navlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? new List<string>();
+            // Update airspace IDs and relations
+            flight.AirspaceGlobalIds = navlogResponse.AirspaceGlobalIds?.ToList() ?? new List<string>();
+            flight.SpecialUseAirspaceGlobalIds = navlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? new List<string>();
+            flight.ObstacleOasNumbers = navlogResponse.ObstacleOasNumbers?.ToList() ?? new List<string>();
 
-                // Clear existing relations before setting (EF will manage join table diffs)
-                flight.Airspaces.Clear();
-                flight.SpecialUseAirspaces.Clear();
+            // Clear existing relations before setting (EF will manage join table diffs)
+            flight.Airspaces.Clear();
+            flight.SpecialUseAirspaces.Clear();
+            flight.Obstacles.Clear();
 
-                if (flight.AirspaceGlobalIds.Count > 0)
-                {
-                    var relatedAirspaces = await _context.Airspaces
-                        .Where(a => flight.AirspaceGlobalIds.Contains(a.GlobalId))
-                        .ToListAsync();
-                    foreach (var a in relatedAirspaces) flight.Airspaces.Add(a);
-                }
+            if (flight.AirspaceGlobalIds.Count > 0)
+            {
+                var relatedAirspaces = await _context.Airspaces
+                    .Where(a => flight.AirspaceGlobalIds.Contains(a.GlobalId))
+                    .ToListAsync();
+                foreach (var a in relatedAirspaces) flight.Airspaces.Add(a);
+            }
 
-                if (flight.SpecialUseAirspaceGlobalIds.Count > 0)
-                {
-                    var relatedSuas = await _context.SpecialUseAirspaces
-                        .Where(s => flight.SpecialUseAirspaceGlobalIds.Contains(s.GlobalId))
-                        .ToListAsync();
-                    foreach (var s in relatedSuas) flight.SpecialUseAirspaces.Add(s);
-                }
+            if (flight.SpecialUseAirspaceGlobalIds.Count > 0)
+            {
+                var relatedSuas = await _context.SpecialUseAirspaces
+                    .Where(s => flight.SpecialUseAirspaceGlobalIds.Contains(s.GlobalId))
+                    .ToListAsync();
+                foreach (var s in relatedSuas) flight.SpecialUseAirspaces.Add(s);
+            }
 
-                if (request.Waypoints != null)
-                {
-                    flight.StateCodesAlongRoute = await GetStateCodesAlongRoute(request.Waypoints);
-                }
+            if (flight.ObstacleOasNumbers.Count > 0)
+            {
+                var relatedObstacles = await _context.Obstacles
+                    .Where(o => flight.ObstacleOasNumbers.Contains(o.OasNumber))
+                    .ToListAsync();
+                foreach (var o in relatedObstacles) flight.Obstacles.Add(o);
+            }
+
+            if (request.Waypoints != null)
+            {
+                flight.StateCodesAlongRoute = await GetStateCodesAlongRoute(request.Waypoints);
             }
 
             await _context.SaveChangesAsync();
@@ -163,6 +251,7 @@ public class FlightService : IFlightService
         {
             var flights = await _context.Flights
                 .Include(f => f.AircraftPerformanceProfile)
+                .Include(f => f.Aircraft)
                 .Where(f => f.Auth0UserId == userId)
                 .ToListAsync();
 
@@ -181,11 +270,12 @@ public class FlightService : IFlightService
         {
             var flight = await _context.Flights
                 .Include(f => f.AircraftPerformanceProfile)
+                .Include(f => f.Aircraft)
                 .FirstOrDefaultAsync(f => f.Id == flightId && f.Auth0UserId == userId);
 
             if (flight == null)
             {
-                throw new KeyNotFoundException($"Flight not found with ID {flightId}");
+                throw new FlightNotFoundException(userId, flightId);
             }
 
             return FlightMapper.MapToDto(flight);
@@ -206,7 +296,7 @@ public class FlightService : IFlightService
 
             if (flight == null)
             {
-                throw new KeyNotFoundException($"Flight not found with ID {flightId}");
+                throw new FlightNotFoundException(userId, flightId);
             }
 
             _context.Flights.Remove(flight);
@@ -225,11 +315,15 @@ public class FlightService : IFlightService
         {
             var flight = await _context.Flights
                 .Include(f => f.AircraftPerformanceProfile)
+                .Include(f => f.Aircraft)
+                .Include(f => f.Airspaces)
+                .Include(f => f.SpecialUseAirspaces)
+                .Include(f => f.Obstacles)
                 .FirstOrDefaultAsync(f => f.Id == flightId && f.Auth0UserId == userId);
 
             if (flight == null)
             {
-                throw new KeyNotFoundException($"Flight not found with ID {flightId}");
+                throw new FlightNotFoundException(userId, flightId);
             }
 
             var navlogRequest = new NavlogRequestDto
@@ -251,9 +345,11 @@ public class FlightService : IFlightService
             // Update airspace IDs and relations
             flight.AirspaceGlobalIds = updatedNavlogResponse.AirspaceGlobalIds?.ToList() ?? new List<string>();
             flight.SpecialUseAirspaceGlobalIds = updatedNavlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? new List<string>();
+            flight.ObstacleOasNumbers = updatedNavlogResponse.ObstacleOasNumbers?.ToList() ?? new List<string>();
 
             flight.Airspaces.Clear();
             flight.SpecialUseAirspaces.Clear();
+            flight.Obstacles.Clear();
 
             if (flight.AirspaceGlobalIds.Count > 0)
             {
@@ -271,13 +367,21 @@ public class FlightService : IFlightService
                 foreach (var s in relatedSuas) flight.SpecialUseAirspaces.Add(s);
             }
 
+            if (flight.ObstacleOasNumbers.Count > 0)
+            {
+                var relatedObstacles = await _context.Obstacles
+                    .Where(o => flight.ObstacleOasNumbers.Contains(o.OasNumber))
+                    .ToListAsync();
+                foreach (var o in relatedObstacles) flight.Obstacles.Add(o);
+            }
+
             await _context.SaveChangesAsync();
 
             return FlightMapper.MapToDto(flight);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error regenerating navlog for flight {FlightId} for user {UserId}", 
+            _logger.LogError(ex, "Error regenerating navlog for flight {FlightId} for user {UserId}",
                 flightId, userId);
             throw;
         }
@@ -343,6 +447,7 @@ public class FlightService : IFlightService
             outboundFlight.Legs = outboundNavlogResponse.Legs.Select(NavlogLegMapper.MapToEntity).ToList();
             outboundFlight.AirspaceGlobalIds = outboundNavlogResponse.AirspaceGlobalIds?.ToList() ?? [];
             outboundFlight.SpecialUseAirspaceGlobalIds = outboundNavlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? [];
+            outboundFlight.ObstacleOasNumbers = outboundNavlogResponse.ObstacleOasNumbers?.ToList() ?? [];
 
             // Set navigation data for return flight
             returnFlight.TotalRouteDistance = returnNavlogResponse.TotalRouteDistance;
@@ -353,6 +458,7 @@ public class FlightService : IFlightService
             returnFlight.Legs = returnNavlogResponse.Legs.Select(NavlogLegMapper.MapToEntity).ToList();
             returnFlight.AirspaceGlobalIds = returnNavlogResponse.AirspaceGlobalIds?.ToList() ?? [];
             returnFlight.SpecialUseAirspaceGlobalIds = returnNavlogResponse.SpecialUseAirspaceGlobalIds?.ToList() ?? [];
+            returnFlight.ObstacleOasNumbers = returnNavlogResponse.ObstacleOasNumbers?.ToList() ?? [];
 
             // Link the flights to each other
             outboundFlight.RelatedFlightId = returnFlight.Id;
@@ -393,6 +499,14 @@ public class FlightService : IFlightService
                 .Where(s => flight.SpecialUseAirspaceGlobalIds.Contains(s.GlobalId))
                 .ToListAsync();
             flight.SpecialUseAirspaces = relatedSuas;
+        }
+
+        if (flight.ObstacleOasNumbers?.Count > 0)
+        {
+            var relatedObstacles = await _context.Obstacles
+                .Where(o => flight.ObstacleOasNumbers.Contains(o.OasNumber))
+                .ToListAsync();
+            flight.Obstacles = relatedObstacles;
         }
     }
 

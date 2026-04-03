@@ -19,6 +19,8 @@ namespace VFR3D.Infrastructure.Data
 
         public virtual DbSet<Airsigmet> Airsigmets => Set<Airsigmet>();
 
+        public virtual DbSet<GAirmet> GAirmets => Set<GAirmet>();
+
         public virtual DbSet<ChartSupplement> ChartSupplements => Set<ChartSupplement>();
 
         public virtual DbSet<AirportDiagram> AirportDiagrams => Set<AirportDiagram>();
@@ -36,6 +38,20 @@ namespace VFR3D.Infrastructure.Data
         public virtual DbSet<Flight> Flights => Set<Flight>();
         
         public virtual DbSet<AircraftPerformanceProfile> AircraftPerformanceProfiles => Set<AircraftPerformanceProfile>();
+
+        public virtual DbSet<Aircraft> Aircraft => Set<Aircraft>();
+
+        public virtual DbSet<Runway> Runways => Set<Runway>();
+
+        public virtual DbSet<RunwayEnd> RunwayEnds => Set<RunwayEnd>();
+
+        public virtual DbSet<Obstacle> Obstacles => Set<Obstacle>();
+
+        public virtual DbSet<WeightBalanceProfile> WeightBalanceProfiles => Set<WeightBalanceProfile>();
+
+        public virtual DbSet<WeightBalanceCalculation> WeightBalanceCalculations => Set<WeightBalanceCalculation>();
+
+        public virtual DbSet<AircraftDocument> AircraftDocuments => Set<AircraftDocument>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Net;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Xml.Linq;
 using VFR3D.Domain.Entities;
@@ -32,6 +33,14 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
             {
                 _logger.LogInformation("Starting AIRSIGMET data fetch and storage");
                 var xmlData = await FetchAirsigmetXmlDataAsync(cancellationToken);
+
+                if (xmlData == null)
+                {
+                    _logger.LogInformation("No AIRSIGMET data available from API (204 No Content)");
+                    await PurgeExpiredAirsigmetsAsync(cancellationToken);
+                    return;
+                }
+
                 var airsigmetData = ParseAirsigmetXmlData(xmlData);
                 await UpdateOrCreateAirsigmetsAsync(airsigmetData, cancellationToken);
                 await PurgeExpiredAirsigmetsAsync(cancellationToken);
@@ -44,16 +53,51 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
             }
         }
 
-        private async Task<string> FetchAirsigmetXmlDataAsync(CancellationToken cancellationToken)
+        private async Task<string?> FetchAirsigmetXmlDataAsync(CancellationToken cancellationToken)
         {
             using var client = _httpClientFactory.CreateClient();
-            using var response = await client.GetStreamAsync(AirsigmetUrl, cancellationToken);
-            using var decompressedStream = new System.IO.Compression.GZipStream(
-                response,
-                System.IO.Compression.CompressionMode.Decompress);
-            using var reader = new StreamReader(decompressedStream);
+            using var response = await client.GetAsync(AirsigmetUrl, cancellationToken);
 
-            return await reader.ReadToEndAsync(cancellationToken);
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.OK:
+                    await using (var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken))
+                    await using (var decompressedStream = new System.IO.Compression.GZipStream(
+                        responseStream,
+                        System.IO.Compression.CompressionMode.Decompress))
+                    using (var reader = new StreamReader(decompressedStream))
+                    {
+                        return await reader.ReadToEndAsync(cancellationToken);
+                    }
+
+                case HttpStatusCode.NoContent:
+                    return null;
+
+                case HttpStatusCode.BadRequest:
+                    _logger.LogError("Aviation Weather API returned 400 Bad Request for AIRSIGMET data");
+                    throw new HttpRequestException("Aviation Weather API returned 400 Bad Request - invalid parameters or URL");
+
+                case HttpStatusCode.NotFound:
+                    _logger.LogError("Aviation Weather API returned 404 Not Found for AIRSIGMET endpoint");
+                    throw new HttpRequestException("Aviation Weather API endpoint not found (404)");
+
+                case HttpStatusCode.TooManyRequests:
+                    _logger.LogWarning("Aviation Weather API rate limit exceeded (429 Too Many Requests)");
+                    throw new HttpRequestException("Aviation Weather API rate limit exceeded (429)");
+
+                case HttpStatusCode.InternalServerError:
+                    _logger.LogError("Aviation Weather API returned 500 Internal Server Error");
+                    throw new HttpRequestException("Aviation Weather API internal server error (500)");
+
+                case HttpStatusCode.BadGateway:
+                case HttpStatusCode.GatewayTimeout:
+                    _logger.LogWarning("Aviation Weather API service disruption ({StatusCode})", (int)response.StatusCode);
+                    throw new HttpRequestException($"Aviation Weather API service disruption ({(int)response.StatusCode})");
+
+                default:
+                    _logger.LogError("Aviation Weather API returned unexpected status code {StatusCode}", (int)response.StatusCode);
+                    throw new HttpRequestException($"Aviation Weather API returned unexpected status code: {(int)response.StatusCode}");
+            }
         }
 
         private IEnumerable<Airsigmet> ParseAirsigmetXmlData(string xmlData)

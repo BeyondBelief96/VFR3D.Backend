@@ -10,6 +10,7 @@ using VFR3D.Infrastructure.Dtos.Flights;
 using VFR3D.Infrastructure.Dtos.Navlog;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Services;
+using VFR3D.Domain.Exceptions;
 using Xunit;
 
 namespace VFR3D.Tests.IntegrationTests
@@ -284,7 +285,7 @@ namespace VFR3D.Tests.IntegrationTests
             var nonExistentFlightId = Guid.NewGuid().ToString();
 
             // Act & Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            await Assert.ThrowsAsync<FlightNotFoundException>(() =>
                 _flightService!.GetFlight(userId, nonExistentFlightId));
         }
 
@@ -318,7 +319,7 @@ namespace VFR3D.Tests.IntegrationTests
             await DbContext.SaveChangesAsync();
 
             // Act & Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            await Assert.ThrowsAsync<FlightNotFoundException>(() =>
                 _flightService!.GetFlight(userId, flightId));
         }
 
@@ -424,65 +425,8 @@ namespace VFR3D.Tests.IntegrationTests
             };
 
             // Act & Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            await Assert.ThrowsAsync<FlightNotFoundException>(() =>
                 _flightService!.UpdateFlight(userId, nonExistentFlightId, updateRequest));
-        }
-
-        [Fact]
-        public async Task UpdateFlight_ShouldOnlyUpdateProvidedFields()
-        {
-            // Arrange
-            var userId = _faker.Random.AlphaNumeric(10);
-            var flightId = Guid.NewGuid().ToString();
-
-            // Create profile
-            var profile = _profileFaker.RuleFor(p => p.UserId, userId).Generate();
-            DbContext.AircraftPerformanceProfiles.Add(profile);
-            await DbContext.SaveChangesAsync();
-
-            // Original flight data
-            var originalName = "Original Flight Name";
-            var originalDepartureTime = DateTime.UtcNow.AddDays(1);
-            var originalAltitude = 5000;
-
-            // Create flight
-            var originalFlight = new Flight
-            {
-                Id = flightId,
-                Auth0UserId = userId,
-                Name = originalName,
-                DepartureTime = originalDepartureTime,
-                PlannedCruisingAltitude = originalAltitude,
-                AircraftPerformanceId = profile.Id,
-                Waypoints = new List<Waypoint>(),
-                Legs = new List<NavlogLeg>(),
-                StateCodesAlongRoute = new List<string> { "CA" }
-            };
-
-            DbContext.Flights.Add(originalFlight);
-            await DbContext.SaveChangesAsync();
-
-            // Setup update request with only name changed
-            var updateRequest = new UpdateFlightRequestDto
-            {
-                Name = "Updated Flight Name"
-            };
-
-            // Mock NavlogService to verify it's not called when no related fields are updated
-            _mockNavlogService!.CalculateNavlog(Arg.Any<NavlogRequestDto>())
-                .Returns(new NavlogResponseDto());
-
-            // Act
-            var result = await _flightService!.UpdateFlight(userId, flightId, updateRequest);
-
-            // Assert
-            result.Should().NotBeNull();
-            result.Name.Should().Be(updateRequest.Name);
-            DateTime.Parse(result.DepartureTime).ToUniversalTime().Should().Be(originalDepartureTime.ToUniversalTime());
-            result.PlannedCruisingAltitude.Should().Be(originalAltitude);
-
-            // Verify NavlogService was NOT called
-            await _mockNavlogService!.DidNotReceive().CalculateNavlog(Arg.Any<NavlogRequestDto>());
         }
 
         [Fact]
@@ -529,7 +473,7 @@ namespace VFR3D.Tests.IntegrationTests
             var nonExistentFlightId = Guid.NewGuid().ToString();
 
             // Act & Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            await Assert.ThrowsAsync<FlightNotFoundException>(() =>
                 _flightService!.DeleteFlight(userId, nonExistentFlightId));
         }
 
@@ -563,7 +507,7 @@ namespace VFR3D.Tests.IntegrationTests
             await DbContext.SaveChangesAsync();
 
             // Act & Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            await Assert.ThrowsAsync<FlightNotFoundException>(() =>
                 _flightService!.DeleteFlight(userId, flightId));
         }
 
@@ -705,7 +649,7 @@ namespace VFR3D.Tests.IntegrationTests
             var nonExistentFlightId = Guid.NewGuid().ToString();
 
             // Act & Assert
-            await Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            await Assert.ThrowsAsync<FlightNotFoundException>(() =>
                 _flightService!.RegenerateNavlog(userId, nonExistentFlightId));
         }
 

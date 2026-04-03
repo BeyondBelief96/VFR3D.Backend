@@ -1,6 +1,6 @@
-﻿using Amazon.SecretsManager.Model;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos;
 using VFR3D.Infrastructure.Dtos.Mappers;
@@ -31,8 +31,7 @@ public class TafService : ITafService
 
             if (airport == null)
             {
-                throw new ResourceNotFoundException
-                    ($"Airport not found for ICAO code or identifier: {icaoCodeOrIdent}");
+                throw new AirportNotFoundException(icaoCodeOrIdent);
             }
 
             var modifiedIdent = airport.StateCode switch
@@ -47,7 +46,7 @@ public class TafService : ITafService
         
         if (taf == null)
         {
-            throw new ResourceNotFoundException($"TAF not found for airport with ICAO ID: {icaoCodeOrIdent}");
+            throw new TafNotFoundException(icaoCodeOrIdent);
         }
 
         return TafMapper.ToDto(taf);

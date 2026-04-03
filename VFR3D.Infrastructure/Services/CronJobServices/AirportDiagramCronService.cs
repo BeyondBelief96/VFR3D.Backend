@@ -1,8 +1,7 @@
-﻿using Amazon.S3.Model;
-using Amazon.S3;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.IO.Compression;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using VFR3D.Domain.Entities;
 using VFR3D.Infrastructure.Data;
@@ -19,21 +18,21 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
         private readonly ILogger<AirportDiagramCronService> _logger;
         private readonly IHttpClientFactory _httpClientFactory;
         private readonly VFR3DDbContext _dbContext;
-        private readonly IAmazonS3 _s3Client;
-        private readonly AwsSettings _awsSettings;
+        private readonly ICloudStorageService _cloudStorageService;
+        private readonly CloudStorageSettings _cloudStorageSettings;
 
         public AirportDiagramCronService(
             ILogger<AirportDiagramCronService> logger,
             IHttpClientFactory httpClientFactory,
             VFR3DDbContext dbContext,
-            IAmazonS3 s3Client,
-            IOptions<AwsSettings> awsSettings)
+            ICloudStorageService cloudStorageService,
+            IOptions<CloudStorageSettings> cloudStorageSettings)
         {
             _logger = logger;
             _httpClientFactory = httpClientFactory;
             _dbContext = dbContext;
-            _s3Client = s3Client;
-            _awsSettings = awsSettings.Value;
+            _cloudStorageService = cloudStorageService;
+            _cloudStorageSettings = cloudStorageSettings.Value;
         }
 
         public async Task DownloadAndProcessAirportDiagramsAsync(CancellationToken cancellationToken = default)
@@ -53,7 +52,7 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
                 var dateString = FaaPublicationDateUtils.FormatDateForAirportDiagrams(currentPublicationDate);
                 var regions = new[] { "A", "B", "C", "D", "E" };
 
-                await DeleteExistingS3Files(cancellationToken);
+                await DeleteExistingFilesAsync(cancellationToken);
 
                 foreach (var region in regions)
                 {
@@ -83,8 +82,11 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
                         await ParseAndStoreXmlDataAsync(xmlContent, cancellationToken);
                     }
 
-                    var pdfEntries = zipArchive.Entries.Where(e => e.Name.Contains("AD.PDF"));
-                    await UploadPdfsToS3Async(pdfEntries, cancellationToken);
+                    // Match airport diagram PDFs: 5-digit code + "AD" + optional variant + ".PDF"
+                    // Examples: 00500AD.PDF, 00500ADROGERSLAKEBED.PDF, 00500ADROSAMONDLAKEBED.PDF
+                    var airportDiagramPattern = new Regex(@"^\d{5}AD.*\.PDF$", RegexOptions.IgnoreCase);
+                    var pdfEntries = zipArchive.Entries.Where(e => airportDiagramPattern.IsMatch(e.Name));
+                    await UploadPdfsToStorageAsync(pdfEntries, cancellationToken);
                 }
 
                 _logger.LogInformation("Completed airport diagram processing.");
@@ -96,90 +98,76 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
             }
         }
 
-        private async Task DeleteExistingS3Files(CancellationToken cancellationToken)
+        private async Task DeleteExistingFilesAsync(CancellationToken cancellationToken)
         {
+            var containerName = _cloudStorageSettings.AirportDiagramsContainerName;
+
             try
             {
-                var listRequest = new ListObjectsV2Request
+                var existingBlobs = await _cloudStorageService.ListBlobsAsync(containerName);
+
+                _logger.LogInformation("Found {Count} existing airport diagrams in storage", existingBlobs.Count);
+
+                if (existingBlobs.Count > 0)
                 {
-                    BucketName = _awsSettings.AirportDiagramsBucketName,
-                    MaxKeys = 1000
-                };
-
-                var existingObjects = new List<KeyVersion>();
-
-                do
-                {
-                    var listResponse = await _s3Client.ListObjectsV2Async(listRequest, cancellationToken);
-                    existingObjects.AddRange(listResponse.S3Objects
-                        .Select(obj => new KeyVersion { Key = obj.Key }));
-
-                    if (listResponse.IsTruncated)
-                    {
-                        listRequest.ContinuationToken = listResponse.NextContinuationToken;
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                while (true);
-
-                _logger.LogInformation("Found {Count} existing airport diagrams in S3", existingObjects.Count);
-
-                // Delete objects in batches of 1000
-                for (int i = 0; i < existingObjects.Count; i += 1000)
-                {
-                    var batch = existingObjects.Skip(i).Take(1000).ToList();
-                    var deleteRequest = new DeleteObjectsRequest
-                    {
-                        BucketName = _awsSettings.AirportDiagramsBucketName,
-                        Objects = batch
-                    };
-
-                    _logger.LogInformation("Deleting batch of {Count} objects from S3", batch.Count);
-                    await _s3Client.DeleteObjectsAsync(deleteRequest, cancellationToken);
+                    // DeleteBlobsAsync handles batching internally (256 per batch for Azure)
+                    await _cloudStorageService.DeleteBlobsAsync(containerName, existingBlobs);
+                    _logger.LogInformation("Deleted {Count} existing airport diagrams from storage", existingBlobs.Count);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error deleting existing S3 files: {BucketName}", _awsSettings.AirportDiagramsBucketName);
+                _logger.LogError(ex, "Error deleting existing files from container: {ContainerName}", containerName);
                 throw;
             }
         }
 
-        private async Task UploadPdfsToS3Async(IEnumerable<ZipArchiveEntry> pdfEntries, CancellationToken cancellationToken)
+        private async Task UploadPdfsToStorageAsync(IEnumerable<ZipArchiveEntry> pdfEntries, CancellationToken cancellationToken)
         {
+            const int batchSize = 50; // Process 50 PDFs at a time to avoid memory issues
+            var containerName = _cloudStorageSettings.AirportDiagramsContainerName;
+
             try
             {
-                foreach (var pdfEntry in pdfEntries)
+                var entriesList = pdfEntries.ToList();
+                var totalCount = entriesList.Count;
+                var uploadedCount = 0;
+
+                for (int i = 0; i < totalCount; i += batchSize)
                 {
-                    using var pdfStream = pdfEntry.Open();
-                    using var memoryStream = new MemoryStream();
-                    await pdfStream.CopyToAsync(memoryStream, cancellationToken);
-                    memoryStream.Position = 0;
+                    var batch = entriesList.Skip(i).Take(batchSize).ToList();
+                    var blobs = new List<(string BlobName, byte[] Content, string ContentType)>();
 
-                    var putRequest = new PutObjectRequest
+                    foreach (var pdfEntry in batch)
                     {
-                        BucketName = _awsSettings.AirportDiagramsBucketName,
-                        Key = pdfEntry.Name,
-                        InputStream = memoryStream,
-                        ContentType = "application/pdf"
-                    };
+                        using var pdfStream = pdfEntry.Open();
+                        using var memoryStream = new MemoryStream();
+                        await pdfStream.CopyToAsync(memoryStream, cancellationToken);
+                        blobs.Add((pdfEntry.Name, memoryStream.ToArray(), "application/pdf"));
+                    }
 
-                    await _s3Client.PutObjectAsync(putRequest, cancellationToken);
-                    _logger.LogDebug("Uploaded airport diagram {FileName} to S3", pdfEntry.Name);
+                    if (blobs.Count > 0)
+                    {
+                        await _cloudStorageService.UploadBlobsAsync(containerName, blobs);
+                        uploadedCount += blobs.Count;
+                        _logger.LogInformation("Uploaded batch of {BatchCount} airport diagrams ({UploadedCount}/{TotalCount})",
+                            blobs.Count, uploadedCount, totalCount);
+                    }
                 }
+
+                _logger.LogInformation("Completed uploading {Count} airport diagrams to storage", uploadedCount);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error uploading PDFs to S3: {BucketName}", _awsSettings.AirportDiagramsBucketName);
+                _logger.LogError(ex, "Error uploading PDFs to container: {ContainerName}", containerName);
                 throw;
             }
         }
 
         private async Task ParseAndStoreXmlDataAsync(string xmlContent, CancellationToken cancellationToken)
         {
+            const int batchSize = 1000;
+
             var doc = XDocument.Parse(xmlContent);
             var diagrams = doc.Descendants("airport_name")
             .SelectMany(airport => airport.Elements("record")
@@ -189,33 +177,59 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
                 AirportName = airport.Attribute("ID")?.Value ?? "",
                 IcaoIdent = airport.Attribute("icao_ident")?.Value,
                 AirportIdent = airport.Attribute("apt_ident")?.Value,
-                FileName = record.Element("pdf_name")?.Value
+                ChartName = record.Element("chart_name")?.Value,
+                FileName = record.Element("pdf_name")?.Value ?? ""
             }))
-            .Where(diagram => diagram.AirportName != null &&
-                   diagram.FileName != null)
+            .Where(diagram => !string.IsNullOrEmpty(diagram.AirportName) &&
+                   !string.IsNullOrEmpty(diagram.FileName))
             .ToList();
 
-            foreach (var diagram in diagrams)
+            _logger.LogInformation("Processing {Count} airport diagrams from XML", diagrams.Count);
+
+            for (int i = 0; i < diagrams.Count; i += batchSize)
             {
-                var existingDiagram = await _dbContext.AirportDiagrams
-                    .FirstOrDefaultAsync(d =>
-                        d.IcaoIdent == diagram.IcaoIdent ||
-                        d.AirportIdent == diagram.AirportIdent,
-                        cancellationToken);
+                var batch = diagrams.Skip(i).Take(batchSize).ToList();
 
-                if (existingDiagram != null)
+                // Get all filenames for this batch
+                var fileNames = batch.Select(d => d.FileName).ToList();
+
+                // Get existing records for this batch by filename (unique identifier)
+                var existingDiagrams = await _dbContext.AirportDiagrams
+                    .Where(d => fileNames.Contains(d.FileName))
+                    .ToListAsync(cancellationToken);
+
+                // Create lookup by filename
+                var existingByFileName = existingDiagrams.ToDictionary(d => d.FileName, d => d);
+
+                var newDiagrams = new List<AirportDiagram>();
+
+                foreach (var diagram in batch)
                 {
-                    existingDiagram.AirportName = diagram.AirportName;
-                    existingDiagram.FileName = diagram.FileName;
-                    _dbContext.AirportDiagrams.Update(existingDiagram);
+                    if (existingByFileName.TryGetValue(diagram.FileName, out var existingDiagram))
+                    {
+                        // Update existing record
+                        existingDiagram.AirportName = diagram.AirportName;
+                        existingDiagram.IcaoIdent = diagram.IcaoIdent;
+                        existingDiagram.AirportIdent = diagram.AirportIdent;
+                        existingDiagram.ChartName = diagram.ChartName;
+                    }
+                    else
+                    {
+                        newDiagrams.Add(diagram);
+                    }
                 }
-                else
+
+                // Batch add new diagrams
+                if (newDiagrams.Count > 0)
                 {
-                    await _dbContext.AirportDiagrams.AddAsync(diagram, cancellationToken);
+                    await _dbContext.AirportDiagrams.AddRangeAsync(newDiagrams, cancellationToken);
                 }
+
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
+                _logger.LogInformation("Processed airport diagram batch: {Count} diagrams ({NewCount} new, {UpdatedCount} updated)",
+                    batch.Count, newDiagrams.Count, batch.Count - newDiagrams.Count);
             }
-
-            await _dbContext.SaveChangesAsync(cancellationToken);
         }
     }
 }

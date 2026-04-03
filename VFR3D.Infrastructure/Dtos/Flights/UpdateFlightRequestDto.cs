@@ -9,4 +9,5 @@ public record UpdateFlightRequestDto
     public int? PlannedCruisingAltitude { get; set; }
     public List<WaypointDto>? Waypoints { get; set; }
     public string? AircraftPerformanceProfileId { get; set; }
+    public string? AircraftId { get; set; }
 }

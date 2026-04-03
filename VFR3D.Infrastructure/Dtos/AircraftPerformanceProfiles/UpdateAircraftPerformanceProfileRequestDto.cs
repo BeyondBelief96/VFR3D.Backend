@@ -3,6 +3,7 @@
 public record UpdateAircraftPerformanceProfileRequestDto
 {
     public string UserId { get; init; } = string.Empty;
+    public string? AircraftId { get; init; }
     public string ProfileName { get; init; } = string.Empty;
     public int ClimbTrueAirspeed { get; init; }
     public int CruiseTrueAirspeed { get; init; }

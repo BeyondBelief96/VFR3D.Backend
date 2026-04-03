@@ -1,4 +1,5 @@
-﻿using VFR3D.Infrastructure.Dtos.AircraftPerformanceProfiles;
+using VFR3D.Infrastructure.Dtos.Aircraft;
+using VFR3D.Infrastructure.Dtos.AircraftPerformanceProfiles;
 using VFR3D.Infrastructure.Dtos.Navlog;
 
 namespace VFR3D.Infrastructure.Dtos.Flights;
@@ -12,6 +13,7 @@ public record FlightDto
     public int PlannedCruisingAltitude { get; set; }
     public List<WaypointDto> Waypoints { get; set; } = [];
     public string AircraftPerformanceId { get; set; } = string.Empty;
+    public string? AircraftId { get; set; }
     public double TotalRouteDistance { get; set; }
     public double TotalRouteTimeHours { get; set; }
     public double TotalFuelUsed { get; set; }
@@ -20,6 +22,8 @@ public record FlightDto
     public List<string> StateCodesAlongRoute { get; set; } = [];
     public List<string> AirspaceGlobalIds { get; set; } = [];
     public List<string> SpecialUseAirspaceGlobalIds { get; set; } = [];
+    public List<string> ObstacleOasNumbers { get; set; } = [];
     public AircraftPerformanceProfileDto? AircraftPerformanceProfile { get; set; }
+    public AircraftDto? Aircraft { get; set; }
     public string? RelatedFlightId { get; set; }
 }

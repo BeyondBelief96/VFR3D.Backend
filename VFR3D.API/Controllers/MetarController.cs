@@ -1,6 +1,6 @@
-﻿using Amazon.SecretsManager.Model;
 using Microsoft.AspNetCore.Mvc;
 using VFR3D.API.Authentication;
+using VFR3D.API.Models;
 using VFR3D.Infrastructure.Dtos;
 using VFR3D.Infrastructure.Interfaces;
 
@@ -9,8 +9,7 @@ namespace VFR3D.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [ConditionalAuth]
-public class MetarController(IMetarService metarService, ILogger<MetarController> logger)
-    : ControllerBase
+public class MetarController(IMetarService metarService) : ControllerBase
 {
     /// <summary>
     /// Gets METAR information for a specific airport
@@ -19,27 +18,13 @@ public class MetarController(IMetarService metarService, ILogger<MetarController
     /// <returns>METAR information for the specified airport</returns>
     /// <response code="200">Returns the METAR information</response>
     /// <response code="404">If the METAR or airport is not found</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("{icaoCodeOrIdent}")]
     [ProducesResponseType(typeof(MetarDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<MetarDto>> GetMetarForAirport(string icaoCodeOrIdent)
     {
-        try
-        {
-            var metar = await metarService.GetMetarForAirport(icaoCodeOrIdent.ToUpperInvariant());
-            return Ok(metar);
-        }
-        catch (ResourceNotFoundException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving METAR for airport {IcaoCodeOrIdent}", icaoCodeOrIdent);
-            return StatusCode(500, "An error occurred while retrieving the METAR information");
-        }
+        var metar = await metarService.GetMetarForAirport(icaoCodeOrIdent.ToUpperInvariant());
+        return Ok(metar);
     }
 
     /// <summary>
@@ -48,22 +33,12 @@ public class MetarController(IMetarService metarService, ILogger<MetarController
     /// <param name="stateCode">Two-letter state code (e.g., TN, WA)</param>
     /// <returns>List of METARs for the specified state</returns>
     /// <response code="200">Returns the list of METARs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("state/{stateCode}")]
     [ProducesResponseType(typeof(IEnumerable<MetarDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<MetarDto>>> GetMetarsByState(string stateCode)
     {
-        try
-        {
-            var metars = await metarService.GetMetarsByState(stateCode.ToUpperInvariant());
-            return Ok(metars);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving METARs for state {StateCode}", stateCode);
-            return StatusCode(500, "An error occurred while retrieving the METAR information");
-        }
+        var metars = await metarService.GetMetarsByState(stateCode.ToUpperInvariant());
+        return Ok(metars);
     }
 
     /// <summary>
@@ -72,25 +47,15 @@ public class MetarController(IMetarService metarService, ILogger<MetarController
     /// <param name="stateCodes">Comma-separated list of two-letter state codes (e.g., TN,WA,OR)</param>
     /// <returns>List of METARs for the specified states</returns>
     /// <response code="200">Returns the list of METARs</response>
-    /// <response code="500">If there was an internal server error</response>
     [HttpGet("states/{stateCodes}")]
     [ProducesResponseType(typeof(IEnumerable<MetarDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<IEnumerable<MetarDto>>> GetMetarsByStates(string stateCodes)
     {
-        try
-        {
-            var stateCodeArray = stateCodes.Split(',')
-                .Select(s => s.Trim().ToUpperInvariant())
-                .ToArray();
+        var stateCodeArray = stateCodes.Split(',')
+            .Select(s => s.Trim().ToUpperInvariant())
+            .ToArray();
 
-            var metars = await metarService.GetMetarsByStates(stateCodeArray);
-            return Ok(metars);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Error retrieving METARs for states {StateCodes}", stateCodes);
-            return StatusCode(500, "An error occurred while retrieving the METAR information");
-        }
+        var metars = await metarService.GetMetarsByStates(stateCodeArray);
+        return Ok(metars);
     }
 }

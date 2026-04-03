@@ -22,58 +22,40 @@ var builder = FunctionsApplication.CreateBuilder(args);
 builder.ConfigureFunctionsWebApplication();
 
 builder.Configuration
-    .SetBasePath(builder.Environment.ContentRootPath)
-    .AddUserSecrets<Program>(optional: true, reloadOnChange: true)
-    .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
+    .SetBasePath(Path.GetDirectoryName(typeof(Program).Assembly.Location)!)
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-    .AddEnvironmentVariables();
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables()
+    .AddUserSecrets<Program>(optional: true, reloadOnChange: true);
 
-// Register settings with explicit binding
-builder.Services.Configure<DatabaseSettings>(options =>
-{
-    options.Host = builder.Configuration["Database:Host"] ??
-                  builder.Configuration["Database__Host"] ??
-                  "localhost";
+// Add Application Insights early - before other service registrations
+builder.Services
+    .AddApplicationInsightsTelemetryWorkerService()
+    .ConfigureFunctionsApplicationInsights();
 
-    options.Database = builder.Configuration["Database:Database"] ??
-                          builder.Configuration["Database__Database"] ??
-                          "postgres";
-
-    options.Username = builder.Configuration["Database:Username"] ??
-                      builder.Configuration["Database__Username"] ??
-                      "postgres";
-
-    options.Password = builder.Configuration["Database:Password"] ??
-                      builder.Configuration["Database__Password"] ??
-                      string.Empty;
-
-    if (int.TryParse(builder.Configuration["Database:Port"] ?? builder.Configuration["Database__Port"], out int port))
-    {
-        options.Port = port;
-    }
-    else
-    {
-        options.Port = 5432;
-    }
-});
+// Configure logging to ensure logs go to Application Insights
+builder.Logging.AddApplicationInsights();
 
 // Register settings
-builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"));
+builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
 
 // Register services
-builder.Services.AddScoped<IAwsInitializationService, AwsInitializationService>();
 builder.Services.AddScoped<IFaaPublicationCycleService, FaaPublicationCycleService>();
 builder.Services.AddScoped<IChartSupplementCronService, ChartSupplementCronService>();
 builder.Services.AddScoped<IAirportDiagramCronService, AirportDiagramCronService>();
 builder.Services.AddScoped<IAviationWeatherService<Metar>, MetarCronService>();
 builder.Services.AddScoped<IAviationWeatherService<Taf>, TafCronService>();
 builder.Services.AddScoped<IAviationWeatherService<Airsigmet>, AirsigmetCronService>();
+builder.Services.AddScoped<IAviationWeatherService<GAirmet>, GAirmetCronService>();
 builder.Services.AddScoped<IAviationWeatherService<Pirep>, PirepCronService>();
 builder.Services.AddScoped<IAirspaceCronService<Airspace>, AirspaceCronService>();
 builder.Services.AddScoped<IAirspaceCronService<SpecialUseAirspace>, SpecialUseAirspaceCronService>();
 builder.Services.AddScoped<AirportCronService>();
 builder.Services.AddScoped<CommunicationFrequencyCronService>();
-builder.Services.AddAwsServices(builder.Configuration);
+builder.Services.AddScoped<RunwayCronService>();
+builder.Services.AddScoped<RunwayEndCronService>();
+builder.Services.AddScoped<IObstacleCronService, ObstacleCronService>();
+builder.Services.AddCloudStorageServices(builder.Configuration);
 builder.Services.AddHttpClient();
 
 // Configure HttpClient for ArcGIS services with extended timeout
@@ -93,7 +75,7 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
         npgsqlOptions =>
         {
             npgsqlOptions.EnableRetryOnFailure(3);
-            npgsqlOptions.CommandTimeout(30);
+            npgsqlOptions.CommandTimeout(300); // 5 minutes for heavy NASR data operations
             npgsqlOptions.UseNetTopologySuite();
         });
 
@@ -104,33 +86,33 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
     }
 });
 
-// Add Application Insights
-builder.Services
-    .AddApplicationInsightsTelemetryWorkerService()
-    .ConfigureFunctionsApplicationInsights();
+// Build the application
+var app = builder.Build();
 
-// Get required services for initialization
-var serviceProvider = builder.Services.BuildServiceProvider();
-var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
-var awsInitService = serviceProvider.GetRequiredService<IAwsInitializationService>();
+// Get logger from root provider (singletons are fine)
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
 
-// Initialize AWS resources on startup
-logger.LogInformation("Initializing AWS resources during startup...");
+// Initialize Azure Blob Storage resources on startup (scoped service - needs scope)
+logger.LogInformation("Initializing Azure Blob Storage resources during startup...");
 try
 {
-    awsInitService.InitializeAsync(CancellationToken.None).GetAwaiter().GetResult();
-    logger.LogInformation("AWS resources initialized successfully");
+    using (var scope = app.Services.CreateScope())
+    {
+        var cloudStorageInitService = scope.ServiceProvider.GetRequiredService<ICloudStorageInitializationService>();
+        cloudStorageInitService.InitializeAsync(CancellationToken.None).GetAwaiter().GetResult();
+    }
+    logger.LogInformation("Azure Blob Storage resources initialized successfully");
 }
 catch (Exception ex)
 {
-    logger.LogError(ex, "Failed to initialize AWS resources");
+    logger.LogError(ex, "Failed to initialize Azure Blob Storage resources");
 }
 
-// Database seeding
+// Database seeding (scoped service - needs scope)
 logger.LogInformation("Initializing database data...");
 try
 {
-    using (var scope = serviceProvider.CreateScope())
+    using (var scope = app.Services.CreateScope())
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<VFR3DDbContext>();
         DbInitializer.InitializeAsync(dbContext, logger).GetAwaiter().GetResult();
@@ -142,4 +124,4 @@ catch (Exception ex)
     logger.LogError(ex, "Failed to initialize database data");
 }
 
-builder.Build().Run();
+app.Run();

@@ -2,7 +2,24 @@
   "permissions": {
     "allow": [
       "Bash(dotnet build:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(docker logs:*)",
+      "Bash(grep:*)",
+      "Bash(docker compose -f docker-compose.local.yml down)",
+      "Bash(dotnet add:*)",
+      "Bash(dotnet remove:*)",
+      "Bash(dotnet test:*)",
+      "Bash(dir:*)",
+      "WebFetch(domain:www.faa.gov)",
+      "Bash(dotnet ef database update:*)",
+      "Bash(dotnet ef migrations:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker ps:*)",
+      "Bash(dotnet package search:*)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(dotnet user-secrets:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

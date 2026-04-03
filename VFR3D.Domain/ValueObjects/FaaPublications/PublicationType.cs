@@ -8,5 +8,6 @@
         NasrSubscription_Frequencies = 3,
         Airspaces = 4,
         SpecialUseAirspaces = 5,
+        Obstacles = 6,
     }
 }

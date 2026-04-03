@@ -49,6 +49,10 @@ public class AircraftPerformanceProfile
     [Column("fuel_on_board_gals")]
     public double FuelOnBoardGals { get; set; }
 
+    [Column("aircraft_id")]
+    public string? AircraftId { get; set; }
+
     // Navigation Properties
+    public virtual Aircraft? Aircraft { get; set; }
     public virtual ICollection<Flight> Flights { get; set; } = new List<Flight>();
 }

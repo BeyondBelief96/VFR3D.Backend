@@ -1,7 +1,7 @@
-﻿using Amazon.SecretsManager.Model;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Domain.ValueObjects.FaaPublications;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Interfaces;
@@ -36,6 +36,12 @@ namespace VFR3D.Infrastructure.Services
             {
                 _logger.LogError("No publication cycle found for type: {PublicationType}", publicationType);
                 return false;
+            }
+
+            // If there has never been a successful update, we should run the update.
+            if (!publicationCycle.LastSuccessfulUpdate.HasValue)
+            {
+                return true;
             }
 
             var daysSinceKnownValidDate = (currentDate - publicationCycle.KnownValidDate).TotalDays;

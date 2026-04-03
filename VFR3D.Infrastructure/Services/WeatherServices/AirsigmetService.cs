@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VFR3D.Domain.Enums;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos;
 using VFR3D.Infrastructure.Dtos.Mappers;
@@ -32,5 +33,35 @@ public class AirsigmetService : IAirsigmetService
             _logger.LogError(ex, "Error retrieving all AIRSIGMETs");
             throw;
         }
+    }
+
+    public async Task<IEnumerable<AirsigmetDto>> GetAirsigmetsByHazardType(AirsigmetHazardType hazardType)
+    {
+        try
+        {
+            var hazardTypeString = ConvertHazardTypeToString(hazardType);
+            var airsigmets = await _context.Airsigmets
+                .Where(a => a.Hazard != null && a.Hazard.Type == hazardTypeString)
+                .ToListAsync();
+            return airsigmets.Select(AirsigmetMapper.ToDto);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving AIRSIGMETs for hazard type {HazardType}", hazardType);
+            throw;
+        }
+    }
+
+    private static string ConvertHazardTypeToString(AirsigmetHazardType hazardType)
+    {
+        return hazardType switch
+        {
+            AirsigmetHazardType.CONVECTIVE => "CONVECTIVE",
+            AirsigmetHazardType.ICE => "ICE",
+            AirsigmetHazardType.TURB => "TURB",
+            AirsigmetHazardType.IFR => "IFR",
+            AirsigmetHazardType.MTN_OBSCN => "MTN OBSCN",
+            _ => throw new ArgumentOutOfRangeException(nameof(hazardType))
+        };
     }
 }

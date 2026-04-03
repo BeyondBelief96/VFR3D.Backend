@@ -1,6 +1,6 @@
-﻿using Amazon.SecretsManager.Model;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using VFR3D.Domain.Exceptions;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Dtos;
 using VFR3D.Infrastructure.Dtos.Mappers;
@@ -61,8 +61,7 @@ namespace VFR3D.Infrastructure.Services
 
                 if (airport == null)
                 {
-                    throw new ResourceNotFoundException(
-                        $"Airport not found for ICAO code or identifier: {icaoCodeOrIdent}");
+                    throw new AirportNotFoundException(icaoCodeOrIdent);
                 }
 
                 return AirportMapper.ToDto(airport);
@@ -150,8 +149,8 @@ namespace VFR3D.Infrastructure.Services
 
                 var upperPrefix = prefix.ToUpper();
                 var airports = await _context.Airports
-                    .Where(a => 
-                        (a.IcaoId != null && a.IcaoId.ToUpper().StartsWith(upperPrefix)) || 
+                    .Where(a =>
+                        (a.IcaoId != null && a.IcaoId.ToUpper().StartsWith(upperPrefix)) ||
                         (a.ArptId != null && a.ArptId.ToUpper().StartsWith(upperPrefix)))
                     .ToListAsync();
 
@@ -160,6 +159,41 @@ namespace VFR3D.Infrastructure.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting airports by prefix: {Prefix}", prefix);
+                throw;
+            }
+        }
+
+        public async Task<IEnumerable<AirportDto>> SearchAirports(string query)
+        {
+            try
+            {
+                _logger.LogInformation("Searching airports with query: {Query}", query);
+
+                if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+                {
+                    return Enumerable.Empty<AirportDto>();
+                }
+
+                var queryLower = query.ToLower();
+
+                var airports = await _context.Airports
+                    .Where(a =>
+                        (a.IcaoId != null && a.IcaoId.ToLower().StartsWith(queryLower)) ||
+                        (a.ArptId != null && a.ArptId.ToLower().StartsWith(queryLower)) ||
+                        (a.ArptName != null && a.ArptName.ToLower().Contains(queryLower)) ||
+                        (a.City != null && a.City.ToLower().Contains(queryLower)))
+                    .OrderByDescending(a =>
+                        (a.IcaoId != null && a.IcaoId.ToLower().StartsWith(queryLower)) ||
+                        (a.ArptId != null && a.ArptId.ToLower().StartsWith(queryLower)))
+                    .ThenBy(a => a.ArptName)
+                    .Take(50)
+                    .ToListAsync();
+
+                return airports.Select(AirportMapper.ToDto);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching airports with query: {Query}", query);
                 throw;
             }
         }

@@ -6,7 +6,7 @@
       "project": "VFR3D.API.csproj",
       "documentName": "v1",
       "msBuildProjectExtensionsPath": null,
-      "configuration": "",
+      "configuration": null,
       "runtime": null,
       "targetFramework": null,
       "noBuild": false,
@@ -50,6 +50,8 @@
       "useTransformResultMethod": false,
       "generateDtoTypes": true,
       "operationGenerationMode": "MultipleClientsFromOperationId",
+      "includedOperationIds": [],
+      "excludedOperationIds": [],
       "markOptionalProperties": true,
       "generateCloneMethod": false,
       "typeStyle": "Interface",
@@ -76,7 +78,7 @@
       "templateDirectory": null,
       "serviceHost": null,
       "serviceSchemes": null,
-      "output": "../vfr3d/src/redux/api/vfr3d/dtos.ts",
+      "output": null,
       "newLineBehavior": "Auto"
     }
   }

@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using VFR3D.Domain.ValueObjects.Flights;
+using VFR3D.Domain.ValueObjects.WeightBalance;
 using VFR3D.Infrastructure.Data;
 
 #nullable disable
@@ -20,17 +21,193 @@ namespace VFR3D.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.0")
+                .HasAnnotation("ProductVersion", "9.0.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "postgis");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("VFR3D.Domain.Entities.Aircraft", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AircraftHome")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("aircraft_home");
+
+                    b.Property<string>("AircraftType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("aircraft_type");
+
+                    b.Property<string>("AirspeedUnits")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("airspeed_units");
+
+                    b.Property<string>("CallSign")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("call_sign");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("category");
+
+                    b.Property<string>("Color2")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("color2");
+
+                    b.Property<string>("Color3")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("color3");
+
+                    b.Property<string>("Color4")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("color4");
+
+                    b.Property<int?>("DefaultCruiseAltitude")
+                        .HasColumnType("integer")
+                        .HasColumnName("default_cruise_altitude");
+
+                    b.Property<double?>("GlideRatio")
+                        .HasColumnType("double precision")
+                        .HasColumnName("glide_ratio");
+
+                    b.Property<int?>("GlideSpeed")
+                        .HasColumnType("integer")
+                        .HasColumnName("glide_speed");
+
+                    b.Property<string>("LengthUnits")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("length_units");
+
+                    b.Property<int?>("MaxCeiling")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_ceiling");
+
+                    b.Property<string>("PrimaryColor")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("primary_color");
+
+                    b.Property<string>("SerialNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("serial_number");
+
+                    b.Property<string>("TailNumber")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("tail_number");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "TailNumber")
+                        .IsUnique();
+
+                    b.ToTable("aircraft", (string)null);
+                });
+
+            modelBuilder.Entity("VFR3D.Domain.Entities.AircraftDocument", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AircraftId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("aircraft_id");
+
+                    b.Property<string>("BlobName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("blob_name");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("category");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("content_type");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("file_name");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("file_size_bytes");
+
+                    b.Property<DateTime>("LastModifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_modified_at");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("uploaded_at");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AircraftId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "AircraftId");
+
+                    b.ToTable("aircraft_documents", (string)null);
+                });
 
             modelBuilder.Entity("VFR3D.Domain.Entities.AircraftPerformanceProfile", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("text")
                         .HasColumnName("id");
+
+                    b.Property<string>("AircraftId")
+                        .HasColumnType("text")
+                        .HasColumnName("aircraft_id");
 
                     b.Property<int>("ClimbFpm")
                         .HasColumnType("integer")
@@ -84,6 +261,8 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnName("user_id");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AircraftId");
 
                     b.HasIndex("UserId");
 
@@ -501,7 +680,13 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("airport_name");
 
+                    b.Property<string>("ChartName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("chart_name");
+
                     b.Property<string>("FileName")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("file_name");
@@ -514,6 +699,9 @@ namespace VFR3D.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AirportIdent");
+
+                    b.HasIndex("FileName")
+                        .IsUnique();
 
                     b.HasIndex("IcaoIdent");
 
@@ -1011,6 +1199,20 @@ namespace VFR3D.Infrastructure.Migrations
                             CycleLengthDays = 56,
                             KnownValidDate = new DateTime(2024, 12, 26, 0, 0, 0, 0, DateTimeKind.Utc),
                             PublicationType = "Airspaces"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CycleLengthDays = 56,
+                            KnownValidDate = new DateTime(2024, 12, 26, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PublicationType = "SpecialUseAirspaces"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CycleLengthDays = 56,
+                            KnownValidDate = new DateTime(2025, 10, 26, 0, 0, 0, 0, DateTimeKind.Utc),
+                            PublicationType = "Obstacles"
                         });
                 });
 
@@ -1019,6 +1221,10 @@ namespace VFR3D.Infrastructure.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("text")
                         .HasColumnName("id");
+
+                    b.Property<string>("AircraftId")
+                        .HasColumnType("text")
+                        .HasColumnName("aircraft_id");
 
                     b.Property<string>("AircraftPerformanceId")
                         .IsRequired()
@@ -1052,6 +1258,10 @@ namespace VFR3D.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("name");
+
+                    b.Property<List<string>>("ObstacleOasNumbers")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("obstacle_oas_numbers");
 
                     b.Property<int>("PlannedCruisingAltitude")
                         .HasColumnType("integer")
@@ -1089,6 +1299,8 @@ namespace VFR3D.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("AircraftId");
+
                     b.HasIndex("AircraftPerformanceId");
 
                     b.HasIndex("Auth0UserId");
@@ -1096,6 +1308,239 @@ namespace VFR3D.Infrastructure.Migrations
                     b.HasIndex("Auth0UserId", "Name");
 
                     b.ToTable("flights", (string)null);
+                });
+
+            modelBuilder.Entity("VFR3D.Domain.Entities.GAirmet", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Altitudes")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("altitudes");
+
+                    b.Property<string>("Area")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("area");
+
+                    b.Property<string>("DueTo")
+                        .HasColumnType("text")
+                        .HasColumnName("due_to");
+
+                    b.Property<DateTime>("ExpireTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expire_time");
+
+                    b.Property<int>("ForecastHour")
+                        .HasColumnType("integer")
+                        .HasColumnName("forecast_hour");
+
+                    b.Property<string>("GeometryType")
+                        .HasColumnType("text")
+                        .HasColumnName("geometry_type");
+
+                    b.Property<string>("HazardSeverity")
+                        .HasColumnType("text")
+                        .HasColumnName("hazard_severity");
+
+                    b.Property<string>("HazardType")
+                        .HasColumnType("text")
+                        .HasColumnName("hazard_type");
+
+                    b.Property<DateTime>("IssueTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issue_time");
+
+                    b.Property<string>("Product")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("product");
+
+                    b.Property<DateTime>("ReceiptTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("receipt_time");
+
+                    b.Property<string>("Tag")
+                        .HasColumnType("text")
+                        .HasColumnName("tag");
+
+                    b.Property<DateTime>("ValidTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("valid_time");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpireTime");
+
+                    b.HasIndex("HazardType");
+
+                    b.HasIndex("IssueTime");
+
+                    b.HasIndex("Product");
+
+                    b.HasIndex("ValidTime");
+
+                    b.ToTable("gairmet");
+                });
+
+            modelBuilder.Entity("VFR3D.Domain.Entities.Obstacle", b =>
+                {
+                    b.Property<string>("OasNumber")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("oas_number");
+
+                    b.Property<string>("Action")
+                        .HasMaxLength(1)
+                        .HasColumnType("varchar(1)")
+                        .HasColumnName("action");
+
+                    b.Property<string>("CityName")
+                        .HasMaxLength(16)
+                        .HasColumnType("varchar(16)")
+                        .HasColumnName("city_name");
+
+                    b.Property<string>("CountryId")
+                        .HasMaxLength(2)
+                        .HasColumnType("varchar(2)")
+                        .HasColumnName("country_id");
+
+                    b.Property<string>("FaaStudyNumber")
+                        .HasMaxLength(14)
+                        .HasColumnType("varchar(14)")
+                        .HasColumnName("faa_study_number");
+
+                    b.Property<int?>("HeightAgl")
+                        .HasColumnType("integer")
+                        .HasColumnName("height_agl");
+
+                    b.Property<int?>("HeightAmsl")
+                        .HasColumnType("integer")
+                        .HasColumnName("height_amsl");
+
+                    b.Property<string>("HorizontalAccuracy")
+                        .HasMaxLength(1)
+                        .HasColumnType("varchar(1)")
+                        .HasColumnName("horizontal_accuracy");
+
+                    b.Property<string>("JulianDate")
+                        .HasMaxLength(7)
+                        .HasColumnType("varchar(7)")
+                        .HasColumnName("julian_date");
+
+                    b.Property<decimal?>("LatDecimal")
+                        .HasColumnType("decimal(10,8)")
+                        .HasColumnName("lat_decimal");
+
+                    b.Property<int?>("LatDegrees")
+                        .HasColumnType("integer")
+                        .HasColumnName("lat_degrees");
+
+                    b.Property<string>("LatHemisphere")
+                        .HasMaxLength(1)
+                        .HasColumnType("varchar(1)")
+                        .HasColumnName("lat_hemisphere");
+
+                    b.Property<int?>("LatMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("lat_minutes");
+
+                    b.Property<decimal?>("LatSeconds")
+                        .HasColumnType("decimal(6,2)")
+                        .HasColumnName("lat_seconds");
+
+                    b.Property<string>("Lighting")
+                        .HasMaxLength(1)
+                        .HasColumnType("varchar(1)")
+                        .HasColumnName("lighting");
+
+                    b.Property<Point>("Location")
+                        .HasColumnType("geography(Point, 4326)")
+                        .HasColumnName("location");
+
+                    b.Property<decimal?>("LongDecimal")
+                        .HasColumnType("decimal(11,8)")
+                        .HasColumnName("long_decimal");
+
+                    b.Property<int?>("LongDegrees")
+                        .HasColumnType("integer")
+                        .HasColumnName("long_degrees");
+
+                    b.Property<string>("LongHemisphere")
+                        .HasMaxLength(1)
+                        .HasColumnType("varchar(1)")
+                        .HasColumnName("long_hemisphere");
+
+                    b.Property<int?>("LongMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("long_minutes");
+
+                    b.Property<decimal?>("LongSeconds")
+                        .HasColumnType("decimal(6,2)")
+                        .HasColumnName("long_seconds");
+
+                    b.Property<string>("MarkIndicator")
+                        .HasMaxLength(1)
+                        .HasColumnType("varchar(1)")
+                        .HasColumnName("mark_indicator");
+
+                    b.Property<string>("OasCode")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("varchar(2)")
+                        .HasColumnName("oas_code");
+
+                    b.Property<string>("ObstacleNumber")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("varchar(6)")
+                        .HasColumnName("obstacle_number");
+
+                    b.Property<string>("ObstacleType")
+                        .HasMaxLength(18)
+                        .HasColumnType("varchar(18)")
+                        .HasColumnName("obstacle_type");
+
+                    b.Property<int?>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.Property<string>("StateId")
+                        .HasMaxLength(2)
+                        .HasColumnType("varchar(2)")
+                        .HasColumnName("state_id");
+
+                    b.Property<string>("VerificationStatus")
+                        .HasMaxLength(1)
+                        .HasColumnType("varchar(1)")
+                        .HasColumnName("verification_status");
+
+                    b.Property<string>("VerticalAccuracy")
+                        .HasMaxLength(1)
+                        .HasColumnType("varchar(1)")
+                        .HasColumnName("vertical_accuracy");
+
+                    b.HasKey("OasNumber");
+
+                    b.HasIndex("HeightAgl");
+
+                    b.HasIndex("HeightAmsl");
+
+                    b.HasIndex("Location");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Location"), "gist");
+
+                    b.HasIndex("OasNumber")
+                        .IsUnique();
+
+                    b.HasIndex("ObstacleType");
+
+                    b.HasIndex("StateId");
+
+                    b.ToTable("obstacles", (string)null);
                 });
 
             modelBuilder.Entity("VFR3D.Domain.Entities.Pirep", b =>
@@ -1187,6 +1632,245 @@ namespace VFR3D.Infrastructure.Migrations
                     b.HasIndex("Latitude", "Longitude");
 
                     b.ToTable("pirep");
+                });
+
+            modelBuilder.Entity("VFR3D.Domain.Entities.Runway", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EdgeLightIntensity")
+                        .HasMaxLength(5)
+                        .HasColumnType("varchar(5)")
+                        .HasColumnName("edge_light_intensity");
+
+                    b.Property<int?>("Length")
+                        .HasColumnType("integer")
+                        .HasColumnName("length");
+
+                    b.Property<string>("PavementClassification")
+                        .HasMaxLength(11)
+                        .HasColumnType("varchar(11)")
+                        .HasColumnName("pavement_classification");
+
+                    b.Property<string>("RunwayId")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("varchar(7)")
+                        .HasColumnName("runway_id");
+
+                    b.Property<string>("SiteNo")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("varchar(9)")
+                        .HasColumnName("site_no");
+
+                    b.Property<string>("SurfaceTreatmentCode")
+                        .HasMaxLength(5)
+                        .HasColumnType("varchar(5)")
+                        .HasColumnName("surface_treatment_code");
+
+                    b.Property<string>("SurfaceTypeCode")
+                        .HasMaxLength(12)
+                        .HasColumnType("varchar(12)")
+                        .HasColumnName("surface_type_code");
+
+                    b.Property<int?>("WeightBearingDoubleDualTandem")
+                        .HasColumnType("integer")
+                        .HasColumnName("weight_bearing_double_dual_tandem");
+
+                    b.Property<int?>("WeightBearingDualTandem")
+                        .HasColumnType("integer")
+                        .HasColumnName("weight_bearing_dual_tandem");
+
+                    b.Property<int?>("WeightBearingDualWheel")
+                        .HasColumnType("integer")
+                        .HasColumnName("weight_bearing_dual_wheel");
+
+                    b.Property<int?>("WeightBearingSingleWheel")
+                        .HasColumnType("integer")
+                        .HasColumnName("weight_bearing_single_wheel");
+
+                    b.Property<int?>("Width")
+                        .HasColumnType("integer")
+                        .HasColumnName("width");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Length");
+
+                    b.HasIndex("SiteNo");
+
+                    b.HasIndex("SurfaceTypeCode");
+
+                    b.HasIndex("SiteNo", "RunwayId")
+                        .IsUnique();
+
+                    b.ToTable("runways", (string)null);
+                });
+
+            modelBuilder.Entity("VFR3D.Domain.Entities.RunwayEnd", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApproachLightSystem")
+                        .HasMaxLength(8)
+                        .HasColumnType("varchar(8)")
+                        .HasColumnName("approach_light_system");
+
+                    b.Property<string>("ApproachType")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
+                        .HasColumnName("approach_type");
+
+                    b.Property<bool>("CenterlineLights")
+                        .HasColumnType("boolean")
+                        .HasColumnName("centerline_lights");
+
+                    b.Property<string>("ControllingObjectCenterlineOffset")
+                        .HasMaxLength(7)
+                        .HasColumnType("varchar(7)")
+                        .HasColumnName("controlling_object_centerline_offset");
+
+                    b.Property<int?>("ControllingObjectClearanceSlope")
+                        .HasColumnType("integer")
+                        .HasColumnName("controlling_object_clearance_slope");
+
+                    b.Property<string>("ControllingObjectDescription")
+                        .HasMaxLength(11)
+                        .HasColumnType("varchar(11)")
+                        .HasColumnName("controlling_object_description");
+
+                    b.Property<int?>("ControllingObjectDistanceFromRunway")
+                        .HasColumnType("integer")
+                        .HasColumnName("controlling_object_distance_from_runway");
+
+                    b.Property<int?>("ControllingObjectHeightAboveRunway")
+                        .HasColumnType("integer")
+                        .HasColumnName("controlling_object_height_above_runway");
+
+                    b.Property<string>("ControllingObjectMarkedLighted")
+                        .HasMaxLength(4)
+                        .HasColumnType("varchar(4)")
+                        .HasColumnName("controlling_object_marked_lighted");
+
+                    b.Property<decimal?>("DisplacedThresholdElev")
+                        .HasColumnType("decimal(7,1)")
+                        .HasColumnName("displaced_threshold_elev");
+
+                    b.Property<decimal?>("DisplacedThresholdLatDecimal")
+                        .HasColumnType("decimal(10,8)")
+                        .HasColumnName("displaced_threshold_lat_decimal");
+
+                    b.Property<int?>("DisplacedThresholdLength")
+                        .HasColumnType("integer")
+                        .HasColumnName("displaced_threshold_length");
+
+                    b.Property<decimal?>("DisplacedThresholdLongDecimal")
+                        .HasColumnType("decimal(11,8)")
+                        .HasColumnName("displaced_threshold_long_decimal");
+
+                    b.Property<decimal?>("Elevation")
+                        .HasColumnType("decimal(7,1)")
+                        .HasColumnName("elevation");
+
+                    b.Property<decimal?>("LatDecimal")
+                        .HasColumnType("decimal(10,8)")
+                        .HasColumnName("lat_decimal");
+
+                    b.Property<decimal?>("LongDecimal")
+                        .HasColumnType("decimal(11,8)")
+                        .HasColumnName("long_decimal");
+
+                    b.Property<bool>("RightHandTrafficPattern")
+                        .HasColumnType("boolean")
+                        .HasColumnName("right_hand_traffic_pattern");
+
+                    b.Property<string>("RunwayEndId")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("varchar(3)")
+                        .HasColumnName("runway_end_id");
+
+                    b.Property<bool>("RunwayEndLights")
+                        .HasColumnType("boolean")
+                        .HasColumnName("runway_end_lights");
+
+                    b.Property<Guid?>("RunwayFk")
+                        .HasColumnType("uuid")
+                        .HasColumnName("runway_fk");
+
+                    b.Property<string>("RunwayIdRef")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("varchar(7)")
+                        .HasColumnName("runway_id_ref");
+
+                    b.Property<string>("RunwayMarkingsCondition")
+                        .HasMaxLength(1)
+                        .HasColumnType("varchar(1)")
+                        .HasColumnName("runway_markings_condition");
+
+                    b.Property<string>("RunwayMarkingsType")
+                        .HasMaxLength(5)
+                        .HasColumnType("varchar(5)")
+                        .HasColumnName("runway_markings_type");
+
+                    b.Property<bool>("RunwayVisibilityValueEquipment")
+                        .HasColumnType("boolean")
+                        .HasColumnName("runway_visibility_value_equipment");
+
+                    b.Property<string>("RunwayVisualRangeEquipment")
+                        .HasMaxLength(3)
+                        .HasColumnType("varchar(3)")
+                        .HasColumnName("runway_visual_range_equipment");
+
+                    b.Property<string>("SiteNo")
+                        .IsRequired()
+                        .HasMaxLength(9)
+                        .HasColumnType("varchar(9)")
+                        .HasColumnName("site_no");
+
+                    b.Property<decimal?>("ThresholdCrossingHeight")
+                        .HasColumnType("decimal(5,1)")
+                        .HasColumnName("threshold_crossing_height");
+
+                    b.Property<decimal?>("TouchdownZoneElev")
+                        .HasColumnType("decimal(7,1)")
+                        .HasColumnName("touchdown_zone_elev");
+
+                    b.Property<bool>("TouchdownZoneLights")
+                        .HasColumnType("boolean")
+                        .HasColumnName("touchdown_zone_lights");
+
+                    b.Property<int?>("TrueAlignment")
+                        .HasColumnType("integer")
+                        .HasColumnName("true_alignment");
+
+                    b.Property<decimal?>("VisualGlidePathAngle")
+                        .HasColumnType("decimal(4,2)")
+                        .HasColumnName("visual_glide_path_angle");
+
+                    b.Property<string>("VisualGlideSlopeIndicator")
+                        .HasMaxLength(5)
+                        .HasColumnType("varchar(5)")
+                        .HasColumnName("visual_glide_slope_indicator");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RunwayFk");
+
+                    b.HasIndex("RunwayFk", "RunwayEndId")
+                        .IsUnique()
+                        .HasFilter("\"runway_fk\" IS NOT NULL");
+
+                    b.HasIndex("SiteNo", "RunwayIdRef", "RunwayEndId")
+                        .IsUnique();
+
+                    b.ToTable("runway_ends", (string)null);
                 });
 
             modelBuilder.Entity("VFR3D.Domain.Entities.SpecialUseAirspace", b =>
@@ -1430,6 +2114,179 @@ namespace VFR3D.Infrastructure.Migrations
                     b.ToTable("taf");
                 });
 
+            modelBuilder.Entity("VFR3D.Domain.Entities.WeightBalanceCalculation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CalculatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("calculated_at");
+
+                    b.Property<string>("EnvelopeId")
+                        .HasColumnType("text")
+                        .HasColumnName("envelope_id");
+
+                    b.Property<List<CgEnvelopePoint>>("EnvelopeLimits")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("envelope_limits");
+
+                    b.Property<string>("EnvelopeName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("envelope_name");
+
+                    b.Property<string>("FlightId")
+                        .HasColumnType("text")
+                        .HasColumnName("flight_id");
+
+                    b.Property<double?>("FuelBurnGallons")
+                        .HasColumnType("double precision")
+                        .HasColumnName("fuel_burn_gallons");
+
+                    b.Property<bool>("IsStandalone")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_standalone");
+
+                    b.Property<WeightBalanceCgResult>("LandingResult")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("landing_result");
+
+                    b.Property<List<StationLoad>>("LoadedStations")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("loaded_stations");
+
+                    b.Property<List<StationBreakdown>>("StationBreakdown")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("station_breakdown");
+
+                    b.Property<WeightBalanceCgResult>("TakeoffResult")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("takeoff_result");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("user_id");
+
+                    b.Property<List<string>>("Warnings")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("warnings");
+
+                    b.Property<Guid>("WeightBalanceProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("weight_balance_profile_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FlightId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("WeightBalanceProfileId");
+
+                    b.HasIndex("UserId", "IsStandalone");
+
+                    b.ToTable("weight_balance_calculations", (string)null);
+                });
+
+            modelBuilder.Entity("VFR3D.Domain.Entities.WeightBalanceProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AircraftId")
+                        .HasColumnType("text")
+                        .HasColumnName("aircraft_id");
+
+                    b.Property<string>("ArmUnits")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("arm_units");
+
+                    b.Property<List<CgEnvelope>>("CgEnvelopes")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("cg_envelopes");
+
+                    b.Property<string>("DatumDescription")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("datum_description");
+
+                    b.Property<double>("EmptyWeight")
+                        .HasColumnType("double precision")
+                        .HasColumnName("empty_weight");
+
+                    b.Property<double>("EmptyWeightArm")
+                        .HasColumnType("double precision")
+                        .HasColumnName("empty_weight_arm");
+
+                    b.Property<string>("LoadingGraphFormat")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("loading_graph_format");
+
+                    b.Property<List<LoadingStation>>("LoadingStations")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("loading_stations");
+
+                    b.Property<double?>("MaxLandingWeight")
+                        .HasColumnType("double precision")
+                        .HasColumnName("max_landing_weight");
+
+                    b.Property<double?>("MaxRampWeight")
+                        .HasColumnType("double precision")
+                        .HasColumnName("max_ramp_weight");
+
+                    b.Property<double>("MaxTakeoffWeight")
+                        .HasColumnType("double precision")
+                        .HasColumnName("max_takeoff_weight");
+
+                    b.Property<double?>("MaxZeroFuelWeight")
+                        .HasColumnType("double precision")
+                        .HasColumnName("max_zero_fuel_weight");
+
+                    b.Property<string>("ProfileName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("profile_name");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("WeightUnits")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("weight_units");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AircraftId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "ProfileName")
+                        .IsUnique();
+
+                    b.ToTable("weight_balance_profiles", (string)null);
+                });
+
             modelBuilder.Entity("Vfr3d.Domain.Entities.Metar", b =>
                 {
                     b.Property<int>("Id")
@@ -1588,6 +2445,21 @@ namespace VFR3D.Infrastructure.Migrations
                     b.ToTable("flight_airspaces", (string)null);
                 });
 
+            modelBuilder.Entity("flight_obstacles", b =>
+                {
+                    b.Property<string>("flight_id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("obstacle_oas_number")
+                        .HasColumnType("varchar(10)");
+
+                    b.HasKey("flight_id", "obstacle_oas_number");
+
+                    b.HasIndex("obstacle_oas_number");
+
+                    b.ToTable("flight_obstacles", (string)null);
+                });
+
             modelBuilder.Entity("flight_special_use_airspaces", b =>
                 {
                     b.Property<string>("flight_id")
@@ -1603,15 +2475,90 @@ namespace VFR3D.Infrastructure.Migrations
                     b.ToTable("flight_special_use_airspaces", (string)null);
                 });
 
+            modelBuilder.Entity("VFR3D.Domain.Entities.AircraftDocument", b =>
+                {
+                    b.HasOne("VFR3D.Domain.Entities.Aircraft", "Aircraft")
+                        .WithMany("Documents")
+                        .HasForeignKey("AircraftId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Aircraft");
+                });
+
+            modelBuilder.Entity("VFR3D.Domain.Entities.AircraftPerformanceProfile", b =>
+                {
+                    b.HasOne("VFR3D.Domain.Entities.Aircraft", "Aircraft")
+                        .WithMany("PerformanceProfiles")
+                        .HasForeignKey("AircraftId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Aircraft");
+                });
+
             modelBuilder.Entity("VFR3D.Domain.Entities.Flight", b =>
                 {
+                    b.HasOne("VFR3D.Domain.Entities.Aircraft", "Aircraft")
+                        .WithMany("Flights")
+                        .HasForeignKey("AircraftId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("VFR3D.Domain.Entities.AircraftPerformanceProfile", "AircraftPerformanceProfile")
                         .WithMany("Flights")
                         .HasForeignKey("AircraftPerformanceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("Aircraft");
+
                     b.Navigation("AircraftPerformanceProfile");
+                });
+
+            modelBuilder.Entity("VFR3D.Domain.Entities.Runway", b =>
+                {
+                    b.HasOne("VFR3D.Domain.Entities.Airport", null)
+                        .WithMany()
+                        .HasForeignKey("SiteNo")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("VFR3D.Domain.Entities.RunwayEnd", b =>
+                {
+                    b.HasOne("VFR3D.Domain.Entities.Runway", "Runway")
+                        .WithMany("RunwayEnds")
+                        .HasForeignKey("RunwayFk")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Runway");
+                });
+
+            modelBuilder.Entity("VFR3D.Domain.Entities.WeightBalanceCalculation", b =>
+                {
+                    b.HasOne("VFR3D.Domain.Entities.Flight", "Flight")
+                        .WithOne("WeightBalanceCalculation")
+                        .HasForeignKey("VFR3D.Domain.Entities.WeightBalanceCalculation", "FlightId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("VFR3D.Domain.Entities.WeightBalanceProfile", "WeightBalanceProfile")
+                        .WithMany()
+                        .HasForeignKey("WeightBalanceProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Flight");
+
+                    b.Navigation("WeightBalanceProfile");
+                });
+
+            modelBuilder.Entity("VFR3D.Domain.Entities.WeightBalanceProfile", b =>
+                {
+                    b.HasOne("VFR3D.Domain.Entities.Aircraft", "Aircraft")
+                        .WithMany("WeightBalanceProfiles")
+                        .HasForeignKey("AircraftId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Aircraft");
                 });
 
             modelBuilder.Entity("flight_airspaces", b =>
@@ -1625,6 +2572,21 @@ namespace VFR3D.Infrastructure.Migrations
                     b.HasOne("VFR3D.Domain.Entities.Flight", null)
                         .WithMany()
                         .HasForeignKey("flight_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("flight_obstacles", b =>
+                {
+                    b.HasOne("VFR3D.Domain.Entities.Flight", null)
+                        .WithMany()
+                        .HasForeignKey("flight_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("VFR3D.Domain.Entities.Obstacle", null)
+                        .WithMany()
+                        .HasForeignKey("obstacle_oas_number")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -1644,9 +2606,30 @@ namespace VFR3D.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("VFR3D.Domain.Entities.Aircraft", b =>
+                {
+                    b.Navigation("Documents");
+
+                    b.Navigation("Flights");
+
+                    b.Navigation("PerformanceProfiles");
+
+                    b.Navigation("WeightBalanceProfiles");
+                });
+
             modelBuilder.Entity("VFR3D.Domain.Entities.AircraftPerformanceProfile", b =>
                 {
                     b.Navigation("Flights");
+                });
+
+            modelBuilder.Entity("VFR3D.Domain.Entities.Flight", b =>
+                {
+                    b.Navigation("WeightBalanceCalculation");
+                });
+
+            modelBuilder.Entity("VFR3D.Domain.Entities.Runway", b =>
+                {
+                    b.Navigation("RunwayEnds");
                 });
 #pragma warning restore 612, 618
         }

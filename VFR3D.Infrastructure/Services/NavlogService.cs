@@ -1,8 +1,9 @@
-﻿using GeographicLib;
-using Microsoft.EntityFrameworkCore;
+using GeographicLib;
 using Microsoft.Extensions.Logging;
 using VFR3D.Domain.Entities;
 using VFR3D.Domain.Enums;
+using VFR3D.Domain.Exceptions;
+using VFR3D.Domain.Utilities.UnitConversions;
 using VFR3D.Infrastructure.Dtos.Navlog;
 using VFR3D.Infrastructure.Interfaces;
 
@@ -13,6 +14,7 @@ public class NavlogService : INavlogService
     private readonly IAircraftPerformanceProfileRepository _aircraftPerformanceProfileRepository;
     private readonly IWindsAloftService _windsAloftService;
     private readonly IAirspaceService _airspaceService;
+    private readonly IObstacleService _obstacleService;
     private readonly IMagneticVariationService _magneticVariationService;
     private readonly ILogger<NavlogService> _logger;
 
@@ -20,12 +22,14 @@ public class NavlogService : INavlogService
         IAircraftPerformanceProfileRepository aircraftPerformanceProfileRepository,
         IWindsAloftService windsAloftService,
         IAirspaceService airspaceService,
+        IObstacleService obstacleService,
         IMagneticVariationService magneticVariationService,
         ILogger<NavlogService> logger)
     {
         _aircraftPerformanceProfileRepository = aircraftPerformanceProfileRepository;
         _windsAloftService = windsAloftService;
         _airspaceService = airspaceService;
+        _obstacleService = obstacleService;
         _magneticVariationService = magneticVariationService;
         _logger = logger;
     }
@@ -39,12 +43,11 @@ public class NavlogService : INavlogService
 
             if (request.Waypoints.Count < 2)
             {
-                throw new ArgumentException("At least two waypoints are required for navigation");
+                throw new ValidationException("Waypoints", "At least two waypoints are required for navigation");
             }
 
             var performanceProfile = await _aircraftPerformanceProfileRepository.GetByIdAsync(request.AircraftPerformanceProfileId)
-                                     ?? throw new KeyNotFoundException(
-                                         $"Aircraft performance profile not found: {request.AircraftPerformanceProfileId}");
+                                     ?? throw new PerformanceProfileNotFoundException(request.AircraftPerformanceProfileId);
 
             var waypointsWithClimbAndDescent = AddClimbAndDescentWaypoints(
                 request.Waypoints,
@@ -117,6 +120,19 @@ public class NavlogService : INavlogService
                 _logger.LogWarning(ex, "Failed to determine intersecting airspaces for route");
             }
 
+            try
+            {
+                var obstacleOasNumbers = await _obstacleService.GetObstacleOasNumbersForRouteAsync(
+                    waypointsAdjustedForCruisingAltitude,
+                    request.PlannedCruisingAltitude);
+
+                response.ObstacleOasNumbers = obstacleOasNumbers;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to determine obstacles along route");
+            }
+
             return response;
         }
         catch (Exception ex)
@@ -143,7 +159,7 @@ public class NavlogService : INavlogService
 
         return new BearingAndDistanceResponseDto
         {
-            Distance = inverseGeodesicResult.Distance / Constants.NauticalMile,
+            Distance = inverseGeodesicResult.Distance / DistanceConversion.MetersPerNauticalMile,
             TrueCourse = trueCourse,
             MagneticCourse = magneticCourse
         };
@@ -163,8 +179,10 @@ public class NavlogService : INavlogService
         {
             var isTerminal = index == 0 || index == waypoints.Count - 1;
             var isRefuelStop = (waypoint.IsRefuelingStop ?? false);
+            var isBottomOfDescent = waypoint.Id?.StartsWith("BOD-", StringComparison.OrdinalIgnoreCase) ?? false;
 
-            if (isTerminal || isRefuelStop)
+            // Preserve altitude for terminal points, refuel stops, and BOD (which is at TPA)
+            if (isTerminal || isRefuelStop || isBottomOfDescent)
             {
                 return waypoint;
             }
@@ -205,6 +223,7 @@ public class NavlogService : INavlogService
         var result = new List<WaypointDto>();
         int tocCounter = 1;
         int todCounter = 1;
+        int bodCounter = 1;
 
         for (var s = 0; s < segmentAnchors.Count - 1; s++)
         {
@@ -256,13 +275,22 @@ public class NavlogService : INavlogService
             if (segEndIndex - segStartIndex >= 1)
             {
                 var from = waypoints[Math.Max(segEndIndex - 1, segStartIndex)];
-                var descentAltitudeDifference = plannedCruisingAltitude - segEnd.Altitude;
+
+                // Calculate traffic pattern altitude (1000 ft above airport elevation, rounded to nearest 100)
+                var trafficPatternAltitude = Math.Round((segEnd.Altitude + 1000) / 100.0) * 100;
+
+                // Calculate descent to reach TPA (not airport elevation)
+                var descentAltitudeDifference = plannedCruisingAltitude - trafficPatternAltitude;
                 var descentTime = descentAltitudeDifference / (performance.DescentFpm * 60.0);
                 var descentDistance = performance.DescentTrueAirspeed * descentTime;
 
+                // Add 3nm to account for reaching TPA 3nm before the airport
+                const double trafficPatternEntryDistanceNm = 3.0;
+                var totalDistanceFromAirport = descentDistance + trafficPatternEntryDistanceNm;
+
                 var topOfDescentPoint = FindPointAtDistance(
                     segEnd,
-                    -descentDistance,
+                    -totalDistanceFromAirport,
                     CalculateTrueCourse(from.Latitude, from.Longitude, segEnd.Latitude, segEnd.Longitude));
 
                 var topOfDescentWaypoint = new WaypointDto
@@ -276,6 +304,24 @@ public class NavlogService : INavlogService
                 };
 
                 result.Add(topOfDescentWaypoint);
+
+                // Add bottom of descent point at TPA, 3nm from the airport
+                var bottomOfDescentPoint = FindPointAtDistance(
+                    segEnd,
+                    -trafficPatternEntryDistanceNm,
+                    CalculateTrueCourse(from.Latitude, from.Longitude, segEnd.Latitude, segEnd.Longitude));
+
+                var bottomOfDescentWaypoint = new WaypointDto
+                {
+                    Id = $"BOD-{bodCounter++}",
+                    Name = "BOD",
+                    Latitude = bottomOfDescentPoint.Latitude,
+                    Longitude = bottomOfDescentPoint.Longitude,
+                    Altitude = trafficPatternAltitude,
+                    WaypointType = WaypointType.CalculatedPoint
+                };
+
+                result.Add(bottomOfDescentWaypoint);
             }
 
             result.Add(segEnd);
@@ -310,7 +356,7 @@ public class NavlogService : INavlogService
             LegEndPoint = endPoint,
             TrueCourse = NormalizeAzimuth(inverseGeodesicResult.Azimuth1),
             MagneticCourse = magneticCourse,
-            LegDistance = inverseGeodesicResult.Distance / Constants.NauticalMile,
+            LegDistance = inverseGeodesicResult.Distance / DistanceConversion.MetersPerNauticalMile,
             StartLegTime = previousLegEndTime
         };
 
@@ -561,7 +607,7 @@ public class NavlogService : INavlogService
 
         private WaypointDto FindPointAtDistance(WaypointDto startPoint, double distanceNauticalMiles, double trueCourse)
         {
-            var distanceMeters = (distanceNauticalMiles * Constants.NauticalMile);
+            var distanceMeters = (distanceNauticalMiles * DistanceConversion.MetersPerNauticalMile);
             var result = Geodesic.WGS84.Direct(
                 startPoint.Latitude,
                 startPoint.Longitude,

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Azure.Identity;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -8,12 +9,15 @@ using Npgsql;
 using NSwag;
 using NSwag.Generation.Processors.Security;
 using VFR3D.API.Authentication;
+using VFR3D.API.Configuration;
+using VFR3D.API.Middleware;
 using VFR3D.Infrastructure.Data;
 using VFR3D.Infrastructure.Interfaces;
 using VFR3D.Infrastructure.Repositories;
 using VFR3D.Infrastructure.Services;
 using VFR3D.Infrastructure.Services.AirportInformationServices;
 using VFR3D.Infrastructure.Services.DocumentServices;
+using VFR3D.Infrastructure.Services.NotamServices;
 using VFR3D.Infrastructure.Services.WeatherServices;
 using VFR3D.Infrastructure.Settings;
 using VFR3D.Infrastructure.Utilities;
@@ -25,17 +29,30 @@ bool isRunningInDocker = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_C
 
 builder.Configuration
     .SetBasePath(builder.Environment.ContentRootPath)
-    .AddJsonFile("api.appsettings.json", optional: false)
-    .AddJsonFile($"api.appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
-    .AddEnvironmentVariables();
+    .AddJsonFile("appsettings.json", optional: false)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
+    .AddEnvironmentVariables()
+    .AddUserSecrets<Program>(optional: true, reloadOnChange: true);
 
-// Add Docker-specific configuration if running in Docker
-if (isRunningInDocker)
+// Add Azure Key Vault for secrets
+var keyVaultUrl = builder.Configuration["KeyVault:Url"];
+if (!string.IsNullOrEmpty(keyVaultUrl))
 {
-    builder.Configuration.AddJsonFile("appsettings.Docker.json", optional: true);
-}
+    var credential = new DefaultAzureCredential();
 
-builder.Configuration.AddEnvironmentVariables();
+    // Map Key Vault secret names to configuration keys based on environment
+    var secretSuffix = builder.Environment.IsProduction() ? "prd" : "staging";
+    var secretMappings = new Dictionary<string, string>
+    {
+        { $"vfr3d-faa-nms-api-client-id-{secretSuffix}", "NmsSettings:ClientId" },
+        { $"vfr3d-faa-nms-api-client-secret-{secretSuffix}", "NmsSettings:ClientSecret" }
+    };
+
+    builder.Configuration.AddAzureKeyVault(
+        new Uri(keyVaultUrl),
+        credential,
+        new MappedKeyVaultSecretManager(secretMappings));
+}
 
 // Setup CORS
 builder.Services.AddCors(options =>
@@ -44,9 +61,7 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy.WithOrigins(
-                    "http://localhost:5173",
-                    "https://www.vfr3d.com",
-                    "https://vfr3d.netlify.app")
+                    "http://localhost:5173")
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .AllowCredentials();
@@ -58,9 +73,19 @@ builder.Services.AddCors(options =>
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
-if (builder.Environment.IsProduction())
+if (!builder.Environment.IsDevelopment())
 {
     builder.Logging.AddAzureWebAppDiagnostics();
+
+    // Add Application Insights if connection string is configured
+    var appInsightsConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+    if (!string.IsNullOrEmpty(appInsightsConnectionString))
+    {
+        builder.Services.AddApplicationInsightsTelemetry(options =>
+        {
+            options.ConnectionString = appInsightsConnectionString;
+        });
+    }
 }
 
 builder.Services.Configure<AzureFileLoggerOptions>(options =>
@@ -126,8 +151,8 @@ builder.Services.AddOpenApiDocument(options =>
 builder.Services.Configure<NOAASettings>(builder.Configuration.GetSection("NOAASettings"));
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection("StripeSettings"));
 builder.Services.Configure<Auth0Settings>(builder.Configuration.GetSection("Auth0Settings"));
-builder.Services.Configure<AwsSettings>(builder.Configuration.GetSection("AWS"));
 builder.Services.Configure<DatabaseSettings>(builder.Configuration.GetSection("Database"));
+builder.Services.Configure<NmsSettings>(builder.Configuration.GetSection("NmsSettings"));
 
 // Setup DB Context
 builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
@@ -156,30 +181,65 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
 
 // Configure Services
 builder.Services.AddMemoryCache();
-builder.Services.AddAwsServices(builder.Configuration);
+builder.Services.AddCloudStorageServices(builder.Configuration);
 builder.Services.AddScoped<IAircraftPerformanceProfileRepository, AircraftPerformanceProfileRepository>();
 builder.Services.AddScoped<IMetarService, MetarService>();
 builder.Services.AddScoped<IPirepService, PirepService>();
 builder.Services.AddScoped<ITafService, TafService>();
 builder.Services.AddScoped<IAirsigmetService, AirsigmetService>();
+builder.Services.AddScoped<IGAirmetService, GAirmetService>();
 builder.Services.AddScoped<IAirportDiagramService, AirportDiagramService>();
 builder.Services.AddScoped<IChartSupplementService, ChartSupplementService>();  
 builder.Services.AddScoped<IAirportService, AirportService>();
+builder.Services.AddScoped<IRunwayService, RunwayService>();
 builder.Services.AddScoped<ICommunicationFrequencyService, CommunicationFrequencyService>();
 builder.Services.AddScoped<IAirspaceService, AirspaceService>();
+builder.Services.AddScoped<IObstacleService, ObstacleService>();
 builder.Services.AddScoped<IMagneticVariationService, MagneticVariationService>();
 builder.Services.AddScoped<IWindsAloftService, WindsAloftService>();
 builder.Services.AddScoped<INavlogService, NavlogService>();
 builder.Services.AddScoped<IAircraftPerformanceProfileService, AircraftPerformanceProfileService>();
+builder.Services.AddScoped<IAircraftService, AircraftService>();
+builder.Services.AddScoped<IWeightBalanceProfileService, WeightBalanceProfileService>();
+builder.Services.AddScoped<IPerformanceCalculatorService, PerformanceCalculatorService>();
 builder.Services.AddScoped<IFlightService, FlightService>();
-builder.Services.AddScoped<IStripeService, StripeService>();
 builder.Services.AddScoped<ConditionalAuthHandler>();
+
+// NOTAM Services
+builder.Services.AddSingleton<INmsApiClient, NmsApiClient>();
+builder.Services.AddScoped<INotamService, NotamService>();
 
 builder.Services.AddHttpClient();
 
+// Configure NMS API HttpClient with extended timeout
+builder.Services.AddHttpClient("NmsApi", (serviceProvider, client) =>
+{
+    var nmsSettings = serviceProvider.GetRequiredService<IOptions<NmsSettings>>().Value;
+    client.Timeout = TimeSpan.FromSeconds(nmsSettings.RequestTimeoutSeconds);
+});
+
 var app = builder.Build();
 
+// Initialize Azure Blob Storage resources on startup
+using (var scope = app.Services.CreateScope())
+{
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var cloudStorageInitService = scope.ServiceProvider.GetRequiredService<ICloudStorageInitializationService>();
+
+    logger.LogInformation("Initializing Azure Blob Storage resources during startup...");
+    try
+    {
+        await cloudStorageInitService.InitializeAsync(CancellationToken.None);
+        logger.LogInformation("Azure Blob Storage resources initialized successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to initialize Azure Blob Storage resources");
+    }
+}
+
 app.UseCors("AllowedOrigins");
+app.UseGlobalExceptionHandling();
 
 if (app.Environment.IsDevelopment())
 {
@@ -191,4 +251,4 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.Run();
+await app.RunAsync();

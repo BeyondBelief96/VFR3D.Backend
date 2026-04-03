@@ -53,4 +53,16 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.NasrServices.Utils
             return null;
         }
     }
+
+    public class YesNoToBoolConverter : DefaultTypeConverter
+    {
+        public override object? ConvertFromString(string? text, IReaderRow row, MemberMapData memberMapData)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+                return false;
+
+            var cleanText = text.Trim().ToUpperInvariant();
+            return cleanText == "Y" || cleanText == "YES" || cleanText == "1" || cleanText == "TRUE";
+        }
+    }
 }

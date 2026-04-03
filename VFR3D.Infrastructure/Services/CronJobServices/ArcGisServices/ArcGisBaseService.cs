@@ -1,10 +1,14 @@
 ﻿using NetTopologySuite.Geometries;
 using NetTopologySuite;
 using System.Text.Json;
+using System.Net;
 using VFR3D.Infrastructure.Data;
 using Microsoft.Extensions.Logging;
 using VFR3D.Infrastructure.Utilities;
 using VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices.Models;
+using Polly;
+using Polly.Extensions.Http;
+using Polly.Retry;
 
 namespace VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices
 {
@@ -22,6 +26,16 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices
         /// </summary>
         protected virtual int PageSize => 1000;
 
+        /// <summary>
+        /// Maximum number of retry attempts for transient HTTP errors.
+        /// </summary>
+        protected virtual int MaxRetryAttempts => 3;
+
+        /// <summary>
+        /// Base delay in seconds for exponential backoff retry strategy.
+        /// </summary>
+        protected virtual int RetryBaseDelaySeconds => 2;
+
         protected ArcGisBaseService(
             ILogger logger,
             IHttpClientFactory httpClientFactory,
@@ -36,6 +50,35 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices
             {
                 PropertyNameCaseInsensitive = true
             };
+        }
+
+        /// <summary>
+        /// Creates a retry policy for transient HTTP errors including network failures,
+        /// connection drops, and server errors (5xx).
+        /// </summary>
+        private AsyncRetryPolicy<HttpResponseMessage> CreateRetryPolicy()
+        {
+            return HttpPolicyExtensions
+                .HandleTransientHttpError() // Handles HttpRequestException, 5xx, and 408
+                .Or<HttpIOException>() // Handles "response ended prematurely" errors
+                .Or<TaskCanceledException>() // Handles timeouts
+                .WaitAndRetryAsync(
+                    MaxRetryAttempts,
+                    retryAttempt => TimeSpan.FromSeconds(Math.Pow(RetryBaseDelaySeconds, retryAttempt)),
+                    onRetry: (outcome, timespan, retryAttempt, context) =>
+                    {
+                        var exception = outcome.Exception;
+                        var statusCode = outcome.Result?.StatusCode;
+
+                        _logger.LogWarning(
+                            "ArcGIS request failed (attempt {RetryAttempt}/{MaxRetries}). " +
+                            "Retrying in {RetryDelay}s. Status: {StatusCode}, Error: {ErrorMessage}",
+                            retryAttempt,
+                            MaxRetryAttempts,
+                            timespan.TotalSeconds,
+                            statusCode?.ToString() ?? "N/A",
+                            exception?.Message ?? "HTTP error");
+                    });
         }
 
         /// <summary>
@@ -73,28 +116,35 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices
         }
 
         /// <summary>
-        /// Query a single page of features from ArcGIS.
+        /// Query a single page of features from ArcGIS with automatic retry for transient errors.
         /// </summary>
         private async Task<ArcGisResponse<TAttributes>> QueryFeaturesPage<TAttributes>(
             Dictionary<string, string> parameters,
             int offset,
             CancellationToken cancellationToken)
         {
+            var httpClient = _httpClientFactory.CreateClient("ArcGis");
+            var queryParams = new Dictionary<string, string>(parameters)
+            {
+                ["f"] = "json",
+                ["outSR"] = "4326",
+                ["resultRecordCount"] = PageSize.ToString(),
+                ["resultOffset"] = offset.ToString()
+            };
+
+            var url = WebUtilities.AddQueryString(BaseUrl, queryParams);
+            _logger.LogDebug("Fetching ArcGIS features from offset {Offset}", offset);
+
+            var retryPolicy = CreateRetryPolicy();
+
             try
             {
-                var httpClient = _httpClientFactory.CreateClient("ArcGis");
-                var queryParams = new Dictionary<string, string>(parameters)
+                var response = await retryPolicy.ExecuteAsync(async () =>
                 {
-                    ["f"] = "json",
-                    ["outSR"] = "4326",
-                    ["resultRecordCount"] = PageSize.ToString(),
-                    ["resultOffset"] = offset.ToString()
-                };
+                    var request = new HttpRequestMessage(HttpMethod.Get, url);
+                    return await httpClient.SendAsync(request, cancellationToken);
+                });
 
-                var url = WebUtilities.AddQueryString(BaseUrl, queryParams);
-                _logger.LogDebug("Fetching ArcGIS features from offset {Offset}", offset);
-
-                var response = await httpClient.GetAsync(url, cancellationToken);
                 response.EnsureSuccessStatusCode();
 
                 var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -109,7 +159,8 @@ namespace VFR3D.Infrastructure.Services.CronJobServices.ArcGisServices
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error querying ArcGIS features at offset {Offset}", offset);
+                _logger.LogError(ex, "Error querying ArcGIS features at offset {Offset} after {MaxRetries} retry attempts",
+                    offset, MaxRetryAttempts);
                 throw;
             }
         }

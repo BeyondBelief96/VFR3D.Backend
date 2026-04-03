@@ -26,5 +26,10 @@ namespace VFR3D.Infrastructure.Utilities
         {
             return date.ToString("yyyyMMdd");
         }
+
+        public static string FormatDateForObstacles(DateTime date)
+        {
+            return date.ToString("yyMMdd");
+        }
     }
 }

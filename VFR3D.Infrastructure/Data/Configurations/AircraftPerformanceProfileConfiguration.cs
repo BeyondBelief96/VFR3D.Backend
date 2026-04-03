@@ -58,8 +58,12 @@ public class AircraftPerformanceProfileConfiguration : IEntityTypeConfiguration<
             .HasColumnType("double precision")
             .HasColumnName("fuel_on_board_gals");
 
+        builder.Property(e => e.AircraftId)
+            .HasColumnName("aircraft_id");
+
         // Indexes
         builder.HasIndex(e => e.UserId);
+        builder.HasIndex(e => e.AircraftId);
         builder.HasIndex(e => new { e.UserId, e.ProfileName }).IsUnique();
 
         // Relationships

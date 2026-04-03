@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Net;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System.Xml.Linq;
 using VFR3D.Domain.Entities;
@@ -32,6 +33,13 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
             {
                 _logger.LogInformation("Starting TAF data fetch and storage");
                 var xmlData = await FetchTafXmlDataAsync(cancellationToken);
+
+                if (xmlData == null)
+                {
+                    _logger.LogInformation("No TAF data available from API (204 No Content)");
+                    return;
+                }
+
                 var tafData = ParseTafXmlData(xmlData, cancellationToken);
 
                 foreach (var taf in tafData)
@@ -48,16 +56,51 @@ namespace VFR3D.Infrastructure.Services.CronJobServices
             }
         }
 
-        private async Task<string> FetchTafXmlDataAsync(CancellationToken cancellationToken)
+        private async Task<string?> FetchTafXmlDataAsync(CancellationToken cancellationToken)
         {
             using var client = _httpClientFactory.CreateClient();
-            await using var response = await client.GetStreamAsync(TafUrl, cancellationToken);
-            await using var decompressedStream = new System.IO.Compression.GZipStream(
-                response,
-                System.IO.Compression.CompressionMode.Decompress);
-            using var reader = new StreamReader(decompressedStream);
+            using var response = await client.GetAsync(TafUrl, cancellationToken);
 
-            return await reader.ReadToEndAsync(cancellationToken);
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.OK:
+                    await using (var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken))
+                    await using (var decompressedStream = new System.IO.Compression.GZipStream(
+                        responseStream,
+                        System.IO.Compression.CompressionMode.Decompress))
+                    using (var reader = new StreamReader(decompressedStream))
+                    {
+                        return await reader.ReadToEndAsync(cancellationToken);
+                    }
+
+                case HttpStatusCode.NoContent:
+                    return null;
+
+                case HttpStatusCode.BadRequest:
+                    _logger.LogError("Aviation Weather API returned 400 Bad Request for TAF data");
+                    throw new HttpRequestException("Aviation Weather API returned 400 Bad Request - invalid parameters or URL");
+
+                case HttpStatusCode.NotFound:
+                    _logger.LogError("Aviation Weather API returned 404 Not Found for TAF endpoint");
+                    throw new HttpRequestException("Aviation Weather API endpoint not found (404)");
+
+                case HttpStatusCode.TooManyRequests:
+                    _logger.LogWarning("Aviation Weather API rate limit exceeded (429 Too Many Requests)");
+                    throw new HttpRequestException("Aviation Weather API rate limit exceeded (429)");
+
+                case HttpStatusCode.InternalServerError:
+                    _logger.LogError("Aviation Weather API returned 500 Internal Server Error");
+                    throw new HttpRequestException("Aviation Weather API internal server error (500)");
+
+                case HttpStatusCode.BadGateway:
+                case HttpStatusCode.GatewayTimeout:
+                    _logger.LogWarning("Aviation Weather API service disruption ({StatusCode})", (int)response.StatusCode);
+                    throw new HttpRequestException($"Aviation Weather API service disruption ({(int)response.StatusCode})");
+
+                default:
+                    _logger.LogError("Aviation Weather API returned unexpected status code {StatusCode}", (int)response.StatusCode);
+                    throw new HttpRequestException($"Aviation Weather API returned unexpected status code: {(int)response.StatusCode}");
+            }
         }
 
         private IEnumerable<Taf> ParseTafXmlData(string xmlData, CancellationToken cancellationToken)
