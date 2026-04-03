@@ -7,7 +7,7 @@ COPY VFR3D.Domain/*.csproj ./VFR3D.Domain/
 COPY VFR3D.Infrastructure/*.csproj ./VFR3D.Infrastructure/
 COPY VFR3D.API/*.csproj ./VFR3D.API/
 COPY VFR3D.Backend.sln .
-RUN dotnet restore VFR3D.API/VFR3D.API.csproj
+RUN dotnet restore VFR3D.Backend.sln
 
 # Copy source and publish
 COPY . .
@@ -18,8 +18,6 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/publish .
 
-# Railway sets PORT env var
-ENV ASPNETCORE_URLS=http://0.0.0.0:${PORT:-8080}
+# Railway sets PORT at runtime; shell form ensures it's evaluated then
 EXPOSE 8080
-
-ENTRYPOINT ["dotnet", "VFR3D.API.dll"]
+CMD ASPNETCORE_URLS=http://0.0.0.0:${PORT:-8080} dotnet VFR3D.API.dll
