@@ -1,4 +1,4 @@
-name: VFR3D CI/CD Pipeline
+name: VFR3D CI Pipeline
 on:
   push:
     branches:
@@ -7,191 +7,36 @@ on:
       - 'VFR3D.API/**'
       - 'VFR3D.Domain/**'
       - 'VFR3D.Infrastructure/**'
-      - 'VFR3D.Common/**'
       - 'VFR3D.Azure.Functions/**'
       - '.github/workflows/main-ci-cd.yml'
+  pull_request:
+    branches:
+      - main
 
 env:
   DOTNET_CORE_VERSION: 8.0.x
   CONFIGURATION: Release
-  API_PUBLISH_DIR: ./api-publish
-  FUNCTIONS_PUBLISH_DIR: ./functions-publish
-  API_APP_NAME: azapp-vfr3d-api-centralus-test
-  FUNCTION_APP_NAME: vfr3d-cron-functions-centralus-test
-  RESOURCE_GROUP: rg-vfr3d-centralus-test
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
-    outputs:
-      functions_built: ${{ steps.check_functions.outputs.functions_built }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
-      
-      # Build and publish API
-      - name: Restore API project
-        run: dotnet restore "VFR3D.API"
-      
-      - name: Build and Publish API
-        run: |
-          dotnet publish "VFR3D.API" --configuration ${{ env.CONFIGURATION }} --output "${{ env.API_PUBLISH_DIR }}"
-      
-      - name: Publish API Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: vfr3d-api
-          path: ${{ env.API_PUBLISH_DIR }}
-          if-no-files-found: error
-      
-      # Check if Functions project exists
-      - name: Check for Functions project
-        id: check_functions
-        run: |
-          if [ -d "VFR3D.Azure.Functions" ]; then
-            echo "functions_built=true" >> $GITHUB_OUTPUT
-            echo "Functions project found"
-          else
-            echo "functions_built=false" >> $GITHUB_OUTPUT
-            echo "Functions project not found, skipping Functions build"
-          fi
-      
-      # Build and publish Functions only if project exists
-      - name: Restore Functions project
-        if: steps.check_functions.outputs.functions_built == 'true'
-        run: dotnet restore "VFR3D.Azure.Functions"
-      
-      - name: Build and Publish Functions
-        if: steps.check_functions.outputs.functions_built == 'true'
-        run: |
-          dotnet publish "VFR3D.Azure.Functions" --configuration ${{ env.CONFIGURATION }} --output "${{ env.FUNCTIONS_PUBLISH_DIR }}"
-      
-      - name: Create Functions metadata
-        if: steps.check_functions.outputs.functions_built == 'true'
-        run: |
-          mkdir -p "${{ env.FUNCTIONS_PUBLISH_DIR }}/.azurefunctions"
-          echo "{}" > "${{ env.FUNCTIONS_PUBLISH_DIR }}/.azurefunctions/functionsmetadata"
-      
-      - name: Create Functions zip
-        if: steps.check_functions.outputs.functions_built == 'true'
-        run: |
-          # Get absolute paths for reliable zip creation
-          WORKSPACE_DIR=$(pwd)
-          FUNCTIONS_DIR="${WORKSPACE_DIR}/${FUNCTIONS_PUBLISH_DIR}"
-          ZIP_PATH="${WORKSPACE_DIR}/functionapp.zip"
-          
-          # Change to functions dir and create zip with all files at root
-          cd "${FUNCTIONS_DIR}"
-          zip -r "${ZIP_PATH}" .
-          
-          # Verify zip was created successfully
-          if [ -f "${ZIP_PATH}" ]; then
-            echo "Functions zip created successfully at ${ZIP_PATH}"
-            ls -la "${ZIP_PATH}"
-          else
-            echo "Failed to create functions zip!"
-            exit 1
-          fi
-      
-      - name: Upload Functions zip
-        if: steps.check_functions.outputs.functions_built == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: functionapp-zip
-          path: functionapp.zip
-      
-      # Create EF migration bundle
-      - name: Install EF Core tools
-        run: dotnet tool install --global dotnet-ef
-      
-      - name: Create EF migrations bundle
-        run: dotnet ef migrations bundle --project VFR3D.Infrastructure/VFR3D.Infrastructure.csproj -o efbundle.exe
-      
-      - name: Upload EF bundle artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ef-bundle
-          path: efbundle.exe
 
-  migrations:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download EF bundle
-        uses: actions/download-artifact@v4
-        with:
-          name: ef-bundle
-          path: .
-      
-      - name: Make bundle executable
-        run: chmod +x efbundle.exe
-      
-      - name: Apply migrations
-        run: ./efbundle.exe --connection "${{ secrets.DB_CONNECTION_STRING }}"
-        env:
-          ASPNETCORE_ENVIRONMENT: Production
+      - name: Restore
+        run: dotnet restore VFR3D.Backend.sln
 
-  deploy:
-    needs: [migrations, build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.azapp_service_principal_test }}
-      
-      # Deploy API
-      - name: Download API artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: vfr3d-api
-          path: ${{ env.API_PUBLISH_DIR }}
-      
-      - name: Deploy API to Azure
-        uses: azure/webapps-deploy@v2
-        with:
-          app-name: ${{ env.API_APP_NAME }}
-          package: ${{ env.API_PUBLISH_DIR }}
-      
-      - name: Restart API App
-        run: az webapp restart --name ${{ env.API_APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
-      
-      # Only deploy Functions if they were built
-      - name: Check Functions build status
-        id: functions_check
-        run: |
-          if [[ "${{ needs.build.outputs.functions_built }}" == "true" ]]; then
-            echo "Deploying Functions app..."
-            echo "deploy_functions=true" >> $GITHUB_OUTPUT
-          else
-            echo "Skipping Functions deployment as they were not built"
-            echo "deploy_functions=false" >> $GITHUB_OUTPUT
-          fi
-      
-      # Download and deploy Functions only if they were built
-      - name: Download Functions zip
-        if: steps.functions_check.outputs.deploy_functions == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: functionapp-zip
-          path: .
-        continue-on-error: false
-      
-      - name: Stop Functions App
-        if: steps.functions_check.outputs.deploy_functions == 'true'
-        run: az functionapp stop --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.FUNCTION_APP_NAME }}
+      - name: Build
+        run: dotnet build VFR3D.Backend.sln --configuration ${{ env.CONFIGURATION }} --no-restore
 
-      - name: Deploy Functions
-        if: steps.functions_check.outputs.deploy_functions == 'true'
-        uses: azure/functions-action@v1
-        with:
-          app-name: ${{ env.FUNCTION_APP_NAME }}
-          package: functionapp.zip
+      - name: Test
+        run: dotnet test VFR3D.Tests/VFR3D.Tests.csproj --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal
 
-      - name: Start Functions App
-        if: steps.functions_check.outputs.deploy_functions == 'true'
-        run: az functionapp start --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.FUNCTION_APP_NAME }}
+      # Verify the Docker build works (catches Dockerfile issues before Railway deploys)
+      - name: Verify Docker build
+        run: docker build -t vfr3d-api-test .
