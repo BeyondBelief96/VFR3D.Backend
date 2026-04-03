@@ -55,13 +55,18 @@ if (!string.IsNullOrEmpty(keyVaultUrl))
 }
 
 // Setup CORS
+var allowedOrigins = new List<string> { "http://localhost:5173" };
+var additionalOrigins = builder.Configuration["AllowedOrigins"];
+if (!string.IsNullOrEmpty(additionalOrigins))
+{
+    allowedOrigins.AddRange(additionalOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+}
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowedOrigins",
         policy =>
         {
-            policy.WithOrigins(
-                    "http://localhost:5173")
+            policy.WithOrigins(allowedOrigins.ToArray())
                 .AllowAnyMethod()
                 .AllowAnyHeader()
                 .AllowCredentials();
@@ -177,6 +182,9 @@ builder.Services.AddDbContext<VFR3DDbContext>((serviceProvider, options) =>
         options.EnableDetailedErrors();
         options.EnableSensitiveDataLogging();
     }
+
+    // Suppress pending model changes warning for deployment scenarios
+    options.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
 }, ServiceLifetime.Scoped);
 
 // Configure Services
@@ -219,6 +227,24 @@ builder.Services.AddHttpClient("NmsApi", (serviceProvider, client) =>
 });
 
 var app = builder.Build();
+
+// Auto-run EF Core migrations on startup
+using (var scope = app.Services.CreateScope())
+{
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<VFR3DDbContext>();
+        logger.LogInformation("Applying database migrations...");
+        await dbContext.Database.MigrateAsync();
+        logger.LogInformation("Database migrations applied successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to apply database migrations");
+    }
+}
 
 // Initialize Azure Blob Storage resources on startup
 using (var scope = app.Services.CreateScope())
